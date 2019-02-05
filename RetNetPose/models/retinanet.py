@@ -124,6 +124,24 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
+def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_feature_size=256, regression_feature_size=256, name='pose_regression_submodel'):
+
+    if keras.backend.image_data_format() == 'channels_first':
+        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+    else:
+        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
+
+    outputs = inputs
+    outputs = keras.layers.Dense(num_anchors * num_classes * num_values, name='pyramid_rotation_regression_sharedF')(outputs)
+    outputs = keras.layers.Dense(num_anchors * num_classes * num_values, name='pyramid_rotation_regression_orientationF')(outputs)
+    if keras.backend.image_data_format() == 'channels_first':
+        outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_ori')(outputs)
+    outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_depth_regression_reshape')(outputs)
+
+    #outputs_q = l2_norm(name='rotation_l2_norm')(outputs_q)
+    return keras.models.Model(inputs=inputs, outputs=outputs, name='rotation_regression_submodel')
+
+
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
     """ Creates the FPN layers on top of the backbone features.
 
@@ -175,8 +193,9 @@ def default_submodels(num_classes, num_anchors):
         A list of tuple, where the first element is the name of the submodel and the second element is the submodel itself.
     """
     return [
-        ('regression', default_regression_model(4, num_anchors)),
-        ('classification', default_classification_model(num_classes, num_anchors))
+        ('bbox', default_regression_model(4, num_anchors)),
+        ('pose', default_pose_regression_model(4, num_anchors, num_classes)),
+        ('cls', default_classification_model(num_classes, num_anchors))
     ]
 
 
@@ -332,21 +351,23 @@ def retinanet_bbox(
 
     # we expect the anchors, regression and classification values as first output
     regression     = model.outputs[0]
-    classification = model.outputs[1]
+    pose_regression = model.outputs[1]
+    classification = model.outputs[2]
 
     # "other" can be any additional output from custom submodels, by default this will be []
-    other = model.outputs[2:]
+    other = model.outputs[3:]
 
     # apply predicted regression to anchors
     boxes = layers.RegressBoxes(name='boxes')([anchors, regression])
     boxes = layers.ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
+    poses = layers.RegressRotation(name='poses')([anchors, pose_regression])
 
     # filter detections (apply NMS / score threshold / select top-k)
     detections = layers.FilterDetections(
         nms                   = nms,
         class_specific_filter = class_specific_filter,
         name                  = 'filtered_detections'
-    )([boxes, classification] + other)
+    )([boxes, poses, classification] + other)
 
     # construct the model
     return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)

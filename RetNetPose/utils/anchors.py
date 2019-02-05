@@ -82,11 +82,13 @@ def anchor_targets_bbox(
     for annotations in annotations_group:
         assert('bboxes' in annotations), "Annotations should contain bboxes."
         assert('labels' in annotations), "Annotations should contain labels."
+        assert('poses' in annotations), "Annotations should contain poses"
 
     batch_size = len(image_group)
 
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
+    poses_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
@@ -100,10 +102,16 @@ def anchor_targets_bbox(
             regression_batch[index, ignore_indices, -1]   = -1
             regression_batch[index, positive_indices, -1] = 1
 
+            poses_batch[index, ignore_indices, :, -1] = -1
+            poses_batch[index, positive_indices, :, -1] = -1
+
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
             regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
+
+            poses_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            poses_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int) - 1, -1] = 1
 
         # ignore annotations outside of image
         if image.shape:
@@ -112,8 +120,9 @@ def anchor_targets_bbox(
 
             labels_batch[index, indices, -1]     = -1
             regression_batch[index, indices, -1] = -1
+            poses_batch[index, indices, :, -1] = -1
 
-    return regression_batch, labels_batch
+    return regression_batch, poses_batch, labels_batch
 
 
 def compute_gt_annotations(
@@ -338,3 +347,35 @@ def bbox_transform(anchors, gt_boxes, mean=None, std=None):
     targets = (targets - mean) / std
 
     return targets
+
+
+def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
+    if mean is None:
+       mean = [0.0, 0.0, 0.0, 0.0]
+    if std is None:
+        std = [1.0, 1.0, 1.0, 1.0]
+
+    if isinstance(mean, (list, tuple)):
+        mean = np.array(mean)
+    elif not isinstance(mean, np.ndarray):
+        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+    if isinstance(std, (list, tuple)):
+        std = np.array(std)
+    elif not isinstance(std, np.ndarray):
+        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+    targets_rx = (gt_poses[:, 3])
+    targets_ry = (gt_poses[:, 4])
+    targets_rz = (gt_poses[:, 5])
+    targets_rw = (gt_poses[:, 6])
+
+    targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
+    #targets = np.reshape(targets, (4, 1, -1))
+    #print(targets.shape)
+    targets = targets.T
+
+    targets = (targets - mean) / std
+    allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
+
+    return allTargets

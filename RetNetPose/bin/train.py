@@ -28,8 +28,8 @@ import tensorflow as tf
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-    import keras_retinanet.bin  # noqa: F401
-    __package__ = "keras_retinanet.bin"
+    import RetNetPose.bin  # noqa: F401
+    __package__ = "RetNetPose.bin"
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
 from .. import layers  # noqa: F401
@@ -38,10 +38,6 @@ from .. import models
 from ..callbacks import RedirectModel
 from ..callbacks.eval import Evaluate
 from ..models.retinanet import retinanet_bbox
-from ..preprocessing.csv_generator import CSVGenerator
-from ..preprocessing.kitti import KittiGenerator
-from ..preprocessing.open_images import OpenImagesGenerator
-from ..preprocessing.pascal_voc import PascalVocGenerator
 from ..utils.anchors import make_shapes_callback
 from ..utils.config import read_config_file, parse_anchor_parameters
 from ..utils.keras_version import check_keras_version
@@ -125,8 +121,9 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # compile model
     training_model.compile(
         loss={
-            'regression'    : losses.smooth_l1(),
-            'classification': losses.focal()
+            'bbox'     : losses.smooth_l1(),
+            'pose'     : losses.weighted_mse(),
+            'cls'      : losses.focal()
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
     )
@@ -233,8 +230,10 @@ def create_generators(args, preprocess_image):
             max_shear=0.1,
             min_scaling=(0.9, 0.9),
             max_scaling=(1.1, 1.1),
-            flip_x_chance=0.5,
-            flip_y_chance=0.5,
+            #flip_x_chance=0.5,
+            #flip_y_chance=0.5,
+            flip_x_chance=0.0,
+            flip_y_chance=0.0,
         )
     else:
         transform_generator = random_transform_generator(flip_x_chance=0.5)
@@ -255,136 +254,42 @@ def create_generators(args, preprocess_image):
             'val2017',
             **common_args
         )
-    elif args.dataset_type == 'pascal':
-        train_generator = PascalVocGenerator(
-            args.pascal_path,
-            'trainval',
+    elif args.dataset_type == 'linemod':
+        from ..preprocessing.linemod import LinemodGenerator
+
+        train_generator = LinemodGenerator(
+            args.linemod_path,
+            'train',
             transform_generator=transform_generator,
             **common_args
         )
 
-        validation_generator = PascalVocGenerator(
-            args.pascal_path,
-            'test',
-            **common_args
-        )
-    elif args.dataset_type == 'csv':
-        train_generator = CSVGenerator(
-            args.annotations,
-            args.classes,
+        validation_generator = LinemodGenerator(
+            args.linemod_path,
+            'val',
             transform_generator=transform_generator,
             **common_args
         )
+        train_iterations = len(os.listdir(os.path.join(args.linemod_path, 'images/train')))
 
-        if args.val_annotations:
-            validation_generator = CSVGenerator(
-                args.val_annotations,
-                args.classes,
-                **common_args
-            )
-        else:
-            validation_generator = None
-    elif args.dataset_type == 'oid':
-        train_generator = OpenImagesGenerator(
-            args.main_dir,
-            subset='train',
-            version=args.version,
-            labels_filter=args.labels_filter,
-            annotation_cache_dir=args.annotation_cache_dir,
-            parent_label=args.parent_label,
-            transform_generator=transform_generator,
-            **common_args
-        )
-
-        validation_generator = OpenImagesGenerator(
-            args.main_dir,
-            subset='validation',
-            version=args.version,
-            labels_filter=args.labels_filter,
-            annotation_cache_dir=args.annotation_cache_dir,
-            parent_label=args.parent_label,
-            **common_args
-        )
-    elif args.dataset_type == 'kitti':
-        train_generator = KittiGenerator(
-            args.kitti_path,
-            subset='train',
-            transform_generator=transform_generator,
-            **common_args
-        )
-
-        validation_generator = KittiGenerator(
-            args.kitti_path,
-            subset='val',
-            **common_args
-        )
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
 
-    return train_generator, validation_generator
-
-
-def check_args(parsed_args):
-    """ Function to check for inherent contradictions within parsed arguments.
-    For example, batch_size < num_gpus
-    Intended to raise errors prior to backend initialisation.
-
-    Args
-        parsed_args: parser.parse_args()
-
-    Returns
-        parsed_args
-    """
-
-    if parsed_args.multi_gpu > 1 and parsed_args.batch_size < parsed_args.multi_gpu:
-        raise ValueError(
-            "Batch size ({}) must be equal to or higher than the number of GPUs ({})".format(parsed_args.batch_size,
-                                                                                             parsed_args.multi_gpu))
-
-    if parsed_args.multi_gpu > 1 and parsed_args.snapshot:
-        raise ValueError(
-            "Multi GPU training ({}) and resuming from snapshots ({}) is not supported.".format(parsed_args.multi_gpu,
-                                                                                                parsed_args.snapshot))
-
-    if parsed_args.multi_gpu > 1 and not parsed_args.multi_gpu_force:
-        raise ValueError("Multi-GPU support is experimental, use at own risk! Run with --multi-gpu-force if you wish to continue.")
-
-    if 'resnet' not in parsed_args.backbone:
-        warnings.warn('Using experimental backbone {}. Only resnet50 has been properly tested.'.format(parsed_args.backbone))
-
-    return parsed_args
+    return train_generator, validation_generator, train_iterations
 
 
 def parse_args(args):
     """ Parse the arguments.
     """
-    parser     = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
+    parser     = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network with object pose estimation.')
     subparsers = parser.add_subparsers(help='Arguments for specific dataset types.', dest='dataset_type')
     subparsers.required = True
 
     coco_parser = subparsers.add_parser('coco')
     coco_parser.add_argument('coco_path', help='Path to dataset directory (ie. /tmp/COCO).')
 
-    pascal_parser = subparsers.add_parser('pascal')
-    pascal_parser.add_argument('pascal_path', help='Path to dataset directory (ie. /tmp/VOCdevkit).')
-
-    kitti_parser = subparsers.add_parser('kitti')
-    kitti_parser.add_argument('kitti_path', help='Path to dataset directory (ie. /tmp/kitti).')
-
-    def csv_list(string):
-        return string.split(',')
-
-    oid_parser = subparsers.add_parser('oid')
-    oid_parser.add_argument('main_dir', help='Path to dataset directory.')
-    oid_parser.add_argument('--version',  help='The current dataset version is v4.', default='v4')
-    oid_parser.add_argument('--labels-filter',  help='A list of labels to filter.', type=csv_list, default=None)
-    oid_parser.add_argument('--annotation-cache-dir', help='Path to store annotation cache.', default='.')
-    oid_parser.add_argument('--parent-label', help='Use the hierarchy children of this label.', default=None)
-
-    csv_parser = subparsers.add_parser('csv')
-    csv_parser.add_argument('annotations', help='Path to CSV file containing annotations for training.')
-    csv_parser.add_argument('classes', help='Path to a CSV file containing class label mapping.')
-    csv_parser.add_argument('--val-annotations', help='Path to CSV file containing annotations for validation (optional).')
+    linemod_parser = subparsers.add_parser('linemod')
+    linemod_parser.add_argument('linemod_path', help='Path to dataset directory (ie. /tmp/linemod).')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--snapshot',          help='Resume training from a snapshot.')
@@ -392,30 +297,28 @@ def parse_args(args):
     group.add_argument('--weights',           help='Initialize the model with weights from a file.')
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
 
-    parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='resnet50', type=str)
+    parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='resnet101', type=str)
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
-    parser.add_argument('--multi-gpu',        help='Number of GPUs to use for parallel processing.', type=int, default=0)
-    parser.add_argument('--multi-gpu-force',  help='Extra flag needed to enable (experimental) multi-gpu support.', action='store_true')
-    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=50)
-    parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=10000)
+    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=25)
+    #parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=10000)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
-    parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./snapshots\')', default='./snapshots')
+    parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
-    parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_false')
+    parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--random-transform', help='Randomly transform image and annotations.', action='store_true')
-    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=800)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=1333)
+    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
+    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file.')
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Fit generator arguments
-    parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=1)
+    parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=3)
     parser.add_argument('--max-queue-size', help='Queue length for multiprocessing workers in fit generator.', type=int, default=10)
 
-    return check_args(parser.parse_args(args))
+    return parser.parse_args(args)
 
 
 def main(args=None):
@@ -440,7 +343,7 @@ def main(args=None):
         args.config = read_config_file(args.config)
 
     # create the generators
-    train_generator, validation_generator = create_generators(args, backbone.preprocess_image)
+    train_generator, validation_generator, train_iterations = create_generators(args, backbone.preprocess_image)
 
     # create the model
     if args.snapshot is not None:
@@ -462,7 +365,7 @@ def main(args=None):
             backbone_retinanet=backbone.retinanet,
             num_classes=train_generator.num_classes(),
             weights=weights,
-            multi_gpu=args.multi_gpu,
+            multi_gpu=0,
             freeze_backbone=args.freeze_backbone,
             lr=args.lr,
             config=args.config
@@ -495,7 +398,7 @@ def main(args=None):
     # start training
     training_model.fit_generator(
         generator=train_generator,
-        steps_per_epoch=args.steps,
+        steps_per_epoch=train_iterations,
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,

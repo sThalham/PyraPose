@@ -83,3 +83,26 @@ def shift(shape, stride, anchors):
     shifted_anchors = keras.backend.reshape(shifted_anchors, [k * number_of_anchors, 4])
 
     return shifted_anchors
+
+
+def rotation_transform_inv(poses, deltas, mean=None, std=None):
+    if mean is None:
+        mean = [0.0, 0.0, 0.0, 0.0]
+    if std is None:
+        std = [1.0, 1.0, 1.0, 1.0]
+
+    subTensors = []
+    for i in range(0, keras.backend.int_shape(deltas)[2]):
+        rx = deltas[:, :, i, 0] * std[0] + mean[0]
+        ry = deltas[:, :, i, 1] * std[1] + mean[1]
+        rz = deltas[:, :, i, 2] * std[2] + mean[2]
+        rw = deltas[:, :, i, 3] * std[3] + mean[3]
+
+        pred_pose = keras.backend.stack([rx, ry, rz, rw], axis=2)
+        #pred_pose = keras.backend.reshape(pred_pose, (-1, -1, 1, 4))
+        pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
+        subTensors.append(pred_pose)
+    pose_cls = keras.backend.concatenate(subTensors, axis=2)
+
+    return pose_cls
+
