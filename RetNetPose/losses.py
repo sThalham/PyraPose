@@ -119,7 +119,7 @@ def smooth_l1(sigma=3.0):
 
 def weighted_mse(weight=1.0):
 
-    def _mse(y_true, y_pred):
+    def _wMSE(y_true, y_pred):
 
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
@@ -138,4 +138,4 @@ def weighted_mse(weight=1.0):
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
         return keras.backend.sum(regression_loss) / normalizer
 
-    return _mse
+    return _wMSE

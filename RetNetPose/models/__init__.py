@@ -14,12 +14,13 @@ class Backbone(object):
             'UpsampleLike'     : layers.UpsampleLike,
             'PriorProbability' : initializers.PriorProbability,
             'RegressBoxes'     : layers.RegressBoxes,
+            'RegressPoses'     : layers.RegressRotation,
             'FilterDetections' : layers.FilterDetections,
             'Anchors'          : layers.Anchors,
             'ClipBoxes'        : layers.ClipBoxes,
             '_smooth_l1'       : losses.smooth_l1(),
             '_focal'           : losses.focal(),
-            '_mse'             : losses.weighted_mse(),
+            '_wMSE'             : losses.weighted_mse(),
         }
 
         self.backbone = backbone
@@ -107,7 +108,7 @@ def convert_model(model, nms=True, class_specific_filter=True, anchor_params=Non
 def assert_training_model(model):
     """ Assert that the model is a training model.
     """
-    assert(all(output in model.output_names for output in ['bbox', 'pose', 'cls'])), \
+    assert(all(output in model.output_names for output in ['bbox', 'rotation', 'cls'])), \
         "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
 
 
