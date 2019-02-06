@@ -117,7 +117,7 @@ def smooth_l1(sigma=3.0):
     return _smooth_l1
 
 
-def weighted_mse(weight=0.5):
+def weighted_mse(weight=0.1):
 
     def _wMSE(y_true, y_pred):
 
