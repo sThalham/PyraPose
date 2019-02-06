@@ -169,7 +169,7 @@ class Generator(keras.utils.Sequence):
                 #    group[index],
                 #    image.shape,
                 #    annotations['bboxes'][invalid_indices, :]
-                ))
+                #))
                 for k in annotations_group[index].keys():
                     annotations_group[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
 
