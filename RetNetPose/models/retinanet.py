@@ -21,6 +21,16 @@ from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
 
+class l2_norm(keras.layers.Layer):
+
+    def call(self, inputs, **kwargs):
+
+        return keras.backend.l2_normalize(inputs, axis=2)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+
 def default_classification_model(
     num_classes,
     num_anchors,
@@ -138,7 +148,7 @@ def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_
         outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_ori')(outputs)
     outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_depth_regression_reshape')(outputs)
 
-    #outputs_q = l2_norm(name='rotation_l2_norm')(outputs_q)
+    outputs = l2_norm(name='rotation_l2_norm')(outputs)
     return keras.models.Model(inputs=inputs, outputs=outputs, name='rotation_regression_submodel')
 
 
