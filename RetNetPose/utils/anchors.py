@@ -104,6 +104,8 @@ def anchor_targets_bbox(
 
             poses_batch[index, ignore_indices, :, -1] = -1
             poses_batch[index, positive_indices, :, -1] = -1
+            #poses_batch[index, ignore_indices, -1] = -1
+            #poses_batch[index, positive_indices, -1] = 1
 
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
@@ -111,7 +113,8 @@ def anchor_targets_bbox(
             regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
             poses_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            poses_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int) - 1, -1] = 1
+            poses_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+
 
         # ignore annotations outside of image
         if image.shape:
@@ -371,11 +374,13 @@ def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     targets_rw = (gt_poses[:, 6])
 
     targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
+    #targets = np.stack((targets_rx, targets_ry, targets_rz))
     #targets = np.reshape(targets, (4, 1, -1))
     #print(targets.shape)
     targets = targets.T
 
     targets = (targets - mean) / std
     allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
+    #allTargets = np.repeat(targets[:, :], num_classes, axis=1)
 
     return allTargets

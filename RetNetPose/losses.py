@@ -95,7 +95,9 @@ def smooth_l1(sigma=3.0):
 
         # filter out "ignore" anchors
         indices           = backend.where(keras.backend.equal(anchor_state, 1))
+        print('l1: ', indices.shape)
         regression        = backend.gather_nd(regression, indices)
+        print(regression.shape)
         regression_target = backend.gather_nd(regression_target, indices)
 
         # compute smooth L1 loss

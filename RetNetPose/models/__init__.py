@@ -10,6 +10,7 @@ class Backbone(object):
         from .. import layers
         from .. import losses
         from .. import initializers
+        from . import retinanet
         self.custom_objects = {
             'UpsampleLike'     : layers.UpsampleLike,
             'PriorProbability' : initializers.PriorProbability,
@@ -20,7 +21,8 @@ class Backbone(object):
             'ClipBoxes'        : layers.ClipBoxes,
             '_smooth_l1'       : losses.smooth_l1(),
             '_focal'           : losses.focal(),
-            '_wMSE'             : losses.weighted_mse(),
+            '_wMSE'            : losses.weighted_mse(),
+            'l2_norm' : retinanet.l2_norm(),
         }
 
         self.backbone = backbone
