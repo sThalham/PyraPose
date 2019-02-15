@@ -17,6 +17,7 @@ limitations under the License.
 import argparse
 import os
 import sys
+import math
 
 import keras
 import tensorflow as tf
@@ -150,7 +151,7 @@ def main(args=None):
         from ..utils.linemod_eval import evaluate_linemod
         evaluate_linemod(generator, model, args.score_threshold)
     else:
-        average_precisions = evaluate(
+        results = evaluate(
             generator,
             model,
             iou_threshold=args.iou_threshold,
@@ -160,20 +161,20 @@ def main(args=None):
         )
 
         # print evaluation
-        total_instances = []
-        precisions = []
-        for label, (average_precision, num_annotations) in average_precisions.items():
-            print('{:.0f} instances of class'.format(num_annotations),
-                  generator.label_to_name(label), 'with average precision: {:.4f}'.format(average_precision))
-            total_instances.append(num_annotations)
-            precisions.append(average_precision)
+        #total_instances = []
+        #precisions = []
+        #for label, (average_precision, num_annotations) in average_precisions.items():
+        #    print('{:.0f} instances of class'.format(num_annotations),
+        #          generator.label_to_name(label), 'with average precision: {:.4f}'.format(average_precision))
+        #    total_instances.append(num_annotations)
+        #    precisions.append(average_precision)
 
-        if sum(total_instances) == 0:
-            print('No test instances found.')
-            return
+        #if sum(total_instances) == 0:
+        #    print('No test instances found.')
+        #    return
 
-        print('mAP using the weighted average of precisions among classes: {:.4f}'.format(sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)))
-        print('mAP: {:.4f}'.format(sum(precisions) / sum(x > 0 for x in total_instances)))
+        #print('mAP using the weighted average of precisions among classes: {:.4f}'.format(sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)))
+        #print('mAP: {:.4f}'.format(sum(precisions) / sum(x > 0 for x in total_instances)))
 
 
 if __name__ == '__main__':

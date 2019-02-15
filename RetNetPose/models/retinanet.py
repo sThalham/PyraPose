@@ -147,6 +147,7 @@ def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_ori')(outputs)
     outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_depth_regression_reshape')(outputs)
+    outputs = l2_norm()(outputs)
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name='rotation_regression_submodel')
 

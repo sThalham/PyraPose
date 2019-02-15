@@ -19,6 +19,8 @@ limitations under the License.
 import keras
 import numpy as np
 import json
+import pyquaternion
+import math
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -67,6 +69,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
     tp = np.zeros((16), dtype=np.uint32)
     fp = np.zeros((16), dtype=np.uint32)
     fn = np.zeros((16), dtype=np.uint32)
+    poseD = []
     val_size = generator.size()
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
 
@@ -94,8 +97,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
         else:
             t_cat = int(anno['labels']) + 1
         t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-        t_pose = anno['poses']
+        t_pose = anno['poses'][0][3:]
         fn[t_cat] += 1
+        fnit = True
         # compute predicted labels and scores
         for box, quat, score, label in zip(boxes[0], quats[0], scores[0], labels[0]):
             # scores are sorted, so we can break
@@ -105,6 +109,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             if label < 0:
                 continue
             cls = generator.label_to_inv_label(label)
+            rot = quat[(cls-1), :]
 
             # append detection for each positively labeled class
             image_result = {
@@ -112,7 +117,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 'category_id' : generator.label_to_inv_label(label),
                 'score'       : float(score),
                 'bbox'        : box.tolist(),
-                'pose'        : quat[(cls-1), :].tolist()
+                'pose'        : rot.tolist()
             }
 
             # append detection to results
@@ -124,8 +129,16 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 IoU = boxoverlap(b1, b2)
                 # occurences of 2 or more instances not possible in LINEMOD
                 if IoU > 0.5:
-                    tp[t_cat] += 1
-                    fn[t_cat] -= 1
+                    if fnit is True:
+                        tp[t_cat] += 1
+                        fn[t_cat] -= 1
+                        fnit = False
+                        q1 = pyquaternion.Quaternion(t_pose).unit
+                        q2 = pyquaternion.Quaternion(rot).unit
+                        #q1 = pyquaternion.Quaternion(t_pose)
+                        #q2 = pyquaternion.Quaternion(rot)
+                        rd = pyquaternion.Quaternion.distance(q1, q2)
+                        poseD.append(rd)
                 else:
                     fp[t_cat] += 1
 
@@ -140,8 +153,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
     # write output
     json.dump(results, open('{}_bbox_results.json'.format(generator.set_name), 'w'), indent=4)
     #json.dump(image_ids, open('{}_processed_image_ids.json'.format(generator.set_name), 'w'), indent=4)
-
-    print(fn)
 
     detPre = [0] * 16
     detRec = [0] * 16
@@ -162,16 +173,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         print('recall category ', ind, ': ', detRec[ind])
 
     print('mP: ', sum(tp) / (sum(tp) + sum(fp)))
-    print('mR: ', sum(tp) / val_size)
-    print(sum(tp), sum(fp), sum(fn))
+    print('mR: ', sum(tp) / (sum(tp) + sum(fn)))
+    print('mPoseD: ', (sum(poseD) / len(poseD)) * 180.0/math.pi)
 
-    #coco_true = generator.coco
-    #coco_pred = coco_true.loadRes('{}_bbox_results.json'.format(generator.set_name))
-
-    # run COCO evaluation
-    #coco_eval = COCOeval(coco_true, coco_pred, 'bbox')
-    #coco_eval.params.imgIds = image_ids
-    #coco_eval.evaluate()
-    #coco_eval.accumulate()
-    #coco_eval.summarize()
-    return coco_eval.stats
+    return detRec, detPre, poseD
