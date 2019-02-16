@@ -169,11 +169,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             detRec[ind] = tp[ind] / (tp[ind] + fn[ind])
             detPre[ind] = tp[ind] / (tp[ind] + fp[ind])
 
-        print('precision category ', ind, ': ', detPre[ind])
-        print('recall category ', ind, ': ', detRec[ind])
+        #print('precision category ', ind, ': ', detPre[ind])
+        #print('recall category ', ind, ': ', detRec[ind])
 
-    print('mP: ', sum(tp) / (sum(tp) + sum(fp)))
-    print('mR: ', sum(tp) / (sum(tp) + sum(fn)))
-    print('mPoseD: ', (sum(poseD) / len(poseD)) * 180.0/math.pi)
+    dataset_recall = sum(tp) / (sum(tp) + sum(fp))
+    dataset_precision = sum(tp) / (sum(tp) + sum(fn))
+    dataset_pose_diff = (sum(poseD) / len(poseD)) * 180.0/math.pi
 
-    return detRec, detPre, poseD
+    return dataset_recall, dataset_precision, dataset_pose_diff

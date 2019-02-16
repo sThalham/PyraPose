@@ -163,32 +163,40 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         callbacks.append(tensorboard_callback)
 
     if args.evaluation and validation_generator:
+        best_rec = 0.0
+        best_pre = 0.0
+        best_pose = 180.0
         if args.dataset_type == 'coco':
             from ..callbacks.coco import CocoEval
 
             # use prediction model for evaluation
             evaluation = CocoEval(validation_generator, tensorboard=tensorboard_callback)
+        elif args.dataset_type == 'linemod':
+            from ..callbacks.linemod import LinemodEval
+            evaluation = LinemodEval(validation_generator, tensorboard=tensorboard_callback)
+
+
         else:
             evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
         evaluation = RedirectModel(evaluation, prediction_model)
         callbacks.append(evaluation)
 
-    # save the model
-    if args.snapshots:
-        # ensure directory created first; otherwise h5py will error after epoch.
-        makedirs(args.snapshot_path)
-        checkpoint = keras.callbacks.ModelCheckpoint(
-            os.path.join(
-                args.snapshot_path,
-                '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
-            ),
-            verbose=1,
-            # save_best_only=True,
-            # monitor="mAP",
-            # mode='max'
-        )
-        checkpoint = RedirectModel(checkpoint, model)
-        callbacks.append(checkpoint)
+        # save the model
+        if args.snapshots:
+            # ensure directory created first; otherwise h5py will error after epoch.
+            makedirs(args.snapshot_path)
+            checkpoint = keras.callbacks.ModelCheckpoint(
+                os.path.join(
+                    args.snapshot_path,
+                    '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
+                ),
+                verbose=1,
+                # save_best_only=True,
+                # monitor="mAP",
+                # mode='max'
+            )
+            checkpoint = RedirectModel(checkpoint, model)
+            callbacks.append(checkpoint)
 
     callbacks.append(keras.callbacks.ReduceLROnPlateau(
         monitor    = 'loss',
@@ -306,7 +314,7 @@ def parse_args(args):
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
-    parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
+    parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_false')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--random-transform', help='Randomly transform image and annotations.', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
