@@ -85,6 +85,46 @@ def shift(shape, stride, anchors):
     return shifted_anchors
 
 
+def translation_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
+    if mean is None:
+        mean = [0.0, 0.0]
+    if std is None:
+        std = [0.4, 0.4]
+
+    subTensors = []
+    for i in range(0, keras.backend.int_shape(deltas_pose)[2]):
+        width  = deltas[:, :, 2] - deltas[:, :, 0]
+        height = deltas[:, :, 3] - deltas[:, :, 1]
+
+        x = boxes[:, :, 0] + ((deltas_pose[:, :, i, 0] * std[0] + mean[0]) * width - (deltas[:, :, 0] * std[0] + mean[0]) * width)
+        y = boxes[:, :, 1] + ((deltas_pose[:, :, i, 1] * std[1] + mean[1]) * width - (deltas[:, :, 1] * std[1] + mean[1]) * height)
+
+        pred_pose = keras.backend.stack([x, y], axis=2)
+        pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
+        subTensors.append(pred_pose)
+    xy_cls = keras.backend.concatenate(subTensors, axis=2)
+
+    return xy_cls
+
+
+def depth_transform_inv(boxes, deltas, mean=None, std=None):
+    if mean is None:
+        mean = [1.0]
+    if std is None:
+        std = [0.5]
+
+    subTensors = []
+    for i in range(0, keras.backend.int_shape(deltas)[2]):
+        z = deltas[:, :, i, 0] * std[0] + mean[0]
+
+        pred_pose = keras.backend.stack([z], axis=2)
+        pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
+        subTensors.append(pred_pose)
+    dep_cls = keras.backend.concatenate(subTensors, axis=2)
+
+    return dep_cls
+
+
 def rotation_transform_inv(poses, deltas, mean=None, std=None):
     if mean is None:
         mean = [0.0, 0.0, 0.0, 0.0]
@@ -99,7 +139,6 @@ def rotation_transform_inv(poses, deltas, mean=None, std=None):
         rw = deltas[:, :, i, 3] * std[3] + mean[3]
 
         pred_pose = keras.backend.stack([rx, ry, rz, rw], axis=2)
-        #pred_pose = keras.backend.reshape(pred_pose, (-1, -1, 1, 4))
         pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
         subTensors.append(pred_pose)
     pose_cls = keras.backend.concatenate(subTensors, axis=2)

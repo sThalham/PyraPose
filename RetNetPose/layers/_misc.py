@@ -186,6 +186,84 @@ class ClipBoxes(keras.layers.Layer):
         return input_shape[1]
 
 
+class RegressTranslation(keras.layers.Layer):
+
+    def __init__(self, mean=None, std=None, *args, **kwargs):
+        if mean is None:
+            mean = [0.0, 0.0]
+        if std is None:
+            std = [0.4, 0.4]
+
+        if isinstance(mean, (list, tuple)):
+            mean = np.array(mean)
+        elif not isinstance(mean, np.ndarray):
+            raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+        if isinstance(std, (list, tuple)):
+            std = np.array(std)
+        elif not isinstance(std, np.ndarray):
+            raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+        self.mean = mean
+        self.std  = std
+        super(RegressTranslation, self).__init__(*args, **kwargs)
+
+    def call(self, inputs, **kwargs):
+        poses, regression, regression_pose = inputs
+        return backend.translation_transform_inv(poses, regression, regression_pose, mean=self.mean, std=self.std)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
+
+    def get_config(self):
+        config = super(RegressTranslation, self).get_config()
+        config.update({
+            'mean': self.mean.tolist(),
+            'std': self.std.tolist(),
+        })
+
+        return config
+
+
+class RegressDepth(keras.layers.Layer):
+
+    def __init__(self, mean=None, std=None, *args, **kwargs):
+        if mean is None:
+            mean = [1.0]
+        if std is None:
+            std = [0.5]
+
+        if isinstance(mean, (list, tuple)):
+            mean = np.array(mean)
+        elif not isinstance(mean, np.ndarray):
+            raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+        if isinstance(std, (list, tuple)):
+            std = np.array(std)
+        elif not isinstance(std, np.ndarray):
+            raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+        self.mean = mean
+        self.std  = std
+        super(RegressDepth, self).__init__(*args, **kwargs)
+
+    def call(self, inputs, **kwargs):
+        poses, regression = inputs
+        return backend.depth_transform_inv(poses, regression, mean=self.mean, std=self.std)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
+
+    def get_config(self):
+        config = super(RegressDepth, self).get_config()
+        config.update({
+            'mean': self.mean.tolist(),
+            'std': self.std.tolist(),
+        })
+
+        return config
+
+
 class RegressRotation(keras.layers.Layer):
 
     def __init__(self, mean=None, std=None, *args, **kwargs):
