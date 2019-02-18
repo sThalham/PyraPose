@@ -388,8 +388,8 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     box_widths  = gt_boxes[:, 2] - gt_boxes[:, 0]
     box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
 
-    targets_dx = ((gt_boxes[:, 0] - anchors[:, 0] + gt_poses[:, 0]) - (gt_boxes[:, 0] - anchors[:, 0])) / box_widths
-    targets_dy = ((gt_boxes[:, 1] - anchors[:, 1] + gt_poses[:, 1]) - (gt_boxes[:, 1] - anchors[:, 1])) / box_heights
+    targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
+    targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
 
     targets = np.stack((targets_dx, targets_dy))
     targets = targets.T

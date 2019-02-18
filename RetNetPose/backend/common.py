@@ -93,11 +93,11 @@ def translation_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
 
     subTensors = []
     for i in range(0, keras.backend.int_shape(deltas_pose)[2]):
-        width  = deltas[:, :, 2] - deltas[:, :, 0]
-        height = deltas[:, :, 3] - deltas[:, :, 1]
+        width  = boxes[:, :, 2] - boxes[:, :, 0]
+        height = boxes[:, :, 3] - boxes[:, :, 1]
 
-        x = boxes[:, :, 0] + ((deltas_pose[:, :, i, 0] * std[0] + mean[0]) * width - (deltas[:, :, 0] * std[0] + mean[0]) * width)
-        y = boxes[:, :, 1] + ((deltas_pose[:, :, i, 1] * std[1] + mean[1]) * width - (deltas[:, :, 1] * std[1] + mean[1]) * height)
+        x = boxes[:, :, 0] + (deltas_pose[:, :, i, 0] * std[0] + mean[0]) * width
+        y = boxes[:, :, 1] + (deltas_pose[:, :, i, 1] * std[1] + mean[1]) * height
 
         pred_pose = keras.backend.stack([x, y], axis=2)
         pred_pose = keras.backend.expand_dims(pred_pose, axis=2)

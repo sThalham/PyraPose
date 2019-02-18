@@ -141,7 +141,7 @@ def weighted_mse(weight=1.0):
     return _wMSE
 
 
-def smooth_l1_exp(sigma=3.0):
+def smooth_l1_exp(sigma=3.0, weight=0.25):
     sigma_squared = sigma ** 2
 
     def _smooth_l1_exp(y_true, y_pred):
@@ -160,7 +160,7 @@ def smooth_l1_exp(sigma=3.0):
         #        |x| - 0.5 / sigma / sigma    otherwise
         regression_diff = regression - regression_target
         regression_diff = keras.backend.abs(regression_diff)
-        regression_loss = backend.where(
+        regression_loss = weight * backend.where(
             keras.backend.less(regression_diff, 1.0 / sigma_squared),
             0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
             regression_diff - 0.5 / sigma_squared
