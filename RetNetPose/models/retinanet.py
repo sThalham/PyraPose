@@ -144,7 +144,7 @@ def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_
     outputs = inputs
     outputs = keras.layers.Dense(num_anchors * num_classes * num_values, activation='relu', name='pyramid_rotation_regression_sharedF')(outputs)
     # TRANSLATION
-    outputsT = keras.layers.Dense(num_anchors * num_classes * 1, name='pyramid_xy_regression_orientationF')(outputs)
+    outputsT = keras.layers.Dense(num_anchors * num_classes * 2, name='pyramid_xy_regression_orientationF')(outputs)
     if keras.backend.image_data_format() == 'channels_first':
         outputsT = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_xy')(outputsT)
     outputsT = keras.layers.Reshape((-1, num_classes, 2), name='pyramid_xy_regression_reshape')(outputsT)
