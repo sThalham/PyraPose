@@ -408,7 +408,7 @@ def depth_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     if mean is None:
         mean = np.array([1.0])
     if std is None:
-        std = np.array([0.5])
+        std = np.array([2.0])
 
     if isinstance(mean, (list, tuple)):
         mean = np.array(mean)

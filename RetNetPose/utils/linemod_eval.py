@@ -97,11 +97,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
         else:
             t_cat = int(anno['labels']) + 1
         t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-        t_pose = anno['poses'][0][3:]
+        t_tra = anno['poses'][0][:2]
+        t_dep = anno['poses'][0][2]
+        t_rot = anno['poses'][0][3:]
         fn[t_cat] += 1
         fnit = True
         # compute predicted labels and scores
-        for box, quat, score, label in zip(boxes[0], quats[0], scores[0], labels[0]):
+        for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
             # scores are sorted, so we can break
             if score < threshold:
                 continue
@@ -109,7 +111,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             if label < 0:
                 continue
             cls = generator.label_to_inv_label(label)
+            tra = trans[(cls-1), :]
+            dep = deps[(cls-1), :]
             rot = quat[(cls-1), :]
+            pose = tra.tolist() + dep.tolist() + rot.tolist()
 
             # append detection for each positively labeled class
             image_result = {
@@ -117,7 +122,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 'category_id' : generator.label_to_inv_label(label),
                 'score'       : float(score),
                 'bbox'        : box.tolist(),
-                'pose'        : rot.tolist()
+                'pose'        : pose
             }
 
             # append detection to results
@@ -133,12 +138,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         tp[t_cat] += 1
                         fn[t_cat] -= 1
                         fnit = False
-                        q1 = pyquaternion.Quaternion(t_pose).unit
+                        q1 = pyquaternion.Quaternion(t_rot).unit
                         q2 = pyquaternion.Quaternion(rot).unit
                         #q1 = pyquaternion.Quaternion(t_pose)
                         #q2 = pyquaternion.Quaternion(rot)
+                        print('translation target: ', t_tra, '       estimation: ', tra)
+                        print('depth target: ', t_dep, '             estimation: ', dep)
                         rd = pyquaternion.Quaternion.distance(q1, q2)
-                        poseD.append(rd)
+                        if not math.isnan(rd):
+                            poseD.append(rd)
                 else:
                     fp[t_cat] += 1
 

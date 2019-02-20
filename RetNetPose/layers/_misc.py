@@ -231,7 +231,7 @@ class RegressDepth(keras.layers.Layer):
         if mean is None:
             mean = [1.0]
         if std is None:
-            std = [0.5]
+            std = [2.0]
 
         if isinstance(mean, (list, tuple)):
             mean = np.array(mean)

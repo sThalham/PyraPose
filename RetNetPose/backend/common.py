@@ -111,7 +111,7 @@ def depth_transform_inv(boxes, deltas, mean=None, std=None):
     if mean is None:
         mean = [1.0]
     if std is None:
-        std = [0.5]
+        std = [2.0]
 
     subTensors = []
     for i in range(0, keras.backend.int_shape(deltas)[2]):
