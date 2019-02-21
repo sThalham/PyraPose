@@ -121,11 +121,12 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # compile model
     training_model.compile(
         loss={
-            'bbox'     : losses.smooth_l1(),
-            'xy'    : losses.smooth_l1_exp(),
-            'depth'         : losses.smooth_l1_exp(),
+            'bbox'         : losses.smooth_l1(),
+            'xy'           : losses.smooth_l1_exp(),
+            #'depth'         : losses.smooth_l1_exp(),
+            'depth'        : losses.cross(),
             'rotation'     : losses.weighted_mse(),
-            'cls'      : losses.focal()
+            'cls'          : losses.focal()
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
     )

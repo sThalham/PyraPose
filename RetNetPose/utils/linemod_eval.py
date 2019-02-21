@@ -21,9 +21,16 @@ import numpy as np
 import json
 import pyquaternion
 import math
+import scipy
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
+
+# LineMOD
+fxkin = 572.41140
+fykin = 573.57043
+cxkin = 325.26110
+cykin = 242.04899
 
 
 def boxoverlap(a, b):
@@ -69,7 +76,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
     tp = np.zeros((16), dtype=np.uint32)
     fp = np.zeros((16), dtype=np.uint32)
     fn = np.zeros((16), dtype=np.uint32)
-    poseD = []
+    xyD = []
+    zD = []
+    rotD = []
     val_size = generator.size()
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
 
@@ -142,11 +151,27 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         q2 = pyquaternion.Quaternion(rot).unit
                         #q1 = pyquaternion.Quaternion(t_pose)
                         #q2 = pyquaternion.Quaternion(rot)
-                        print('translation target: ', t_tra, '       estimation: ', tra)
-                        print('depth target: ', t_dep, '             estimation: ', dep)
+                        #print('translation target: ', t_tra, '       estimation: ', tra)
+                        #print('depth target: ', t_dep, '             estimation: ', dep)
+
+                        x = ((tra[0] - cxkin) * t_dep) / fxkin * 0.001
+                        x_t = ((t_tra[0] - cxkin) * t_dep) / fxkin * 0.001
+                        y = ((tra[1] - cykin) * t_dep) / fykin * 0.001
+                        y_t = ((t_tra[1] - cykin) * t_dep) / fykin * 0.001
+                        xd = np.abs(np.abs(x) - np.abs(x_t))
+                        yd = np.abs(np.abs(y) - np.abs(y_t))
+                        xyd = np.linalg.norm(np.asarray([xd, yd], dtype=np.float32))
+                        if not math.isnan(xyd):
+                            xyD.append(xyd)
+                            print('xy: ', xyd)
+                        zd = np.abs(np.abs(dep) - np.abs(t_dep*0.001))
+                        if not math.isnan(zd):
+                            zD.append(zd)
+                            print('z: ', zd)
                         rd = pyquaternion.Quaternion.distance(q1, q2)
                         if not math.isnan(rd):
-                            poseD.append(rd)
+                            rotD.append(rd)
+                            print('rot: ', rd)
                 else:
                     fp[t_cat] += 1
 
@@ -182,6 +207,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     dataset_recall = sum(tp) / (sum(tp) + sum(fp))
     dataset_precision = sum(tp) / (sum(tp) + sum(fn))
-    dataset_pose_diff = (sum(poseD) / len(poseD)) * 180.0/math.pi
+    dataset_xy_diff = (sum(xyD) / len(xyD))
+    dataset_depth_diff = (sum(zD) / len(zD))
+    dataset_rot_diff = (sum(rotD) / len(rotD)) * 180.0 / math.pi
 
-    return dataset_recall, dataset_precision, dataset_pose_diff
+    return dataset_recall, dataset_precision, dataset_xy_diff, dataset_depth_diff, dataset_rot_diff

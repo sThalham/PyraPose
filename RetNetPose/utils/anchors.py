@@ -89,7 +89,8 @@ def anchor_targets_bbox(
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
-    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx())
+    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
+    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 60 + 1), dtype=keras.backend.floatx()) # depths classification
     rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
@@ -388,8 +389,10 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     box_widths  = gt_boxes[:, 2] - gt_boxes[:, 0]
     box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
 
-    targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
-    targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
+    #targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
+    #targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
+    targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
+    targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
 
     targets = np.stack((targets_dx, targets_dy))
     targets = targets.T
@@ -420,14 +423,22 @@ def depth_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    targets_dz = gt_poses[:, 2]
+    # regression
+    #targets_dz = gt_poses[:, 2]
+    #targets = np.stack((targets_dz))
+    #targets = targets.T
+    #targets = (targets - mean) / std
+    #allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
+    #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
-    targets = np.stack((targets_dz))
-    targets = targets.T
+    # classification
+    indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.035   # bin every 2 cm
+    indices = np.round(indices).astype(dtype=np.int32)
 
-    targets = (targets - mean) / std
-    allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
-    allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
+    allTargets = np.zeros((indices.shape[0], 60))
+    allTargets[np.arange(allTargets.shape[0]), indices] = 1
+
+    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
 

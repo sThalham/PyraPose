@@ -67,6 +67,33 @@ def focal(alpha=0.25, gamma=2.0):
     return _focal
 
 
+def cross(weight=0.5):
+
+    def _cross(y_true, y_pred):
+        labels         = y_true[:, :, :, :-1]
+        anchor_state   = y_true[:, :, :, -1]  # -1 for ignore, 0 for background, 1 for object
+        classification = y_pred
+
+        # filter out "ignore" anchors
+        indices        = backend.where(keras.backend.not_equal(anchor_state, -1))
+        labels         = backend.gather_nd(labels, indices)
+        classification = backend.gather_nd(classification, indices)
+
+        #cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
+        cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
+
+        # compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])  # usually for regression
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        #normalizer = backend.where(keras.backend.equal(anchor_state, 1))       # usually for classification
+        #normalizer = keras.backend.cast(keras.backend.shape(normalizer)[0], keras.backend.floatx())
+        #normalizer = keras.backend.maximum(keras.backend.cast_to_floatx(1.0), normalizer)
+
+        return keras.backend.sum(cls_loss) / normalizer
+
+    return _cross
+
+
 def smooth_l1(sigma=3.0):
     """ Create a smooth L1 loss functor.
 
