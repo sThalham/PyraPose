@@ -89,8 +89,8 @@ def anchor_targets_bbox(
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
-    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
-    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 60 + 1), dtype=keras.backend.floatx()) # depths classification
+    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
+    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 60 + 1), dtype=keras.backend.floatx()) # depths classification
     rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
@@ -122,7 +122,7 @@ def anchor_targets_bbox(
             xy_batch[index, :, :, :-1] = xy_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
             xy_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            dep_batch[index, :, :, :-1] = depth_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            dep_batch[index, :, :, :-1] = depth_transform(annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
             dep_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
@@ -362,6 +362,7 @@ def bbox_transform(anchors, gt_boxes, mean=None, std=None):
     targets = targets.T
 
     targets = (targets - mean) / std
+    #print('bbox: ', targets[0, :])
 
     return targets
 
@@ -403,15 +404,15 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     return allTargets
 
 
-def depth_transform(anchors, gt_poses, num_classes, mean=None, std=None):
+def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     """Compute 2D-offset regression targets for an image.
     prepare data for L0-loss (Sock et al. BMVC2018)
     loss can be calculated using simple L1-distance"""
 
     if mean is None:
-        mean = np.array([1.0])
+        mean = np.array([0.0])
     if std is None:
-        std = np.array([2.0])
+        std = np.array([0.4])
 
     if isinstance(mean, (list, tuple)):
         mean = np.array(mean)
@@ -423,6 +424,18 @@ def depth_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
+    box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
+    box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
+    box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
+
+    targets_dz = gt_poses[:, 2] * 100.0 / box_diag
+    targets = np.stack((targets_dz))
+    targets = targets.T
+    targets = (targets - mean) / std
+    #print('depths: ', targets[0])
+    allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
+    allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
+
     # regression
     #targets_dz = gt_poses[:, 2]
     #targets = np.stack((targets_dz))
@@ -432,13 +445,11 @@ def depth_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
     # classification
-    indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.035   # bin every 2 cm
-    indices = np.round(indices).astype(dtype=np.int32)
-
-    allTargets = np.zeros((indices.shape[0], 60))
-    allTargets[np.arange(allTargets.shape[0]), indices] = 1
-
-    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
+    #indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.035   # bin every 2 cm
+    #indices = np.round(indices).astype(dtype=np.int32)
+    #allTargets = np.zeros((indices.shape[0], 60))
+    #allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    #allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
 

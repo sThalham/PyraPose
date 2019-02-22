@@ -16,6 +16,7 @@ limitations under the License.
 
 import keras.backend
 from .dynamic import meshgrid
+import tensorflow as tf
 
 
 def bbox_transform_inv(boxes, deltas, mean=None, std=None):
@@ -91,36 +92,70 @@ def translation_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
     if std is None:
         std = [0.4, 0.4]
 
-    subTensors = []
-    for i in range(0, keras.backend.int_shape(deltas_pose)[2]):
-        width  = deltas[:, :, 2] - deltas[:, :, 0]
-        height = deltas[:, :, 3] - deltas[:, :, 1]
+    #subTensors = []
+    #for i in range(0, keras.backend.int_shape(deltas_pose)[2]):
+    #    width  = deltas[:, :, 2] - deltas[:, :, 0]
+    #    height = deltas[:, :, 3] - deltas[:, :, 1]
 
-        x = deltas[:, :, 0] + (deltas_pose[:, :, i, 0] * std[0] + mean[0]) * width
-        y = deltas[:, :, 1] + (deltas_pose[:, :, i, 1] * std[1] + mean[1]) * height
+    #    x = deltas[:, :, 0] + (deltas_pose[:, :, i, 0] * std[0] + mean[0]) * width
+    #    y = deltas[:, :, 1] + (deltas_pose[:, :, i, 1] * std[1] + mean[1]) * height
 
-        pred_pose = keras.backend.stack([x, y], axis=2)
-        pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
-        subTensors.append(pred_pose)
-    xy_cls = keras.backend.concatenate(subTensors, axis=2)
+    #    pred_pose = keras.backend.stack([x, y], axis=2)
+    #    pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
+    #    subTensors.append(pred_pose)
+    #xy_cls = keras.backend.concatenate(subTensors, axis=2)
 
-    return xy_cls
+    num_classes = keras.backend.int_shape(deltas_pose)[2]
+
+    #allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
+    deltas_exp = keras.backend.expand_dims(deltas, axis=2)
+    deltas_exp = keras.backend.repeat_elements(deltas_exp, num_classes, axis=2)
+
+    width = deltas_exp[:, :, :, 2] - deltas_exp[:, :, :, 0]
+    height = deltas_exp[:, :, :, 3] - deltas_exp[:, :, :, 1]
+
+    x = deltas_exp[:, :, :, 0] + (deltas_pose[:, :, :, 0] * std[0] + mean[0]) * width
+    y = deltas_exp[:, :, :, 1] + (deltas_pose[:, :, :, 1] * std[1] + mean[1]) * height
+
+    pred_pose = keras.backend.stack([x, y], axis=3)
+
+    return pred_pose
 
 
-def depth_transform_inv(boxes, deltas, mean=None, std=None):
+def depth_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
     if mean is None:
-        mean = [1.0]
+        mean = [0.0, 0.0]
     if std is None:
-        std = [2.0]
+        std = [0.4, 0.4]
 
-    subTensors = []
-    for i in range(0, keras.backend.int_shape(deltas)[2]):
-        z = deltas[:, :, i, 0] * std[0] + mean[0]
+    #subTensors = []
+    #for i in range(0, keras.backend.int_shape(deltas)[2]):
+    #    z = deltas[:, :, i, 0] * std[0] + mean[0]
+    #    pred_pose = keras.backend.stack([z], axis=2)
+    #    pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
+    #    subTensors.append(pred_pose)
+    #dep_cls = keras.backend.concatenate(subTensors, axis=2)
 
-        pred_pose = keras.backend.stack([z], axis=2)
-        pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
-        subTensors.append(pred_pose)
-    dep_cls = keras.backend.concatenate(subTensors, axis=2)
+    #z = deltas[:, :, :, 0] * std[0] + mean[0]
+
+    widths = deltas[:, :, 2] - deltas[:, :, 0]
+    heights = deltas[:, :, 3] - deltas[:, :, 1]
+    box_diag = keras.backend.sqrt((keras.backend.square(widths) + keras.backend.square(heights)))
+
+    #n_anchors = keras.backend.int_shape(box_diag)
+    #print(n_anchors)
+    #scaling = keras.backend.expand_dims(box_diag, axis=0)
+    #scaling = keras.backend.repeat_elements(scaling, n_anchors, axis=0)
+    #print(scaling)
+
+    #targets_dz = gt_poses[:, 2] * 100.0 / box_diag
+    num_classes = keras.backend.int_shape(deltas_pose)[2]
+    deltas_exp = keras.backend.expand_dims(box_diag, axis=2)
+    deltas_exp = keras.backend.repeat_elements(deltas_exp, num_classes, axis=2)
+    deltas_exp = keras.backend.expand_dims(deltas_exp, axis=3)
+    meters = (deltas_pose[:, :, :, 0] * deltas_exp[:, :, :, 0]) * 0.01 * std[0] + mean[0]
+
+    dep_cls = keras.backend.stack([meters], axis=3)
 
     return dep_cls
 

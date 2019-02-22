@@ -21,7 +21,6 @@ import numpy as np
 import json
 import pyquaternion
 import math
-import scipy
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -78,8 +77,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
     fn = np.zeros((16), dtype=np.uint32)
     xyD = []
     zD = []
+    less5cm = []
     rotD = []
-    val_size = generator.size()
+    less5deg = []
+    #val_size = generator.size()
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
 
         image = generator.load_image(index)
@@ -163,15 +164,16 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         xyd = np.linalg.norm(np.asarray([xd, yd], dtype=np.float32))
                         if not math.isnan(xyd):
                             xyD.append(xyd)
-                            print('xy: ', xyd)
+                            if xyd < 0.05:
+                                less5cm.append(xyd)
                         zd = np.abs(np.abs(dep) - np.abs(t_dep*0.001))
                         if not math.isnan(zd):
                             zD.append(zd)
-                            print('z: ', zd)
                         rd = pyquaternion.Quaternion.distance(q1, q2)
                         if not math.isnan(rd):
                             rotD.append(rd)
-                            print('rot: ', rd)
+                            if (rd * 180/math.pi) < 5.0:
+                                less5deg.append(rd)
                 else:
                     fp[t_cat] += 1
 
@@ -210,5 +212,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
     dataset_xy_diff = (sum(xyD) / len(xyD))
     dataset_depth_diff = (sum(zD) / len(zD))
     dataset_rot_diff = (sum(rotD) / len(rotD)) * 180.0 / math.pi
+    less5cm = len(less5cm)/len(xyD)
+    less5deg = len(less5deg) / len(rotD)
 
-    return dataset_recall, dataset_precision, dataset_xy_diff, dataset_depth_diff, dataset_rot_diff
+    return dataset_recall, dataset_precision, dataset_xy_diff, dataset_depth_diff, dataset_rot_diff, less5cm, less5deg

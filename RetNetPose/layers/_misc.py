@@ -229,9 +229,9 @@ class RegressDepth(keras.layers.Layer):
 
     def __init__(self, mean=None, std=None, *args, **kwargs):
         if mean is None:
-            mean = [1.0]
+            mean = np.array([0.0])
         if std is None:
-            std = [2.0]
+            std = np.array([0.4])
 
         if isinstance(mean, (list, tuple)):
             mean = np.array(mean)
@@ -248,8 +248,8 @@ class RegressDepth(keras.layers.Layer):
         super(RegressDepth, self).__init__(*args, **kwargs)
 
     def call(self, inputs, **kwargs):
-        poses, regression = inputs
-        return backend.depth_transform_inv(poses, regression, mean=self.mean, std=self.std)
+        poses, regression, regression_pose = inputs
+        return backend.depth_transform_inv(poses, regression, regression_pose, mean=self.mean, std=self.std)
 
     def compute_output_shape(self, input_shape):
         return input_shape[0]
