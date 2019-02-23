@@ -179,9 +179,17 @@ class LinemodGenerator(Generator):
                 a['bbox'][0] + a['bbox'][2],
                 a['bbox'][1] + a['bbox'][3],
             ]]], axis=0)
+            if a['pose'][0] < 1:
+                x = 0.0
+            else:
+                x = a['pose'][0]
+            if a['pose'][1] < 1:
+                y = 0.0
+            else:
+                y = a['pose'][1]
             annotations['poses'] = np.concatenate([annotations['poses'], [[
-                a['pose'][0],
-                a['pose'][1],
+                x,
+                y,
                 a['pose'][2],
                 a['pose'][3],
                 a['pose'][4],

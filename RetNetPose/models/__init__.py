@@ -23,7 +23,8 @@ class Backbone(object):
             '_focal'           : losses.focal(),
             '_cross'           : losses.cross(),
             '_wMSE'            : losses.weighted_mse(),
-            '_smooth_l1_exp'   : losses.smooth_l1_exp(),
+            '_smooth_l1_xy'   : losses.smooth_l1_xy(),
+            '_smooth_l1_z': losses.smooth_l1_z(),
             'l2_norm'          : retinanet.l2_norm(),
         }
 

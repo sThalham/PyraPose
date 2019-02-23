@@ -16,7 +16,6 @@ limitations under the License.
 
 import keras.backend
 from .dynamic import meshgrid
-import tensorflow as tf
 
 
 def bbox_transform_inv(boxes, deltas, mean=None, std=None):

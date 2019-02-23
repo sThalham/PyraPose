@@ -122,9 +122,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
             cls = generator.label_to_inv_label(label)
             tra = trans[(cls-1), :]
-            dep = deps[(cls-1), :]
+            dep = np.argmax(deps[(cls-1), :]) * 0.035
             rot = quat[(cls-1), :]
-            pose = tra.tolist() + dep.tolist() + rot.tolist()
+            pose = tra.tolist() + [dep] + rot.tolist()
 
             # append detection for each positively labeled class
             image_result = {

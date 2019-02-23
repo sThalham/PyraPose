@@ -16,6 +16,7 @@ limitations under the License.
 
 import numpy as np
 import keras
+import math
 
 from ..utils.compute_overlap import compute_overlap
 
@@ -362,6 +363,7 @@ def bbox_transform(anchors, gt_boxes, mean=None, std=None):
     targets = targets.T
 
     targets = (targets - mean) / std
+    #print('bbox: ', targets[0, :].shape)
     #print('bbox: ', targets[0, :])
 
     return targets
@@ -387,7 +389,9 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    box_widths  = gt_boxes[:, 2] - gt_boxes[:, 0]
+    #box_widths  = anchors[:, 2] - anchors[:, 0]
+    #box_heights = anchors[:, 3] - anchors[:, 1]
+    box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
     box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
 
     #targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
@@ -399,6 +403,7 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     targets = targets.T
 
     targets = (targets - mean) / std
+    #print(targets[0,:])
     allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
@@ -477,6 +482,7 @@ def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
 
     targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
     targets = targets.T
+    #print(targets[0, :])
 
     targets = (targets - mean) / std
     allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
