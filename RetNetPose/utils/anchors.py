@@ -389,15 +389,15 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    #box_widths  = anchors[:, 2] - anchors[:, 0]
-    #box_heights = anchors[:, 3] - anchors[:, 1]
-    box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
-    box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
+    box_widths  = anchors[:, 2] - anchors[:, 0]
+    box_heights = anchors[:, 3] - anchors[:, 1]
+    #box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
+    #box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
 
-    #targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
-    #targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
-    targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
-    targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
+    targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
+    targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
+    #targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
+    #targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
 
     targets = np.stack((targets_dx, targets_dy))
     targets = targets.T
@@ -429,11 +429,12 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
-    box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
-    box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
+    #box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
+    #box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
+    #box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
 
-    targets_dz = gt_poses[:, 2] * 100.0 / box_diag
+    #targets_dz = gt_poses[:, 2] * 100.0 / box_diag
+    targets_dz = gt_poses[:, 2]
     targets = np.stack((targets_dz))
     targets = targets.T
     targets = (targets - mean) / std
