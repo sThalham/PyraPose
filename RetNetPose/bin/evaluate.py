@@ -141,7 +141,7 @@ def main(args=None):
         model = models.convert_model(model, anchor_params=anchor_params)
 
     # print model summary
-    # print(model.summary())
+    print(model.summary())
 
     # start evaluation
     if args.dataset_type == 'coco':

@@ -116,7 +116,7 @@ def filter_detections(
     translations.set_shape([max_detections, 15, 2])
     depths.set_shape([max_detections, 15, 1])
     #.set_shape([max_detections, 15, 80])
-    rotations.set_shape([max_detections, 15, 4])
+    rotations.set_shape([max_detections, 15, 3])
     scores.set_shape([max_detections])
     labels.set_shape([max_detections])
     for o, s in zip(other_, [list(keras.backend.int_shape(o)) for o in other]):
@@ -218,7 +218,7 @@ class FilterDetections(keras.layers.Layer):
             (input_shape[1][0], self.max_detections, 15, 2),
             (input_shape[2][0], self.max_detections, 15, 1),   # depths regression
             #(input_shape[2][0], self.max_detections, 15, 80),  # depths classification
-            (input_shape[3][0], self.max_detections, 15, 4),
+            (input_shape[3][0], self.max_detections, 15, 3),
             (input_shape[4][0], self.max_detections),
             (input_shape[4][0], self.max_detections),
         ] + [

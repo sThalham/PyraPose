@@ -163,11 +163,11 @@ def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_
     outputsD = keras.layers.Reshape((-1, num_classes, 1), name='pyramid_depth_regression_reshape')(outputsD)
 
     # ROTATION
-    outputsQ = keras.layers.Dense(num_anchors * num_classes * 4, name='pyramid_rotation_regression_orientationF')(outputs)
+    outputsQ = keras.layers.Dense(num_anchors * num_classes * 3, name='pyramid_rotation_regression_orientationF')(outputs)
     if keras.backend.image_data_format() == 'channels_first':
         outputsQ = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_ori')(outputsQ)
-    outputsQ = keras.layers.Reshape((-1, num_classes, 4), name='pyramid_ori_regression_reshape')(outputsQ)
-    outputsQ = l2_norm()(outputsQ)
+    outputsQ = keras.layers.Reshape((-1, num_classes, 3), name='pyramid_ori_regression_reshape')(outputsQ)
+    #outputsQ = l2_norm()(outputsQ)
 
     return keras.models.Model(inputs=inputs, outputs=outputsT, name='xy_regression_submodel'), keras.models.Model(inputs=inputs, outputs=outputsD, name='depth_classification_submodel'), keras.models.Model(inputs=inputs, outputs=outputsQ, name='rotation_regression_submodel')
 
