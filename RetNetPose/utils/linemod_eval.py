@@ -21,6 +21,7 @@ import numpy as np
 import json
 import pyquaternion
 import math
+import transforms3d as tf3d
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -115,6 +116,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         # compute predicted labels and scores
         for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
             # scores are sorted, so we can break
+            print(score)
             if score < threshold:
                 continue
 
@@ -125,6 +127,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             dep = np.argmax(deps[(cls-1), :]) * 0.035
             rot = quat[(cls-1), :]
             pose = tra.tolist() + [dep] + rot.tolist()
+            print(cls)
+            print(tra, t_tra)
+            print(dep, t_dep)
+            print(rot, t_rot)
 
             # append detection for each positively labeled class
             image_result = {
@@ -148,8 +154,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         tp[t_cat] += 1
                         fn[t_cat] -= 1
                         fnit = False
-                        q1 = pyquaternion.Quaternion(t_rot).unit
-                        q2 = pyquaternion.Quaternion(rot).unit
                         #q1 = pyquaternion.Quaternion(t_pose)
                         #q2 = pyquaternion.Quaternion(rot)
                         #print('translation target: ', t_tra, '       estimation: ', tra)
@@ -162,14 +166,28 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         xd = np.abs(np.abs(x) - np.abs(x_t))
                         yd = np.abs(np.abs(y) - np.abs(y_t))
                         xyd = np.linalg.norm(np.asarray([xd, yd], dtype=np.float32))
+                        print(xyd)
                         if not math.isnan(xyd):
                             xyD.append(xyd)
                             if xyd < 0.05:
                                 less5cm.append(xyd)
                         zd = np.abs(np.abs(dep) - np.abs(t_dep*0.001))
+                        print(zd)
                         if not math.isnan(zd):
                             zD.append(zd)
+                        if len(rot) < 4:
+                            lie = [[0.0, np.asscalar(rot[0]), np.asscalar(rot[1])],
+                                    [np.asscalar(-rot[0]), 0.0, np.asscalar(rot[2])],
+                                    [np.asscalar(-rot[1]), np.asscalar(rot[2]), 0.0]]
+                            lie = np.asarray(lie, dtype=np.float32)
+                            eul = geometry.rotations.map_hat(lie)
+                            rot = tf3d.euler.euler2quat(eul[0], eul[1], eul[2])
+                            rot = np.asarray(rot, dtype=np.float32)
+
+                        q1 = pyquaternion.Quaternion(t_rot).unit
+                        q2 = pyquaternion.Quaternion(rot).unit
                         rd = pyquaternion.Quaternion.distance(q1, q2)
+                        print(rd)
                         if not math.isnan(rd):
                             rotD.append(rd)
                             if (rd * 180/math.pi) < 5.0:

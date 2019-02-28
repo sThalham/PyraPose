@@ -25,6 +25,7 @@ class Backbone(object):
             '_wMSE'            : losses.weighted_mse(),
             '_smooth_l1_xy'   : losses.smooth_l1_xy(),
             '_smooth_l1_z': losses.smooth_l1_z(),
+            '_vanilla_l1'       : losses.vanilla_l1(),
             'l2_norm'          : retinanet.l2_norm(),
         }
 

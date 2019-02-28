@@ -144,7 +144,7 @@ def smooth_l1(sigma=3.0):
     return _smooth_l1
 
 
-def weighted_mse(weight=0.25):
+def weighted_mse(weight=0.1):
 
     def _wMSE(y_true, y_pred):
 
@@ -166,6 +166,30 @@ def weighted_mse(weight=0.25):
         return keras.backend.sum(regression_loss) / normalizer
 
     return _wMSE
+
+
+def vanilla_l1(weight=0.5):
+
+    def _vl1(y_true, y_pred):
+
+        regression        = y_pred
+        regression_target = y_true[:, :, :, :-1]
+        anchor_state      = y_true[:, :, :, -1]
+
+        # somethings fucky here
+        #### filter out "ignore" anchors
+        indices           = backend.where(keras.backend.equal(anchor_state, 1))
+        regression        = backend.gather_nd(regression, indices)
+        regression_target = backend.gather_nd(regression_target, indices)
+
+        regression_loss = weight * keras.losses.mean_absolute_error(regression, regression_target)
+
+        #### compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        return keras.backend.sum(regression_loss) / normalizer
+
+    return _vl1
 
 
 def smooth_l1_z(sigma=3.0, weight=0.5):
