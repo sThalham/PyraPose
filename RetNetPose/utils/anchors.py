@@ -483,8 +483,8 @@ def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
 
     #targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
     targets = np.stack((targets_rx, targets_ry, targets_rz))
+    targets = np.divide(targets, np.linalg.norm(targets, axis=0))
     targets = targets.T
-    #print(targets[0, :])
 
     targets = (targets - mean) / std
     allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)

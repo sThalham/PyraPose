@@ -22,6 +22,10 @@ import json
 import pyquaternion
 import math
 import transforms3d as tf3d
+import geometry
+import os
+import scipy.spatial as sci_spa
+import cv2
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -31,6 +35,26 @@ fxkin = 572.41140
 fykin = 573.57043
 cxkin = 325.26110
 cykin = 242.04899
+
+
+def create_point_cloud(depth, ds):
+
+    rows, cols = depth.shape
+
+    depRe = depth.reshape(rows * cols)
+    zP = np.multiply(depRe, ds)
+
+    x, y = np.meshgrid(np.arange(0, cols, 1), np.arange(0, rows, 1), indexing='xy')
+    yP = y.reshape(rows * cols) - cykin
+    xP = x.reshape(rows * cols) - cxkin
+    yP = np.multiply(yP, zP)
+    xP = np.multiply(xP, zP)
+    yP = np.divide(yP, fykin)
+    xP = np.divide(xP, fxkin)
+
+    cloud_final = np.transpose(np.array((xP, yP, zP)))
+
+    return cloud_final
 
 
 def boxoverlap(a, b):
@@ -81,11 +105,24 @@ def evaluate_linemod(generator, model, threshold=0.05):
     less5cm = []
     rotD = []
     less5deg = []
-    #val_size = generator.size()
+
+    # load meshes
+    mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    sub = os.listdir(mesh_path)
+    mesh_dict = {}
+    for m in sub:
+        if m.endswith('.ply'):
+            name = m[:-4]
+            key = str(int(name[-2:]))
+            mesh = np.genfromtxt(mesh_path+m, skip_header=16, usecols=(0, 1, 2))
+            mask = np.where(mesh[:, 0] != 3)
+            mesh = mesh[mask]
+            mesh_dict[key] = mesh
+
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
 
-        image = generator.load_image(index)
-        image = generator.preprocess_image(image)
+        image_raw = generator.load_image(index)
+        image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
         if keras.backend.image_data_format() == 'channels_first':
@@ -116,7 +153,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
         # compute predicted labels and scores
         for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
             # scores are sorted, so we can break
-            print(score)
             if score < threshold:
                 continue
 
@@ -124,13 +160,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
             cls = generator.label_to_inv_label(label)
             tra = trans[(cls-1), :]
-            dep = np.argmax(deps[(cls-1), :]) * 0.035
+            dep = deps[(cls-1), :]
             rot = quat[(cls-1), :]
-            pose = tra.tolist() + [dep] + rot.tolist()
-            print(cls)
-            print(tra, t_tra)
-            print(dep, t_dep)
-            print(rot, t_rot)
+            pose = tra.tolist() + dep.tolist() + rot.tolist()
 
             # append detection for each positively labeled class
             image_result = {
@@ -166,16 +198,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         xd = np.abs(np.abs(x) - np.abs(x_t))
                         yd = np.abs(np.abs(y) - np.abs(y_t))
                         xyd = np.linalg.norm(np.asarray([xd, yd], dtype=np.float32))
-                        print(xyd)
                         if not math.isnan(xyd):
                             xyD.append(xyd)
                             if xyd < 0.05:
                                 less5cm.append(xyd)
                         zd = np.abs(np.abs(dep) - np.abs(t_dep*0.001))
-                        print(zd)
                         if not math.isnan(zd):
                             zD.append(zd)
                         if len(rot) < 4:
+                            print('what? why?')
                             lie = [[0.0, np.asscalar(rot[0]), np.asscalar(rot[1])],
                                     [np.asscalar(-rot[0]), 0.0, np.asscalar(rot[2])],
                                     [np.asscalar(-rot[1]), np.asscalar(rot[2]), 0.0]]
@@ -187,11 +218,20 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         q1 = pyquaternion.Quaternion(t_rot).unit
                         q2 = pyquaternion.Quaternion(rot).unit
                         rd = pyquaternion.Quaternion.distance(q1, q2)
-                        print(rd)
                         if not math.isnan(rd):
                             rotD.append(rd)
-                            if (rd * 180/math.pi) < 5.0:
+                            if (rd * 180/math.pi) < 20.0:
                                 less5deg.append(rd)
+
+                        #ADDS
+                        #mesh = mesh_dict[str(int(t_cat))]
+                        #mesh = np.dot(mesh, tf3d.quaternions.quat2mat(q2))
+                        #mesh = np.add(mesh, np.asarray([t_tra[0]*0.001, t_tra[1]*0.001, t_dep*0.001], dtype=np.float32))
+                        #kd_true = sci_spa.KDTree(mesh)
+
+                        #crop = image_raw[int(box[1]):int(box[1] + box[3]), int(box[0]):int(box[0] + box[2]), :]
+                        #create_point_cloud(crop, 0.01)
+
                 else:
                     fp[t_cat] += 1
 

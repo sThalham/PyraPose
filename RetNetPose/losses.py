@@ -168,7 +168,7 @@ def weighted_mse(weight=0.1):
     return _wMSE
 
 
-def vanilla_l1(weight=0.25):
+def vanilla_l1(weight=2.0):
 
     def _vl1(y_true, y_pred):
 

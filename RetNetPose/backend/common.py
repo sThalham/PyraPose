@@ -110,9 +110,9 @@ def translation_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
 
 def depth_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
     if mean is None:
-        mean = [0.0, 0.0]
+        mean = [0.0]
     if std is None:
-        std = [0.4, 0.4]
+        std = [0.4]
 
     #widths = deltas[:, :, 2] - deltas[:, :, 0]
     #heights = deltas[:, :, 3] - deltas[:, :, 1]
@@ -123,7 +123,7 @@ def depth_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
     #deltas_exp = keras.backend.repeat_elements(deltas_exp, num_classes, axis=2)
     #deltas_exp = keras.backend.expand_dims(deltas_exp, axis=3)
     #meters = (deltas_pose[:, :, :, 0] * deltas_exp[:, :, :, 0]) * 0.01 * std[0] + mean[0]
-    meters = deltas_pose[:, :, :, 0]
+    meters = deltas_pose[:, :, :, 0] * std[0] + mean[0]
 
     dep_cls = keras.backend.stack([meters], axis=3)
 
@@ -132,22 +132,17 @@ def depth_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
 
 def rotation_transform_inv(poses, deltas, mean=None, std=None):
     if mean is None:
-        mean = [0.0, 0.0, 0.0]
+        mean = [0.0, 0.0, 0.0, 0.0]
     if std is None:
-        std = [1.0, 1.0, 1.0]
+        std = [1.0, 1.0, 1.0, 1.0]
 
-    subTensors = []
-    for i in range(0, keras.backend.int_shape(deltas)[2]):
-        rx = deltas[:, :, i, 0] * std[0] + mean[0]
-        ry = deltas[:, :, i, 1] * std[1] + mean[1]
-        rz = deltas[:, :, i, 2] * std[2] + mean[2]
-        #rw = deltas[:, :, i, 3] * std[3] + mean[3]
+    rx = deltas[:, :, :, 0] * std[0] + mean[0]
+    ry = deltas[:, :, :, 1] * std[1] + mean[1]
+    rz = deltas[:, :, :, 2] * std[2] + mean[2]
+    #rw = deltas[:, :, :, 3] * std[3] + mean[3]
 
-        #pred_pose = keras.backend.stack([rx, ry, rz, rw], axis=2)
-        pred_pose = keras.backend.stack([rx, ry, rz], axis=2)
-        pred_pose = keras.backend.expand_dims(pred_pose, axis=2)
-        subTensors.append(pred_pose)
-    pose_cls = keras.backend.concatenate(subTensors, axis=2)
+    #pred_pose = keras.backend.stack([rx, ry, rz, rw], axis=3)
+    pred_pose = keras.backend.stack([rx, ry, rz], axis=3)
 
-    return pose_cls
+    return pred_pose
 
