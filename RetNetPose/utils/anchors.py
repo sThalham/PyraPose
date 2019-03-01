@@ -92,7 +92,7 @@ def anchor_targets_bbox(
     xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
     dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
     #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 60 + 1), dtype=keras.backend.floatx()) # depths classification
-    rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 3 + 1), dtype=keras.backend.floatx())
+    rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
@@ -389,15 +389,15 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    #box_widths  = anchors[:, 2] - anchors[:, 0]
-    #box_heights = anchors[:, 3] - anchors[:, 1]
-    box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
-    box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
+    box_widths  = anchors[:, 2] - anchors[:, 0]
+    box_heights = anchors[:, 3] - anchors[:, 1]
+    #box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
+    #box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
 
-    #targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
-    #targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
-    targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
-    targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
+    targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
+    targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
+    #targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
+    #targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
 
     targets = np.stack((targets_dx, targets_dy))
     targets = targets.T
@@ -429,12 +429,12 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    #box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
-    #box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
-    #box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
+    box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
+    box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
+    box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
 
-    #targets_dz = gt_poses[:, 2] * 100.0 / box_diag
-    targets_dz = gt_poses[:, 2]
+    targets_dz = gt_poses[:, 2] * 100.0 / box_diag
+    #targets_dz = gt_poses[:, 2]
     targets = np.stack((targets_dz))
     targets = targets.T
     targets = (targets - mean) / std
@@ -462,9 +462,9 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
 
 def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     if mean is None:
-       mean = [0.0, 0.0, 0.0]
+       mean = [0.0, 0.0, 0.0, 0.0]
     if std is None:
-        std = [1.0, 1.0, 1.0]
+        std = [1.0, 1.0, 1.0, 1.0]
 
     if isinstance(mean, (list, tuple)):
         mean = np.array(mean)
@@ -479,11 +479,11 @@ def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     targets_rx = (gt_poses[:, 3])
     targets_ry = (gt_poses[:, 4])
     targets_rz = (gt_poses[:, 5])
-    #targets_rw = (gt_poses[:, 6])
+    targets_rw = (gt_poses[:, 6])
 
-    #targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
-    targets = np.stack((targets_rx, targets_ry, targets_rz))
-    targets = np.divide(targets, np.linalg.norm(targets, axis=0))
+    targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
+    #targets = np.stack((targets_rx, targets_ry, targets_rz))
+    #targets = np.divide(targets, np.linalg.norm(targets, axis=0))
     targets = targets.T
 
     targets = (targets - mean) / std

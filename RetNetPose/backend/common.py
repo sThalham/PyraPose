@@ -93,8 +93,8 @@ def translation_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
 
     num_classes = keras.backend.int_shape(deltas_pose)[2]
 
-    deltas_exp = keras.backend.expand_dims(deltas, axis=2)
-    #deltas_exp = keras.backend.expand_dims(boxes, axis=2)
+    #deltas_exp = keras.backend.expand_dims(deltas, axis=2)
+    deltas_exp = keras.backend.expand_dims(boxes, axis=2)
     deltas_exp = keras.backend.repeat_elements(deltas_exp, num_classes, axis=2)
 
     width = deltas_exp[:, :, :, 2] - deltas_exp[:, :, :, 0]
@@ -114,16 +114,16 @@ def depth_transform_inv(boxes, deltas, deltas_pose, mean=None, std=None):
     if std is None:
         std = [0.4]
 
-    #widths = deltas[:, :, 2] - deltas[:, :, 0]
-    #heights = deltas[:, :, 3] - deltas[:, :, 1]
-    #box_diag = keras.backend.sqrt((keras.backend.square(widths) + keras.backend.square(heights)))
+    widths = deltas[:, :, 2] - deltas[:, :, 0]
+    heights = deltas[:, :, 3] - deltas[:, :, 1]
+    box_diag = keras.backend.sqrt((keras.backend.square(widths) + keras.backend.square(heights)))
 
-    #num_classes = keras.backend.int_shape(deltas_pose)[2]
-    #deltas_exp = keras.backend.expand_dims(box_diag, axis=2)
-    #deltas_exp = keras.backend.repeat_elements(deltas_exp, num_classes, axis=2)
-    #deltas_exp = keras.backend.expand_dims(deltas_exp, axis=3)
-    #meters = (deltas_pose[:, :, :, 0] * deltas_exp[:, :, :, 0]) * 0.01 * std[0] + mean[0]
-    meters = deltas_pose[:, :, :, 0] * std[0] + mean[0]
+    num_classes = keras.backend.int_shape(deltas_pose)[2]
+    deltas_exp = keras.backend.expand_dims(box_diag, axis=2)
+    deltas_exp = keras.backend.repeat_elements(deltas_exp, num_classes, axis=2)
+    deltas_exp = keras.backend.expand_dims(deltas_exp, axis=3)
+    meters = (deltas_pose[:, :, :, 0] * deltas_exp[:, :, :, 0]) * 0.01 * std[0] + mean[0]
+    #meters = deltas_pose[:, :, :, 0] * std[0] + mean[0]
 
     dep_cls = keras.backend.stack([meters], axis=3)
 
@@ -139,10 +139,10 @@ def rotation_transform_inv(poses, deltas, mean=None, std=None):
     rx = deltas[:, :, :, 0] * std[0] + mean[0]
     ry = deltas[:, :, :, 1] * std[1] + mean[1]
     rz = deltas[:, :, :, 2] * std[2] + mean[2]
-    #rw = deltas[:, :, :, 3] * std[3] + mean[3]
+    rw = deltas[:, :, :, 3] * std[3] + mean[3]
 
-    #pred_pose = keras.backend.stack([rx, ry, rz, rw], axis=3)
-    pred_pose = keras.backend.stack([rx, ry, rz], axis=3)
+    pred_pose = keras.backend.stack([rx, ry, rz, rw], axis=3)
+    #pred_pose = keras.backend.stack([rx, ry, rz], axis=3)
 
     return pred_pose
 
