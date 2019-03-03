@@ -91,7 +91,7 @@ def anchor_targets_bbox(
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
     #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
-    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 150 + 1), dtype=keras.backend.floatx()) # depths classification
+    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 80 + 1), dtype=keras.backend.floatx()) # depths classification
     rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
@@ -451,9 +451,9 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
     # classification
-    indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.02   # bin every 2 cm
+    indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.03   # bin every 2 cm
     indices = np.round(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 150))
+    allTargets = np.zeros((indices.shape[0], 80))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 

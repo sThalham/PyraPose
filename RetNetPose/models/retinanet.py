@@ -152,10 +152,10 @@ def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_
     outputsT = keras.layers.Reshape((-1, num_classes, 2), name='pyramid_xy_regression_reshape')(outputsT)
 
     # DEPTH classification
-    outputsD = keras.layers.Dense(num_anchors * num_classes * 150, name='pyramid_depth_classificationF')(outputs)
+    outputsD = keras.layers.Dense(num_anchors * num_classes * 80, name='pyramid_depth_classificationF')(outputs)
     if keras.backend.image_data_format() == 'channels_first':
         outputsD = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsD)
-    outputsD = keras.layers.Reshape((-1, num_classes, 150), name='pyramid_depth_classification_reshape')(outputsD)
+    outputsD = keras.layers.Reshape((-1, num_classes, 80), name='pyramid_depth_classification_reshape')(outputsD)
     outputsD = keras.layers.Activation('sigmoid', name='pyramid_depth_classification_sigmoid')(outputsD)
 
     # DEPTH regression
