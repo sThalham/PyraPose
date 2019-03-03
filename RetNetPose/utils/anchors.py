@@ -90,8 +90,8 @@ def anchor_targets_bbox(
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
-    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
-    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 60 + 1), dtype=keras.backend.floatx()) # depths classification
+    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
+    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 150 + 1), dtype=keras.backend.floatx()) # depths classification
     rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
@@ -429,18 +429,18 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
-    box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
-    box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
+    #box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
+    #box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
+    #box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
 
-    targets_dz = gt_poses[:, 2] * 100.0 / box_diag
+    #targets_dz = gt_poses[:, 2] * 100.0 / box_diag
     #targets_dz = gt_poses[:, 2]
-    targets = np.stack((targets_dz))
-    targets = targets.T
-    targets = (targets - mean) / std
+    #targets = np.stack((targets_dz))
+    #targets = targets.T
+    #targets = (targets - mean) / std
     #print('depths: ', targets[0])
-    allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
-    allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
+    #allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
+    #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
     # regression
     #targets_dz = gt_poses[:, 2]
@@ -451,11 +451,11 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
     # classification
-    #indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.035   # bin every 2 cm
-    #indices = np.round(indices).astype(dtype=np.int32)
-    #allTargets = np.zeros((indices.shape[0], 60))
-    #allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    #allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
+    indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.02   # bin every 2 cm
+    indices = np.round(indices).astype(dtype=np.int32)
+    allTargets = np.zeros((indices.shape[0], 150))
+    allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
 

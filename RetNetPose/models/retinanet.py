@@ -143,31 +143,35 @@ def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_
 
     outputs = inputs
     outputs = keras.layers.Dense(num_anchors * num_classes * num_values, activation='relu', name='pyramid_rotation_regression_sharedF')(outputs)
+    #outputs = keras.layers.Dropout(0.5)(outputs)
     # TRANSLATION
     outputsT = keras.layers.Dense(num_anchors * num_classes * 2, name='pyramid_xy_regression_orientationF')(outputs)
+    #outputsT = keras.layers.Dropout(0.5)(outputsT)
     if keras.backend.image_data_format() == 'channels_first':
         outputsT = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_xy')(outputsT)
     outputsT = keras.layers.Reshape((-1, num_classes, 2), name='pyramid_xy_regression_reshape')(outputsT)
 
     # DEPTH classification
-    #outputsD = keras.layers.Dense(num_anchors * num_classes * 80, name='pyramid_depth_classificationF')(outputs)
-    #if keras.backend.image_data_format() == 'channels_first':
-    #    outputsD = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsD)
-    #outputsD = keras.layers.Reshape((-1, num_classes, 80), name='pyramid_depth_classification_reshape')(outputsD)
-    #outputsD = keras.layers.Activation('sigmoid', name='pyramid_depth_classification_sigmoid')(outputsD)
+    outputsD = keras.layers.Dense(num_anchors * num_classes * 150, name='pyramid_depth_classificationF')(outputs)
+    if keras.backend.image_data_format() == 'channels_first':
+        outputsD = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsD)
+    outputsD = keras.layers.Reshape((-1, num_classes, 150), name='pyramid_depth_classification_reshape')(outputsD)
+    outputsD = keras.layers.Activation('sigmoid', name='pyramid_depth_classification_sigmoid')(outputsD)
 
     # DEPTH regression
-    outputsD = keras.layers.Dense(num_anchors * num_classes * 1, activation='relu', name='pyramid_depth_regression_orientationF')(outputs)
-    if keras.backend.image_data_format() == 'channels_first':
-        outputsD = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_depth')(outputsD)
-    outputsD = keras.layers.Reshape((-1, num_classes, 1), name='pyramid_depth_regression_reshape')(outputsD)
+    #outputsD = keras.layers.Dense(num_anchors * num_classes * 1, activation='relu', name='pyramid_depth_regression_orientationF')(outputs)
+    #outputsD = keras.layers.Dropout(0.5)(outputsD)
+    #if keras.backend.image_data_format() == 'channels_first':
+    #    outputsD = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_depth')(outputsD)
+    #outputsD = keras.layers.Reshape((-1, num_classes, 1), name='pyramid_depth_regression_reshape')(outputsD)
 
     # ROTATION
     outputsQ = keras.layers.Dense(num_anchors * num_classes * 4, name='pyramid_rotation_regression_orientationF')(outputs)
+    #outputsQ = keras.layers.Dropout(0.5)(outputsQ)
     if keras.backend.image_data_format() == 'channels_first':
         outputsQ = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_ori')(outputsQ)
     outputsQ = keras.layers.Reshape((-1, num_classes, 4), name='pyramid_ori_regression_reshape')(outputsQ)
-    outputsQ = l2_norm()(outputsQ)
+    #outputsQ = l2_norm()(outputsQ)
 
     return keras.models.Model(inputs=inputs, outputs=outputsT, name='xy_regression_submodel'), keras.models.Model(inputs=inputs, outputs=outputsD, name='depth_classification_submodel'), keras.models.Model(inputs=inputs, outputs=outputsQ, name='rotation_regression_submodel')
 
@@ -386,8 +390,8 @@ def retinanet_bbox(
     # we expect the anchors, regression and classification values as first output
     regression     = model.outputs[0]
     translation_regression = model.outputs[1]
-    depth_regression = model.outputs[2]
-    #depth_classification = model.outputs[2]
+    #depth_regression = model.outputs[2]
+    depth_classification = model.outputs[2]
     rotation_regression = model.outputs[3]
     classification = model.outputs[4]
 
@@ -398,7 +402,7 @@ def retinanet_bbox(
     boxes = layers.RegressBoxes(name='boxes')([anchors, regression])
     boxes = layers.ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
     translations = layers.RegressTranslation(name='tras_out')([anchors, boxes, translation_regression])
-    depths = layers.RegressDepth(name='deps_outs')([anchors, boxes, depth_regression])
+    #depths = layers.RegressDepth(name='deps_outs')([anchors, boxes, depth_regression])
     rotations = layers.RegressRotation(name='rots_out')([anchors, rotation_regression])
 
     # filter detections (apply NMS / score threshold / select top-k)
@@ -406,8 +410,8 @@ def retinanet_bbox(
         nms                   = nms,
         class_specific_filter = class_specific_filter,
         name                  = 'filtered_detections'
-    #)([boxes, translations, depth_classification, rotations, classification] + other)
-    )([boxes, translations, depths, rotations, classification] + other)
+    )([boxes, translations, depth_classification, rotations, classification] + other)
+    #)([boxes, translations, depths, rotations, classification] + other)
 
     # construct the model
     return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)

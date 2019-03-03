@@ -207,7 +207,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         yd = np.abs(np.abs(y) - np.abs(y_t))
                         zd = np.abs(np.abs(dep) - np.abs(t_dep * 0.001))
                         xyz = np.linalg.norm(np.asarray([xd, yd, zd], dtype=np.float32))
-                        print(xyz)
                         if not math.isnan(xyz):
                             xyD.append(xyz)
                             if xyz < 0.05:

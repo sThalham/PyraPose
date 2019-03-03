@@ -123,8 +123,8 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
         loss={
             'bbox'         : losses.smooth_l1(),
             'xy'           : losses.smooth_l1_xy(),
-            'depth'         : losses.smooth_l1_z(),
-            #'depth'        : losses.cross(),
+            #'depth'         : losses.smooth_l1_z(),
+            'depth'        : losses.cross(),
             'rotation'     : losses.weighted_mse(),
             #'rotation'     : losses.vanilla_l1(),
             'cls'          : losses.focal()
