@@ -101,7 +101,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
     fp = np.zeros((16), dtype=np.uint32)
     fn = np.zeros((16), dtype=np.uint32)
     xyD = []
+    xyzD = []
     zD = []
+    less5cm_imgplane = []
     less5cm = []
     less10cm = []
     less15cm = []
@@ -168,7 +170,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
             cls = generator.label_to_inv_label(label)
             tra = trans[(cls-1), :]
-            dep = deps[(cls-1), :]
+            #dep = np.array([(np.argmax(deps[(cls-1), :]) * 0.03 ) - 0.015])
+            dep = deps[(cls - 1), :]
             rot = quat[(cls-1), :]
             pose = tra.tolist() + dep.tolist() + rot.tolist()
 
@@ -198,17 +201,29 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #q2 = pyquaternion.Quaternion(rot)
                         #print('translation target: ', t_tra, '       estimation: ', tra)
                         #print('depth target: ', t_dep, '             estimation: ', dep)
+                        x = (((box[0] + box[2]*0.5) - cxkin) * dep) / fxkin * 0.001
+                        y = (((box[1] + box[3]*0.5) - cykin) * dep) / fykin * 0.001
 
-                        x = ((tra[0] - cxkin) * dep) / fxkin
                         x_t = ((t_tra[0] - cxkin) * t_dep) / fxkin * 0.001
-                        y = ((tra[1] - cykin) * dep) / fykin * 0.001
                         y_t = ((t_tra[1] - cykin) * t_dep) / fykin * 0.001
+
+                        #only image plane
+                        x_o = ((tra[0] - cxkin) * t_dep) / fxkin * 0.001
+                        y_o = ((tra[1] - cykin) * t_dep) / fykin * 0.001
+                        x_o_d = np.abs(np.abs(x_o) - np.abs(x_t))
+                        y_o_d = np.abs(np.abs(y_o) - np.abs(y_t))
+                        xy = np.linalg.norm(np.asarray([x_o_d, y_o_d], dtype=np.float32))
+                        if not math.isnan(xy):
+                            xyD.append(xy)
+                            if xy < 0.05:
+                                less5cm_imgplane.append(xy)
+
                         xd = np.abs(np.abs(x) - np.abs(x_t))
                         yd = np.abs(np.abs(y) - np.abs(y_t))
                         zd = np.abs(np.abs(dep) - np.abs(t_dep * 0.001))
                         xyz = np.linalg.norm(np.asarray([xd, yd, zd], dtype=np.float32))
                         if not math.isnan(xyz):
-                            xyD.append(xyz)
+                            xyzD.append(xyz)
                             if xyz < 0.05:
                                 less5cm.append(xyz)
                             if xyz < 0.1:
@@ -222,13 +237,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         if not math.isnan(zd):
                             zD.append(zd)
-                        if len(rot) < 4:
+                        if len(rot) < 4 and len(t_rot) < 4:
                             lie = [[0.0, np.asscalar(rot[0]), np.asscalar(rot[1])],
                                     [np.asscalar(-rot[0]), 0.0, np.asscalar(rot[2])],
                                     [np.asscalar(-rot[1]), np.asscalar(-rot[2]), 0.0]]
                             lie = np.asarray(lie, dtype=np.float32)
                             eul = geometry.rotations.map_hat(lie)
-                            rot = tf3d.euler.euler2quat(eul[2], eul[1], eul[0])
+                            rot = tf3d.euler.euler2quat(eul[0], eul[1], eul[2])
                             rot = np.asarray(rot, dtype=np.float32)
 
                             t_lie = [[0.0, np.asscalar(t_rot[0]), np.asscalar(t_rot[1])],
@@ -236,12 +251,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                    [np.asscalar(-t_rot[1]), np.asscalar(-t_rot[2]), 0.0]]
                             t_lie = np.asarray(t_lie, dtype=np.float32)
                             t_eul = geometry.rotations.map_hat(t_lie)
-                            t_rot = tf3d.euler.euler2quat(t_eul[2], t_eul[1], t_eul[0])
+                            t_rot = tf3d.euler.euler2quat(t_eul[0], t_eul[1], t_eul[2])
                             t_rot = np.asarray(t_rot, dtype=np.float32)
 
                         q1 = pyquaternion.Quaternion(t_rot).unit
                         q2 = pyquaternion.Quaternion(rot).unit
                         rd = pyquaternion.Quaternion.distance(q1, q2)
+
                         if not math.isnan(rd):
                             rotD.append(rd)
                             if (rd * 180/math.pi) < 5.0:
@@ -299,15 +315,18 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     dataset_recall = sum(tp) / (sum(tp) + sum(fp))
     dataset_precision = sum(tp) / (sum(tp) + sum(fn))
+    dataset_xyz_diff = (sum(xyzD) / len(xyzD))
     dataset_xy_diff = (sum(xyD) / len(xyD))
-    print(sum(zD), len(zD))
+    print(' ')
+    print('center difference in image plane', dataset_xy_diff)
+    print('percent < 5cm in image plane', len(less5cm_imgplane)/len(xyD))
     dataset_depth_diff = (sum(zD) / len(zD))
     dataset_rot_diff = (sum(rotD) / len(rotD)) * 180.0 / math.pi
-    less5cm = len(less5cm)/len(xyD)
-    less10cm = len(less10cm) / len(xyD)
-    less15cm = len(less15cm) / len(xyD)
-    less20cm = len(less20cm) / len(xyD)
-    less25cm = len(less25cm) / len(xyD)
+    less5cm = len(less5cm)/len(xyzD)
+    less10cm = len(less10cm) / len(xyzD)
+    less15cm = len(less15cm) / len(xyzD)
+    less20cm = len(less20cm) / len(xyzD)
+    less25cm = len(less25cm) / len(xyzD)
     less5deg = len(less5deg) / len(rotD)
     less10deg = len(less10deg) / len(rotD)
     less15deg = len(less15deg) / len(rotD)
@@ -324,4 +343,4 @@ def evaluate_linemod(generator, model, threshold=0.05):
     print('linemod::percent below 20 deg: ', less20deg, '%')
     print('linemod::percent below 25 deg: ', less25deg, '%')
 
-    return dataset_recall, dataset_precision, dataset_xy_diff, dataset_depth_diff, dataset_rot_diff, less5cm, less5deg
+    return dataset_recall, dataset_precision, dataset_xyz_diff, dataset_depth_diff, dataset_rot_diff, less5cm, less5deg

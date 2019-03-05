@@ -389,15 +389,15 @@ def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    box_widths  = anchors[:, 2] - anchors[:, 0]
-    box_heights = anchors[:, 3] - anchors[:, 1]
-    #box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
-    #box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
+    #box_widths  = anchors[:, 2] - anchors[:, 0]
+    #box_heights = anchors[:, 3] - anchors[:, 1]
+    box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
+    box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
 
-    targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
-    targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
-    #targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
-    #targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
+    #targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
+    #targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
+    targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
+    targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
 
     targets = np.stack((targets_dx, targets_dy))
     targets = targets.T
@@ -438,7 +438,6 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     #targets = np.stack((targets_dz))
     #targets = targets.T
     #targets = (targets - mean) / std
-    #print('depths: ', targets[0])
     #allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
     #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
@@ -454,7 +453,12 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.03   # bin every 2 cm
     indices = np.round(indices).astype(dtype=np.int32)
     allTargets = np.zeros((indices.shape[0], 80))
+    #sampple Gauss sigma=1
+    allTargets[np.arange(allTargets.shape[0]), indices-2] = 0.1335
+    allTargets[np.arange(allTargets.shape[0]), indices-1] = 0.6049
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets[np.arange(allTargets.shape[0]), indices+1] = 0.6049
+    allTargets[np.arange(allTargets.shape[0]), indices+2] = 0.1335
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets

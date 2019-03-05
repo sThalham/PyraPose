@@ -67,7 +67,7 @@ def focal(alpha=0.25, gamma=2.0):
     return _focal
 
 
-def cross(weight=0.5):
+def cross(weight=0.15):
 
     def _cross(y_true, y_pred):
         labels         = y_true[:, :, :, :-1]
@@ -79,7 +79,7 @@ def cross(weight=0.5):
         labels         = backend.gather_nd(labels, indices)
         classification = backend.gather_nd(classification, indices)
 
-        #cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
+        #cls_loss = weight * keras.losses.binary_crossentropy(labels, classification)
         cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
 
         # compute the normalizer: the number of positive anchors
@@ -144,7 +144,7 @@ def smooth_l1(sigma=3.0):
     return _smooth_l1
 
 
-def weighted_mse(weight=0.5):
+def weighted_mse(weight=3.0):
 
     def _wMSE(y_true, y_pred):
 
@@ -166,6 +166,30 @@ def weighted_mse(weight=0.5):
         return keras.backend.sum(regression_loss) / normalizer
 
     return _wMSE
+
+
+def weighted_ae(weight=2.5):
+
+    def _wAE(y_true, y_pred):
+
+        regression        = y_pred
+        regression_target = y_true[:, :, :, :-1]
+        anchor_state      = y_true[:, :, :, -1]
+
+        # somethings fucky here
+        #### filter out "ignore" anchors
+        indices           = backend.where(keras.backend.equal(anchor_state, 1))
+        regression        = backend.gather_nd(regression, indices)
+        regression_target = backend.gather_nd(regression_target, indices)
+
+        regression_loss = weight * keras.losses.mean_absolute_error(regression, regression_target)
+
+        #### compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        return keras.backend.sum(regression_loss) / normalizer
+
+    return _wAE
 
 
 def vanilla_l1(weight=2.0):
