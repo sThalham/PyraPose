@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import keras
+import tensorflow as tf
 from . import backend
 
 
@@ -280,3 +281,65 @@ def smooth_l1_xy(sigma=3.0, weight=0.2):
         return keras.backend.sum(regression_loss) / normalizer
 
     return _smooth_l1_xy
+
+
+def quat_dist(weight=0.1):
+
+    def _dq(y_true, y_pred):
+        # separate target and state
+        regression = y_pred
+        regression_target = y_true[:, :, :, :-1]
+        anchor_state = y_true[:, :, :, -1]
+
+        # filter out "ignore" anchors
+        indices = backend.where(keras.backend.equal(anchor_state, 1))
+        regression = backend.gather_nd(regression, indices)
+        regression_target = backend.gather_nd(regression_target, indices)
+
+        #regression_loss = tf.acos(2 * keras.backend.pow(keras.backend.sum(regression * regression_target, axis=1), 2) - 1)
+        regression_loss = weight * (2 * tf.acos(keras.backend.pow(keras.backend.abs(regression * regression_target), 2)))
+
+        # compute smooth L1 loss
+        # f(x) = 0.5 * (sigma * x)^2          if |x| < 1 / sigma / sigma
+        #        |x| - 0.5 / sigma / sigma    otherwise
+        #regression_diff = regression - regression_target
+        #regression_diff = keras.backend.abs(regression_diff)
+        #regression_loss = weight * backend.where(
+        #    keras.backend.less(regression_diff, 1.0 / sigma_squared),
+        #    0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
+        #    regression_diff - 0.5 / sigma_squared
+        #)
+
+        # compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        return keras.backend.sum(regression_loss) / normalizer
+
+    return _dq
+
+
+def cross_pose(weight=0.2):
+
+    def _cross_pose(y_true, y_pred):
+        labels         = y_true[:, :, :, :-1]
+        anchor_state   = y_true[:, :, :, -1]  # -1 for ignore, 0 for background, 1 for object
+        classification = y_pred
+
+        # filter out "ignore" anchors
+        indices        = backend.where(keras.backend.not_equal(anchor_state, -1))
+        labels         = backend.gather_nd(labels, indices)
+        classification = backend.gather_nd(classification, indices)
+
+        #cls_loss = weight * keras.losses.binary_crossentropy(labels, classification)
+        cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
+
+        # compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])  # usually for regression
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        #normalizer = backend.where(keras.backend.equal(anchor_state, 1))       # usually for classification
+        #normalizer = keras.backend.cast(keras.backend.shape(normalizer)[0], keras.backend.floatx())
+        #normalizer = keras.backend.maximum(keras.backend.cast_to_floatx(1.0), normalizer)
+
+        return keras.backend.sum(cls_loss) / normalizer
+
+    return _cross_pose

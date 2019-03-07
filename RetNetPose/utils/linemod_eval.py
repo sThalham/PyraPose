@@ -24,8 +24,12 @@ import math
 import transforms3d as tf3d
 import geometry
 import os
-import scipy.spatial as sci_spa
 import cv2
+from .pose_error import add
+from .pose_error import adi
+from .pose_error import reproj
+from .pose_error import re
+from .pose_error import te
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -170,8 +174,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
             cls = generator.label_to_inv_label(label)
             tra = trans[(cls-1), :]
-            #dep = np.array([(np.argmax(deps[(cls-1), :]) * 0.03 ) - 0.015])
-            dep = deps[(cls - 1), :]
+            dep = np.array([(np.argmax(deps[(cls-1), :]) * 0.03 ) - 0.015])
+            #dep = deps[(cls - 1), :]
             rot = quat[(cls-1), :]
             pose = tra.tolist() + dep.tolist() + rot.tolist()
 
@@ -220,6 +224,46 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         xd = np.abs(np.abs(x) - np.abs(x_t))
                         yd = np.abs(np.abs(y) - np.abs(y_t))
+
+                        # naive depth estimate
+                        #path = generator.load_image_dep(index)
+                        #image_dep =cv2.imread(path, cv2.IMREAD_UNCHANGED)
+
+                        '''
+                        #dep_val = image_dep[int(box[1] + box[3] * 0.5), int(box[0] + box[2] * 0.5)]*0.001
+                        dep_val = image_dep[int(y_o), int(x_o)] * 0.001
+                        if cls == 1:
+                            dep = dep_val + 0.041
+                        elif cls == 2:
+                            dep = dep_val + 0.0928
+                        elif cls == 3:
+                            dep = dep_val + 0.0675
+                        elif cls == 4:
+                            dep = dep_val + 0.0633
+                        elif cls == 5:
+                            dep = dep_val + 0.0795
+                        elif cls == 6:
+                            dep = dep_val + 0.052
+                        elif cls == 7:
+                            dep = dep_val + 0.0508
+                        elif cls == 8:
+                            dep = dep_val + 0.0853
+                        elif cls == 9:
+                            dep = dep_val + 0.0445
+                        elif cls == 10:
+                            dep = dep_val + 0.0543
+                        elif cls == 11:
+                            dep = dep_val + 0.048
+                        elif cls == 12:
+                            dep = dep_val + 0.05
+                        elif cls == 13:
+                            dep = dep_val + 0.0862
+                        elif cls == 14:
+                            dep = dep_val + 0.0888
+                        elif cls == 15:
+                            dep = dep_val + 0.071
+                        '''
+
                         zd = np.abs(np.abs(dep) - np.abs(t_dep * 0.001))
                         xyz = np.linalg.norm(np.asarray([xd, yd, zd], dtype=np.float32))
                         if not math.isnan(xyz):
@@ -256,7 +300,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         q1 = pyquaternion.Quaternion(t_rot).unit
                         q2 = pyquaternion.Quaternion(rot).unit
-                        rd = pyquaternion.Quaternion.distance(q1, q2)
+                        rd = pyquaternion.Quaternion.absolute_distance(q1, q2)
+                        t_rot = t_rot / np.linalg.norm(t_rot)
+                        rot = rot / np.linalg.norm(rot)
+                        rot_t_mat = geometry.rotations.rotation_from_quaternion(t_rot)
+                        rot_mat = geometry.rotations.rotation_from_quaternion(rot)
+                        matd = geometry.rotations.geodesic_distance_for_rotations(rot_t_mat, rot_mat)
+                        rd = matd
+
+                        #print(' ')
+                        #print(np.arccos(2 * np.power(np.dot(t_rot, rot), 2) - 1) * 180/math.pi, ' / ', (rd * 180/math.pi), (matd * 180/math.pi))
+                        #print(1 - np.power(np.dot(t_rot, rot), 2), ' / ', (rd * 180 / math.pi))
 
                         if not math.isnan(rd):
                             rotD.append(rd)

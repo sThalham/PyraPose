@@ -90,9 +90,12 @@ def anchor_targets_bbox(
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
-    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
-    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 80 + 1), dtype=keras.backend.floatx()) # depths classification
-    rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
+    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
+    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 80 + 1), dtype=keras.backend.floatx()) # depths classification
+    #rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
+    roll_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
+    pitch_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
+    yaw_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
@@ -112,8 +115,17 @@ def anchor_targets_bbox(
             dep_batch[index, ignore_indices, :, -1] = -1
             dep_batch[index, positive_indices, :, -1] = -1
 
-            rots_batch[index, ignore_indices, :, -1] = -1
-            rots_batch[index, positive_indices, :, -1] = -1
+            #rots_batch[index, ignore_indices, :, -1] = -1
+            #rots_batch[index, positive_indices, :, -1] = -1
+
+            roll_batch[index, ignore_indices, :, -1] = -1
+            roll_batch[index, positive_indices, :, -1] = -1
+
+            pitch_batch[index, ignore_indices, :, -1] = -1
+            pitch_batch[index, positive_indices, :, -1] = -1
+
+            yaw_batch[index, ignore_indices, :, -1] = -1
+            yaw_batch[index, positive_indices, :, -1] = -1
 
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
@@ -126,8 +138,17 @@ def anchor_targets_bbox(
             dep_batch[index, :, :, :-1] = depth_transform(annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
             dep_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            rots_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            #rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            #rots_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+
+            roll_batch[index, :, :, :-1] = roll_transform(anchors, annotations['poses'][argmax_overlaps_inds, :],num_classes)
+            roll_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+
+            pitch_batch[index, :, :, :-1] = pitch_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            pitch_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+
+            yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :],num_classes)
+            yaw_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
         # ignore annotations outside of image
         if image.shape:
@@ -138,9 +159,12 @@ def anchor_targets_bbox(
             regression_batch[index, indices, -1] = -1
             xy_batch[index, indices, :, -1] = -1
             dep_batch[index, indices, :, -1] = -1
-            rots_batch[index, indices, :, -1] = -1
+            #rots_batch[index, indices, :, -1] = -1
+            roll_batch[index, indices, :, -1] = -1
+            pitch_batch[index, indices, :, -1] = -1
+            yaw_batch[index, indices, :, -1] = -1
 
-    return regression_batch, xy_batch, dep_batch, rots_batch, labels_batch
+    return regression_batch, xy_batch, dep_batch, roll_batch, pitch_batch, yaw_batch, labels_batch
 
 
 def compute_gt_annotations(
@@ -442,24 +466,24 @@ def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
     #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
     # regression
-    #targets_dz = gt_poses[:, 2]
-    #targets = np.stack((targets_dz))
-    #targets = targets.T
-    #targets = (targets - mean) / std
-    #allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
-    #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
+    targets_dz = gt_poses[:, 2]
+    targets = np.stack((targets_dz))
+    targets = targets.T
+    targets = (targets - mean) / std
+    allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
+    allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
 
     # classification
-    indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.03   # bin every 2 cm
-    indices = np.round(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 80))
+    #indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.03   # bin every 2 cm
+    #indices = np.round(indices).astype(dtype=np.int32)
+    #allTargets = np.zeros((indices.shape[0], 80))
     #sampple Gauss sigma=1
-    allTargets[np.arange(allTargets.shape[0]), indices-2] = 0.1335
-    allTargets[np.arange(allTargets.shape[0]), indices-1] = 0.6049
-    allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    allTargets[np.arange(allTargets.shape[0]), indices+1] = 0.6049
-    allTargets[np.arange(allTargets.shape[0]), indices+2] = 0.1335
-    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
+    #allTargets[np.arange(allTargets.shape[0]), indices-2] = 0.1335
+    #allTargets[np.arange(allTargets.shape[0]), indices-1] = 0.6049
+    #allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    #allTargets[np.arange(allTargets.shape[0]), indices+1] = 0.6049
+    #allTargets[np.arange(allTargets.shape[0]), indices+2] = 0.1335
+    #allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
 
@@ -483,14 +507,89 @@ def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     targets_rx = (gt_poses[:, 3])
     targets_ry = (gt_poses[:, 4])
     targets_rz = (gt_poses[:, 5])
-    targets_rw = (gt_poses[:, 6])
+    #targets_rw = (gt_poses[:, 6])
 
-    targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
-    #targets = np.stack((targets_rx, targets_ry, targets_rz))
+    #targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
+    targets = np.stack((targets_rx, targets_ry, targets_rz))
     #targets = np.divide(targets, np.linalg.norm(targets, axis=0))
     targets = targets.T
 
     targets = (targets - mean) / std
     allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
+
+    return allTargets
+
+
+def roll_transform(anchors, gt_poses, num_classes, mean=None, std=None):
+    if mean is None:
+       mean = [0.0, 0.0, 0.0, 0.0]
+    if std is None:
+        std = [1.0, 1.0, 1.0, 1.0]
+
+    if isinstance(mean, (list, tuple)):
+        mean = np.array(mean)
+    elif not isinstance(mean, np.ndarray):
+        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+    if isinstance(std, (list, tuple)):
+        std = np.array(std)
+    elif not isinstance(std, np.ndarray):
+        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.69813170079) # bin every 2 cm
+    indices = np.round(indices).astype(dtype=np.int32)
+    allTargets = np.zeros((indices.shape[0], 30))
+    allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
+
+    return allTargets
+
+
+def pitch_transform(anchors, gt_poses, num_classes, mean=None, std=None):
+    if mean is None:
+       mean = [0.0, 0.0, 0.0, 0.0]
+    if std is None:
+        std = [1.0, 1.0, 1.0, 1.0]
+
+    if isinstance(mean, (list, tuple)):
+        mean = np.array(mean)
+    elif not isinstance(mean, np.ndarray):
+        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+    if isinstance(std, (list, tuple)):
+        std = np.array(std)
+    elif not isinstance(std, np.ndarray):
+        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.69813170079)   # bin every 2 cm
+    indices = np.round(indices).astype(dtype=np.int32)
+    allTargets = np.zeros((indices.shape[0], 30))
+    allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
+
+    return allTargets
+
+
+def yaw_transform(anchors, gt_poses, num_classes, mean=None, std=None):
+    if mean is None:
+       mean = [0.0, 0.0, 0.0, 0.0]
+    if std is None:
+        std = [1.0, 1.0, 1.0, 1.0]
+
+    if isinstance(mean, (list, tuple)):
+        mean = np.array(mean)
+    elif not isinstance(mean, np.ndarray):
+        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+    if isinstance(std, (list, tuple)):
+        std = np.array(std)
+    elif not isinstance(std, np.ndarray):
+        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.69813170079)  # bin every 2 cm
+    indices = np.round(indices).astype(dtype=np.int32)
+    allTargets = np.zeros((indices.shape[0], 30))
+    allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets

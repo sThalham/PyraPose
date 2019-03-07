@@ -27,6 +27,8 @@ class Backbone(object):
             '_smooth_l1_z'     : losses.smooth_l1_z(),
             '_vl1'             : losses.vanilla_l1(),
             '_wAE'             : losses.weighted_ae(),
+            '_qd'              : losses.quat_dist(),
+            '_cross_pose'      : losses.cross_pose(),
             'l2_norm'          : retinanet.l2_norm(),
         }
 
@@ -115,7 +117,7 @@ def convert_model(model, nms=True, class_specific_filter=True, anchor_params=Non
 def assert_training_model(model):
     """ Assert that the model is a training model.
     """
-    assert(all(output in model.output_names for output in ['bbox', 'xy', 'depth', 'rotation', 'cls'])), \
+    assert(all(output in model.output_names for output in ['bbox', 'xy', 'depth', 'roll', 'pitch', 'yaw', 'cls'])), \
         "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
 
 

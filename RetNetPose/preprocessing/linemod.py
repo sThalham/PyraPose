@@ -152,6 +152,7 @@ class LinemodGenerator(Generator):
 
         return read_image_bgr(path)
 
+
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.
             CHECK DONE HERE: Annotations + images correct
@@ -165,7 +166,7 @@ class LinemodGenerator(Generator):
 
         #annotations_ids = [ann['id'] for ann in anns]
         #annotations = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)),}
-        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7))}
+        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 6))}
 
         for idx, a in enumerate(anns):
             # some annotations have basically no width / height, skip them
@@ -194,7 +195,7 @@ class LinemodGenerator(Generator):
                 a['pose'][3],
                 a['pose'][4],
                 a['pose'][5],
-                a['pose'][6],
+                #a['pose'][6],
             ]]], axis=0)
 
         return annotations
