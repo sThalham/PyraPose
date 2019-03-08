@@ -536,7 +536,7 @@ def roll_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.69813170079) # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.21666156231) # bin every 2 cm
     indices = np.round(indices).astype(dtype=np.int32)
     allTargets = np.zeros((indices.shape[0], 30))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
@@ -561,7 +561,7 @@ def pitch_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.69813170079)   # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.21666156231)   # bin every 2 cm
     indices = np.round(indices).astype(dtype=np.int32)
     allTargets = np.zeros((indices.shape[0], 30))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
@@ -586,7 +586,7 @@ def yaw_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.69813170079)  # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.21666156231)  # bin every 2 cm
     indices = np.round(indices).astype(dtype=np.int32)
     allTargets = np.zeros((indices.shape[0], 30))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
