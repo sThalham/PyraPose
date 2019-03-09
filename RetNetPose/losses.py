@@ -318,7 +318,7 @@ def quat_dist(weight=0.1):
     return _dq
 
 
-def cross_pose(weight=0.2):
+def cross_pose(weight=0.5):
 
     def _cross_pose(y_true, y_pred):
         labels         = y_true[:, :, :, :-1]
