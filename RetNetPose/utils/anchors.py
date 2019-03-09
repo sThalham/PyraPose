@@ -536,8 +536,10 @@ def roll_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.21666156231) # bin every 2 cm
+    print('roll: ', gt_poses[0,3])
+    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.69813170079) #/ 0.21666156231) # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
+    print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
@@ -561,8 +563,10 @@ def pitch_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.21666156231)   # bin every 2 cm
+    print('pitch: ', gt_poses[0, 4])
+    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.69813170079 ) # / 0.21666156231)   # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
+    print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
@@ -586,8 +590,10 @@ def yaw_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.21666156231)  # bin every 2 cm
+    print('yaw: ', gt_poses[0, 5])
+    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.69813170079) # / 0.21666156231)  # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
+    print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)

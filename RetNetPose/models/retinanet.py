@@ -421,7 +421,7 @@ def retinanet_bbox(
     classification = model.outputs[6]
 
     # "other" can be any additional output from custom submodels, by default this will be []
-    other = model.outputs[5:]
+    other = model.outputs[7:]
 
     # apply predicted regression to anchors
     boxes = layers.RegressBoxes(name='boxes')([anchors, regression])

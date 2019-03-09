@@ -330,13 +330,15 @@ def cross_pose(weight=0.2):
         labels         = backend.gather_nd(labels, indices)
         classification = backend.gather_nd(classification, indices)
 
-        #cls_loss = weight * keras.losses.binary_crossentropy(labels, classification)
-        cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
+        cls_loss = weight * keras.losses.binary_crossentropy(labels, classification)
+        #cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
 
         # compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])  # usually for regression
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        #normalizer = backend.where(keras.backend.equal(anchor_state, 1))       # usually for classification
+
+        # compute the normalizer: the number of positive anchors
+        #normalizer = backend.where(keras.backend.equal(anchor_state, 1))
         #normalizer = keras.backend.cast(keras.backend.shape(normalizer)[0], keras.backend.floatx())
         #normalizer = keras.backend.maximum(keras.backend.cast_to_floatx(1.0), normalizer)
 
