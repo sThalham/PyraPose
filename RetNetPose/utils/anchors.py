@@ -141,13 +141,13 @@ def anchor_targets_bbox(
             #rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             #rots_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            roll_batch[index, :, :, :-1] = roll_transform(anchors, annotations['poses'][argmax_overlaps_inds, :],num_classes)
+            roll_batch[index, :, :, :-1] = roll_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             roll_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             pitch_batch[index, :, :, :-1] = pitch_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             pitch_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :],num_classes)
+            yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             yaw_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
         # ignore annotations outside of image
@@ -537,11 +537,15 @@ def roll_transform(anchors, gt_poses, num_classes, mean=None, std=None):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
     #print('roll: ', gt_poses[0,3])
-    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.69813170079) #/ 0.21666156231) # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.21666156231) #/ 0.69813170079 ) # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
-    #print(indices[0])
+    print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
+    allTargets[np.arange(allTargets.shape[0]), indices - 2] = 0.1335
+    allTargets[np.arange(allTargets.shape[0]), indices-1] = 0.6049
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets[np.arange(allTargets.shape[0]), indices+1] = 0.6049
+    allTargets[np.arange(allTargets.shape[0]), indices+2] = 0.1335
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
@@ -564,11 +568,15 @@ def pitch_transform(anchors, gt_poses, num_classes, mean=None, std=None):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
     #print('pitch: ', gt_poses[0, 4])
-    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.69813170079 ) # / 0.21666156231)   # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.21666156231) # / 0.69813170079 )   # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
-    #print(indices[0])
+    print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
+    allTargets[np.arange(allTargets.shape[0]), indices - 2] = 0.1335
+    allTargets[np.arange(allTargets.shape[0]), indices - 1] = 0.6049
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets[np.arange(allTargets.shape[0]), indices + 1] = 0.6049
+    allTargets[np.arange(allTargets.shape[0]), indices + 2] = 0.1335
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
@@ -591,11 +599,15 @@ def yaw_transform(anchors, gt_poses, num_classes, mean=None, std=None):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
     #print('yaw: ', gt_poses[0, 5])
-    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.69813170079) # / 0.21666156231)  # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.21666156231) # / 0.69813170079 )  # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
-    #print(indices[0])
+    print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
+    allTargets[np.arange(allTargets.shape[0]), indices - 2] = 0.1335
+    allTargets[np.arange(allTargets.shape[0]), indices - 1] = 0.6049
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
+    allTargets[np.arange(allTargets.shape[0]), indices + 1] = 0.6049
+    allTargets[np.arange(allTargets.shape[0]), indices + 2] = 0.1335
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets

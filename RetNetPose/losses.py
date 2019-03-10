@@ -329,6 +329,9 @@ def cross_pose(weight=0.5):
         indices        = backend.where(keras.backend.not_equal(anchor_state, -1))
         labels         = backend.gather_nd(labels, indices)
         classification = backend.gather_nd(classification, indices)
+        print(indices)
+        print(labels)
+        print(classification)
 
         cls_loss = weight * keras.losses.binary_crossentropy(labels, classification)
         #cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
