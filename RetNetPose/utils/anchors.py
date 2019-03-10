@@ -541,11 +541,7 @@ def roll_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     indices = np.floor(indices).astype(dtype=np.int32)
     print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
-    allTargets[np.arange(allTargets.shape[0]), indices - 2] = 0.1335
-    allTargets[np.arange(allTargets.shape[0]), indices-1] = 0.6049
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    allTargets[np.arange(allTargets.shape[0]), indices+1] = 0.6049
-    allTargets[np.arange(allTargets.shape[0]), indices+2] = 0.1335
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
@@ -572,11 +568,7 @@ def pitch_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     indices = np.floor(indices).astype(dtype=np.int32)
     print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
-    allTargets[np.arange(allTargets.shape[0]), indices - 2] = 0.1335
-    allTargets[np.arange(allTargets.shape[0]), indices - 1] = 0.6049
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    allTargets[np.arange(allTargets.shape[0]), indices + 1] = 0.6049
-    allTargets[np.arange(allTargets.shape[0]), indices + 2] = 0.1335
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
@@ -603,11 +595,7 @@ def yaw_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     indices = np.floor(indices).astype(dtype=np.int32)
     print(indices[0])
     allTargets = np.zeros((indices.shape[0], 30))
-    allTargets[np.arange(allTargets.shape[0]), indices - 2] = 0.1335
-    allTargets[np.arange(allTargets.shape[0]), indices - 1] = 0.6049
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    allTargets[np.arange(allTargets.shape[0]), indices + 1] = 0.6049
-    allTargets[np.arange(allTargets.shape[0]), indices + 2] = 0.1335
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
     return allTargets
