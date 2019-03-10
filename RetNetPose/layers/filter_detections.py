@@ -20,12 +20,13 @@ from .. import backend
 
 def filter_detections(
     boxes,
-    translations,
-    depths,
+    boxes3D,
+    #translations,
+    #depths,
     #rotations,
-    roll,
-    pitch,
-    yaw,
+    #roll,
+    #pitch,
+    #yaw,
     classification,
     other                 = [],
     class_specific_filter = True,
@@ -96,25 +97,32 @@ def filter_detections(
 
     # filter input using the final set of indices
     indices             = keras.backend.gather(indices[:, 0], top_indices)
+    print(boxes)
+    print(boxes3D)
     boxes               = keras.backend.gather(boxes, indices)
-    translations = keras.backend.gather(translations, indices)
-    depths = keras.backend.gather(depths, indices)
+    boxes3D = keras.backend.gather(boxes3D, indices)
+    print(indices)
+    #translations = keras.backend.gather(translations, indices)
+    #depths = keras.backend.gather(depths, indices)
     #rotations = keras.backend.gather(rotations, indices)
-    roll = keras.backend.gather(roll, indices)
-    pitch = keras.backend.gather(pitch, indices)
-    yaw = keras.backend.gather(yaw, indices)
+    #roll = keras.backend.gather(roll, indices)
+    #pitch = keras.backend.gather(pitch, indices)
+    #yaw = keras.backend.gather(yaw, indices)
     labels              = keras.backend.gather(labels, top_indices)
     other_              = [keras.backend.gather(o, indices) for o in other]
 
+    print(boxes)
+    print(boxes3D)
     # zero pad the outputs
     pad_size = keras.backend.maximum(0, max_detections - keras.backend.shape(scores)[0])
     boxes    = backend.pad(boxes, [[0, pad_size], [0, 0]], constant_values=-1)
-    translations = backend.pad(translations, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
-    depths = backend.pad(depths, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
+    boxes3D = backend.pad(boxes3D, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
+    #translations = backend.pad(translations, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
+    #depths = backend.pad(depths, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
     #rotations = backend.pad(rotations, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
-    roll = backend.pad(roll, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
-    pitch = backend.pad(pitch, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
-    yaw = backend.pad(yaw, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
+    #roll = backend.pad(roll, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
+    #pitch = backend.pad(pitch, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
+    #yaw = backend.pad(yaw, [[0, pad_size], [0, 0], [0, 0]], constant_values=-1)
     scores   = backend.pad(scores, [[0, pad_size]], constant_values=-1)
     labels   = backend.pad(labels, [[0, pad_size]], constant_values=-1)
     labels   = keras.backend.cast(labels, 'int32')
@@ -122,19 +130,21 @@ def filter_detections(
 
     # set shapes, since we know what they are
     boxes.set_shape([max_detections, 4])
-    translations.set_shape([max_detections, 15, 2])
-    depths.set_shape([max_detections, 15, 1])
+    boxes3D.set_shape([max_detections, 15, 16])
+    #translations.set_shape([max_detections, 15, 2])
+    #depths.set_shape([max_detections, 15, 1])
     #depths.set_shape([max_detections, 15, 80])
     #rotations.set_shape([max_detections, 15, 4])
-    roll.set_shape([max_detections, 15, 30])
-    pitch.set_shape([max_detections, 15, 30])
-    yaw.set_shape([max_detections, 15, 30])
+    #roll.set_shape([max_detections, 15, 30])
+    #pitch.set_shape([max_detections, 15, 30])
+    #yaw.set_shape([max_detections, 15, 30])
     scores.set_shape([max_detections])
     labels.set_shape([max_detections])
     for o, s in zip(other_, [list(keras.backend.int_shape(o)) for o in other]):
         o.set_shape([max_detections] + s[1:])
 
-    return [boxes, translations, depths, roll, pitch, yaw, scores, labels] + other_
+    #return [boxes, translations, depths, roll, pitch, yaw, scores, labels] + other_
+    return [boxes, boxes3D, scores, labels] + other_
 
 
 class FilterDetections(keras.layers.Layer):
@@ -175,36 +185,47 @@ class FilterDetections(keras.layers.Layer):
         Args
             inputs : List of [boxes, classification, other[0], other[1], ...] tensors.
         """
-        boxes          = inputs[0]
-        translations = inputs[1]
-        depths = inputs[2]
+        #boxes          = inputs[0]
+        #translations = inputs[1]
+        #depths = inputs[2]
         #rotations = inputs[3]
-        roll = inputs[3]
-        pitch = inputs[4]
-        yaw = inputs[5]
-        classification = inputs[6]
-        other          = inputs[7:]
+        #roll = inputs[3]
+        #pitch = inputs[4]
+        #yaw = inputs[5]
+        #classification = inputs[6]
+        #other          = inputs[7:]
+
+        boxes = inputs[0]
+        boxes3D = inputs[1]
+        classification = inputs[2]
+        other = inputs[3:]
 
         # wrap nms with our parameters
         def _filter_detections(args):
-            boxes          = args[0]
-            translations = args[1]
-            depths = args[2]
+            #boxes          = args[0]
+            #translations = args[1]
+            #depths = args[2]
             #rotations      = args[3]
-            roll = args[3]
-            pitch = args[4]
-            yaw = args[5]
-            classification = args[6]
-            other          = args[7]
+            #roll = args[3]
+            #pitch = args[4]
+            #yaw = args[5]
+            #classification = args[6]
+            #other          = args[7]
+
+            boxes = args[0]
+            boxes3D = args[1]
+            classification = args[2]
+            other = args[3]
 
             return filter_detections(
                 boxes,
-                translations,
-                depths,
+                boxes3D,
+                #translations,
+                #depths,
                 #rotations,
-                roll,
-                pitch,
-                yaw,
+                #roll,
+                #pitch,
+                #yaw,
                 classification,
                 other,
                 nms                   = self.nms,
@@ -218,8 +239,10 @@ class FilterDetections(keras.layers.Layer):
         outputs = backend.map_fn(
             _filter_detections,
             #elems=[boxes, translations, depths, rotations, classification, other],
-            elems=[boxes, translations, depths, roll, pitch, yaw, classification, other],
-            dtype=[keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), 'int32'] + [o.dtype for o in other],
+            #elems=[boxes, translations, depths, roll, pitch, yaw, classification, other],
+            elems=[boxes, boxes3D, classification, other],
+            #dtype=[keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), 'int32'] + [o.dtype for o in other],
+            dtype=[keras.backend.floatx(), keras.backend.floatx(), keras.backend.floatx(), 'int32'] + [o.dtype for o in other],
             parallel_iterations=self.parallel_iterations
         )
 
@@ -237,17 +260,19 @@ class FilterDetections(keras.layers.Layer):
         """
         return [
             (input_shape[0][0], self.max_detections, 4),
-            (input_shape[1][0], self.max_detections, 15, 2),
-            (input_shape[2][0], self.max_detections, 15, 1),   # depths regression
+            (input_shape[1][0], self.max_detections, 16),
+            #(input_shape[1][0], self.max_detections, 15, 2),
+            #(input_shape[2][0], self.max_detections, 15, 1),   # depths regression
             #(input_shape[2][0], self.max_detections, 15, 80),  # depths classification
             #(input_shape[3][0], self.max_detections, 15, 4),
-            (input_shape[3][0], self.max_detections, 15, 30),
-            (input_shape[4][0], self.max_detections, 15, 30),
-            (input_shape[5][0], self.max_detections, 15, 30),
-            (input_shape[6][0], self.max_detections),
-            (input_shape[6][0], self.max_detections),
+            #(input_shape[3][0], self.max_detections, 15, 30),
+            #(input_shape[4][0], self.max_detections, 15, 30),
+            #(input_shape[5][0], self.max_detections, 15, 30),
+            (input_shape[2][0], self.max_detections),
+            (input_shape[2][0], self.max_detections),
         ] + [
-            tuple([input_shape[i][0], self.max_detections] + list(input_shape[i][7:])) for i in range(8, len(input_shape))
+            tuple([input_shape[i][0], self.max_detections] + list(input_shape[i][3:])) for i in range(3, len(input_shape))
+            #tuple([input_shape[i][0], self.max_detections] + list(input_shape[i][7:])) for i in range(7, len(input_shape))
         ]
 
     def compute_mask(self, inputs, mask=None):

@@ -250,7 +250,7 @@ def smooth_l1_z(sigma=3.0, weight=0.5):
     return _smooth_l1_z
 
 
-def smooth_l1_xy(sigma=3.0, weight=0.2):
+def smooth_l1_xy(sigma=3.0, weight=0.05):
     sigma_squared = sigma ** 2
 
     def _smooth_l1_xy(y_true, y_pred):

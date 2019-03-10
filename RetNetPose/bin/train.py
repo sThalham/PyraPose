@@ -121,15 +121,16 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # compile model
     training_model.compile(
         loss={
-            'bbox'         : losses.smooth_l1(),
-            'xy'           : losses.smooth_l1_xy(),
-            'depth'         : losses.smooth_l1_z(),
+            'bbox': losses.smooth_l1(),
+            '3Dbox': losses.smooth_l1_xy(),
+            #'xy'           : losses.smooth_l1_xy(),
+            #'depth'         : losses.smooth_l1_z(),
             #'depth'        : losses.cross(),
             #'rotation'     : losses.weighted_mse(),
             #'rotation'      : losses.quat_dist(),
-            'roll': losses.cross_pose(),
-            'pitch': losses.cross_pose(),
-            'yaw': losses.cross_pose(),
+            #'roll': losses.cross_pose(),
+            #'pitch': losses.cross_pose(),
+            #'yaw': losses.cross_pose(),
             #'rotation'     : losses.weighted_ae(),
             'cls'          : losses.focal()
         },

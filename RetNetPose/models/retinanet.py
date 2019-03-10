@@ -134,6 +134,51 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
+def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_feature_size=256, regression_feature_size=256, name='3Dregression_submodel'):
+    """ Creates the default regression submodel.
+
+    Args
+        num_values              : Number of values to regress.
+        num_anchors             : Number of anchors to regress for each feature level.
+        pyramid_feature_size    : The number of filters to expect from the feature pyramid levels.
+        regression_feature_size : The number of filters to use in the layers in the regression submodel.
+        name                    : The name of the submodel.
+
+    Returns
+        A keras.models.Model that predicts regression values for each anchor.
+    """
+    # All new conv layers except the final one in the
+    # RetinaNet (classification) subnets are initialized
+    # with bias b = 0 and a Gaussian weight fill with stddev = 0.01.
+    options = {
+        'kernel_size'        : 3,
+        'strides'            : 1,
+        'padding'            : 'same',
+        'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer'   : 'zeros'
+    }
+
+    if keras.backend.image_data_format() == 'channels_first':
+        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+    else:
+        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
+    outputs = inputs
+    for i in range(4):
+        outputs = keras.layers.Conv2D(
+            filters=regression_feature_size,
+            activation='relu',
+            name='pyramid_regression3D_{}'.format(i),
+            **options
+        )(outputs)
+
+    outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', **options)(outputs)
+    if keras.backend.image_data_format() == 'channels_first':
+        outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute')(outputs)
+    outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_regression3D_reshape')(outputs)
+
+    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
+
+
 def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_feature_size=256, regression_feature_size=256, name='pose_regression_submodel'):
 
     if keras.backend.image_data_format() == 'channels_first':
@@ -245,16 +290,22 @@ def default_submodels(num_classes, num_anchors):
     Returns
         A list of tuple, where the first element is the name of the submodel and the second element is the submodel itself.
     """
-    xy, dep, roll, pitch, yaw = default_pose_regression_model(3, num_anchors, num_classes)
+    #xy, dep, roll, pitch, yaw = default_pose_regression_model(3, num_anchors, num_classes)
+
+    #return [
+    #    ('bbox', default_regression_model(4, num_anchors)),
+    #    ('xy', xy),
+    #    ('depth', dep),
+    #    #('rotation', rot),
+    #    ('roll', roll),
+    #    ('pitch', pitch),
+    #    ('yaw', yaw),
+    #    ('cls', default_classification_model(num_classes, num_anchors))
+    #]
 
     return [
         ('bbox', default_regression_model(4, num_anchors)),
-        ('xy', xy),
-        ('depth', dep),
-        #('rotation', rot),
-        ('roll', roll),
-        ('pitch', pitch),
-        ('yaw', yaw),
+        ('3Dbox', default_3Dregression_model(16, num_anchors, 15)),
         ('cls', default_classification_model(num_classes, num_anchors))
     ]
 
@@ -410,25 +461,30 @@ def retinanet_bbox(
     anchors  = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output
-    regression     = model.outputs[0]
-    translation_regression = model.outputs[1]
-    depth_regression = model.outputs[2]
+    #regression     = model.outputs[0]
+    #translation_regression = model.outputs[1]
+    #depth_regression = model.outputs[2]
     #depth_classification = model.outputs[2]
     #rotation_regression = model.outputs[3]
-    roll_classification = model.outputs[3]
-    pitch_classification = model.outputs[4]
-    yaw_classification = model.outputs[5]
-    classification = model.outputs[6]
+    #roll_classification = model.outputs[3]
+    #pitch_classification = model.outputs[4]
+    #yaw_classification = model.outputs[5]
+    #classification = model.outputs[6]
+    #other = model.outputs[7:]
 
-    # "other" can be any additional output from custom submodels, by default this will be []
-    other = model.outputs[7:]
+    regression = model.outputs[0]
+    regression3D = model.outputs[1]
+    classification = model.outputs[2]
+    other = model.outputs[3:]
 
     # apply predicted regression to anchors
     boxes = layers.RegressBoxes(name='boxes')([anchors, regression])
     boxes = layers.ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
-    translations = layers.RegressTranslation(name='tras_out')([anchors, boxes, translation_regression])
-    depths = layers.RegressDepth(name='deps_outs')([anchors, boxes, depth_regression])
+    #translations = layers.RegressTranslation(name='tras_out')([anchors, boxes, translation_regression])
+    #depths = layers.RegressDepth(name='deps_outs')([anchors, boxes, depth_regression])
     #rotations = layers.RegressRotation(name='rots_out')([anchors, rotation_regression])
+
+    boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
     # filter detections (apply NMS / score threshold / select top-k)
     detections = layers.FilterDetections(
@@ -437,7 +493,8 @@ def retinanet_bbox(
         name                  = 'filtered_detections'
     #)([boxes, translations, depth_classification, rotations, classification] + other)
     #)([boxes, translations, depths, rotations, classification] + other)
-    )([boxes, translations, depths, roll_classification, pitch_classification, yaw_classification, classification] + other)
+    #)([boxes, translations, depths, roll_classification, pitch_classification, yaw_classification, classification] + other)
+    )([boxes, boxes3D, classification] + other)
 
     # construct the model
     return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)

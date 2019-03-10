@@ -166,7 +166,7 @@ class LinemodGenerator(Generator):
 
         #annotations_ids = [ann['id'] for ann in anns]
         #annotations = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)),}
-        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 6))}
+        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 6)), 'segmentations': np.empty((0, 16))}
 
         for idx, a in enumerate(anns):
             # some annotations have basically no width / height, skip them
@@ -196,6 +196,24 @@ class LinemodGenerator(Generator):
                 a['pose'][4],
                 a['pose'][5],
                 #a['pose'][6],
+            ]]], axis=0)
+            annotations['segmentations'] = np.concatenate([annotations['segmentations'], [[
+                a['segmentation'][0],
+                a['segmentation'][1],
+                a['segmentation'][2],
+                a['segmentation'][3],
+                a['segmentation'][4],
+                a['segmentation'][5],
+                a['segmentation'][6],
+                a['segmentation'][7],
+                a['segmentation'][8],
+                a['segmentation'][9],
+                a['segmentation'][10],
+                a['segmentation'][11],
+                a['segmentation'][12],
+                a['segmentation'][13],
+                a['segmentation'][14],
+                a['segmentation'][15],
             ]]], axis=0)
 
         return annotations

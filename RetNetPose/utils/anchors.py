@@ -83,7 +83,7 @@ def anchor_targets_bbox(
     for annotations in annotations_group:
         assert('bboxes' in annotations), "Annotations should contain bboxes."
         assert('labels' in annotations), "Annotations should contain labels."
-        assert('poses' in annotations), "Annotations should contain poses"
+        assert('segmentations' in annotations), "Annotations should contain poses"
 
     batch_size = len(image_group)
 
@@ -96,6 +96,7 @@ def anchor_targets_bbox(
     roll_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
     pitch_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
     yaw_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
+    regression_3D = np.zeros((batch_size, anchors.shape[0], num_classes, 16 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
@@ -127,6 +128,9 @@ def anchor_targets_bbox(
             yaw_batch[index, ignore_indices, :, -1] = -1
             yaw_batch[index, positive_indices, :, -1] = -1
 
+            regression_3D[index, ignore_indices, :, -1] = -1
+            regression_3D[index, positive_indices, :, -1] = -1
+
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
@@ -150,6 +154,9 @@ def anchor_targets_bbox(
             yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             yaw_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
+            regression_3D[index, :, :, :-1] = box3D_transform(anchors, annotations['segmentations'][argmax_overlaps_inds, :], num_classes)
+            regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+
         # ignore annotations outside of image
         if image.shape:
             anchors_centers = np.vstack([(anchors[:, 0] + anchors[:, 2]) / 2, (anchors[:, 1] + anchors[:, 3]) / 2]).T
@@ -164,7 +171,10 @@ def anchor_targets_bbox(
             pitch_batch[index, indices, :, -1] = -1
             yaw_batch[index, indices, :, -1] = -1
 
-    return regression_batch, xy_batch, dep_batch, roll_batch, pitch_batch, yaw_batch, labels_batch
+            regression_3D[index, indices, :, -1] = -1
+
+    return regression_batch, regression_3D, labels_batch
+    #return regression_batch, xy_batch, dep_batch, roll_batch, pitch_batch, yaw_batch, labels_batch
 
 
 def compute_gt_annotations(
@@ -391,6 +401,53 @@ def bbox_transform(anchors, gt_boxes, mean=None, std=None):
     #print('bbox: ', targets[0, :])
 
     return targets
+
+
+def box3D_transform(anchors, gt_boxes, num_classes, mean=None, std=None):
+    """Compute bounding-box regression targets for an image."""
+
+    if mean is None:
+        mean = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    if std is None:
+        std = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+
+    if isinstance(mean, (list, tuple)):
+        mean = np.array(mean)
+    elif not isinstance(mean, np.ndarray):
+        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+    if isinstance(std, (list, tuple)):
+        std = np.array(std)
+    elif not isinstance(std, np.ndarray):
+        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+    anchor_widths  = anchors[:, 2] - anchors[:, 0]
+    anchor_heights = anchors[:, 3] - anchors[:, 1]
+
+    targets_dx1 = (gt_boxes[:, 0] - anchors[:, 0]) / anchor_widths
+    targets_dy1 = (gt_boxes[:, 1] - anchors[:, 1]) / anchor_heights
+    targets_dx2 = (gt_boxes[:, 2] - anchors[:, 2]) / anchor_widths
+    targets_dy2 = (gt_boxes[:, 3] - anchors[:, 3]) / anchor_heights
+    targets_dx3 = (gt_boxes[:, 4] - anchors[:, 0]) / anchor_widths
+    targets_dy3 = (gt_boxes[:, 5] - anchors[:, 1]) / anchor_heights
+    targets_dx4 = (gt_boxes[:, 6] - anchors[:, 2]) / anchor_widths
+    targets_dy4 = (gt_boxes[:, 7] - anchors[:, 3]) / anchor_heights
+    targets_dx5 = (gt_boxes[:, 8] - anchors[:, 0]) / anchor_widths
+    targets_dy5 = (gt_boxes[:, 9] - anchors[:, 1]) / anchor_heights
+    targets_dx6 = (gt_boxes[:, 10] - anchors[:, 2]) / anchor_widths
+    targets_dy6 = (gt_boxes[:, 11] - anchors[:, 3]) / anchor_heights
+    targets_dx7 = (gt_boxes[:, 12] - anchors[:, 0]) / anchor_widths
+    targets_dy7 = (gt_boxes[:, 13] - anchors[:, 1]) / anchor_heights
+    targets_dx8 = (gt_boxes[:, 14] - anchors[:, 2]) / anchor_widths
+    targets_dy8 = (gt_boxes[:, 15] - anchors[:, 3]) / anchor_heights
+
+    targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
+    targets = targets.T
+
+    targets = (targets - mean) / std
+    allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
+
+    return allTargets
 
 
 def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
