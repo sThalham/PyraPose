@@ -83,19 +83,20 @@ def anchor_targets_bbox(
     for annotations in annotations_group:
         assert('bboxes' in annotations), "Annotations should contain bboxes."
         assert('labels' in annotations), "Annotations should contain labels."
+        assert('poses' in annotations), "Annotations should contain labels."
         assert('segmentations' in annotations), "Annotations should contain poses"
 
     batch_size = len(image_group)
 
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
-    xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
-    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
+    #xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
+    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
     #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 80 + 1), dtype=keras.backend.floatx()) # depths classification
     #rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
-    roll_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
-    pitch_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
-    yaw_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 30 + 1), dtype=keras.backend.floatx())
+    #roll_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
+    #pitch_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
+    #yaw_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], num_classes, 16 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
@@ -110,23 +111,23 @@ def anchor_targets_bbox(
             regression_batch[index, ignore_indices, -1]   = -1
             regression_batch[index, positive_indices, -1] = 1
 
-            xy_batch[index, ignore_indices, :, -1] = -1
-            xy_batch[index, positive_indices, :, -1] = -1
+            #xy_batch[index, ignore_indices, :, -1] = -1
+            #xy_batch[index, positive_indices, :, -1] = -1
 
-            dep_batch[index, ignore_indices, :, -1] = -1
-            dep_batch[index, positive_indices, :, -1] = -1
+            #dep_batch[index, ignore_indices, :, -1] = -1
+            #dep_batch[index, positive_indices, :, -1] = -1
 
             #rots_batch[index, ignore_indices, :, -1] = -1
             #rots_batch[index, positive_indices, :, -1] = -1
 
-            roll_batch[index, ignore_indices, :, -1] = -1
-            roll_batch[index, positive_indices, :, -1] = -1
+            #roll_batch[index, ignore_indices, :, -1] = -1
+            #roll_batch[index, positive_indices, :, -1] = -1
 
-            pitch_batch[index, ignore_indices, :, -1] = -1
-            pitch_batch[index, positive_indices, :, -1] = -1
+            #pitch_batch[index, ignore_indices, :, -1] = -1
+            #pitch_batch[index, positive_indices, :, -1] = -1
 
-            yaw_batch[index, ignore_indices, :, -1] = -1
-            yaw_batch[index, positive_indices, :, -1] = -1
+            #yaw_batch[index, ignore_indices, :, -1] = -1
+            #yaw_batch[index, positive_indices, :, -1] = -1
 
             regression_3D[index, ignore_indices, :, -1] = -1
             regression_3D[index, positive_indices, :, -1] = -1
@@ -136,23 +137,23 @@ def anchor_targets_bbox(
 
             regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
-            xy_batch[index, :, :, :-1] = xy_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            xy_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            #xy_batch[index, :, :, :-1] = xy_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            #xy_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            dep_batch[index, :, :, :-1] = depth_transform(annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            dep_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            #dep_batch[index, :, :, :-1] = depth_transform(annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            #dep_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             #rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             #rots_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            roll_batch[index, :, :, :-1] = roll_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            roll_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            #roll_batch[index, :, :, :-1] = roll_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            #roll_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            pitch_batch[index, :, :, :-1] = pitch_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            pitch_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            #pitch_batch[index, :, :, :-1] = pitch_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            #pitch_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            yaw_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            #yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            #yaw_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             regression_3D[index, :, :, :-1] = box3D_transform(anchors, annotations['segmentations'][argmax_overlaps_inds, :], num_classes)
             regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
@@ -164,12 +165,12 @@ def anchor_targets_bbox(
 
             labels_batch[index, indices, -1]     = -1
             regression_batch[index, indices, -1] = -1
-            xy_batch[index, indices, :, -1] = -1
-            dep_batch[index, indices, :, -1] = -1
+            #xy_batch[index, indices, :, -1] = -1
+            #dep_batch[index, indices, :, -1] = -1
             #rots_batch[index, indices, :, -1] = -1
-            roll_batch[index, indices, :, -1] = -1
-            pitch_batch[index, indices, :, -1] = -1
-            yaw_batch[index, indices, :, -1] = -1
+            #roll_batch[index, indices, :, -1] = -1
+            #pitch_batch[index, indices, :, -1] = -1
+            #yaw_batch[index, indices, :, -1] = -1
 
             regression_3D[index, indices, :, -1] = -1
 
@@ -594,9 +595,9 @@ def roll_transform(anchors, gt_poses, num_classes, mean=None, std=None):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
     #print('roll: ', gt_poses[0,3])
-    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.21666156231) #/ 0.69813170079 ) # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.69813170079 ) #/ 0.21666156231) #/ 0.69813170079 ) # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 30))
+    allTargets = np.zeros((indices.shape[0], 10))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
@@ -620,9 +621,9 @@ def pitch_transform(anchors, gt_poses, num_classes, mean=None, std=None):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
     #print('pitch: ', gt_poses[0, 4])
-    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.21666156231) # / 0.69813170079 )   # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.69813170079 ) # / 0.21666156231) # / 0.69813170079 )   # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 30))
+    allTargets = np.zeros((indices.shape[0], 10))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 
@@ -646,9 +647,9 @@ def yaw_transform(anchors, gt_poses, num_classes, mean=None, std=None):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
     #print('yaw: ', gt_poses[0, 5])
-    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.21666156231) # / 0.69813170079 )  # bin every 2 cm
+    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.69813170079 ) #/ 0.21666156231) # / 0.69813170079 )  # bin every 2 cm
     indices = np.floor(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 30))
+    allTargets = np.zeros((indices.shape[0], 10))
     allTargets[np.arange(allTargets.shape[0]), indices] = 1
     allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
 

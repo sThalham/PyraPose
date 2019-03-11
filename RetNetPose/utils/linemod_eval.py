@@ -319,9 +319,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         matd = geometry.rotations.geodesic_distance_for_rotations(rot_t_mat, rot_mat)
                         rd = matd
                         '''
-                        print(' ')
-                        print('det: ', float(roll), float(pitch), float(yaw))
-                        print('gt: ', t_rot[0], t_rot[1], t_rot[2])
+                        #print('roll, pitch, yaw cls')
+                        #print(np.argmax(rolls[(cls - 1), :]))
+                        #print(np.argmax(pitchs[(cls - 1), :]))
+                        #print(np.argmax(yaws[(cls - 1), :]))
+
+                        #print(' ')
+                        #print('det: ', float(roll), float(pitch), float(yaw))
+                        #print('gt: ', t_rot[0], t_rot[1], t_rot[2])
 
                         #rot = np.array((roll, pitch, yaw), dtype=np.float32)
                         #quat = tf3d.euler.euler2quat(float(roll), float(pitch), float(yaw))

@@ -218,7 +218,7 @@ def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_
     #outputsQ = keras.layers.Reshape((-1, num_classes, 4), name='pyramid_ori_regression_reshape')(outputsQ)
     #outputsQ = l2_norm()(outputsQ)
 
-    num_rots = 30
+    num_rots = 10
     outputsR = keras.layers.Dense(num_anchors * num_classes * num_rots, name='pyramid_depth_classificationF')(outputs)
     if keras.backend.image_data_format() == 'channels_first':
         outputsR = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsR)

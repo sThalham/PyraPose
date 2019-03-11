@@ -97,11 +97,8 @@ def filter_detections(
 
     # filter input using the final set of indices
     indices             = keras.backend.gather(indices[:, 0], top_indices)
-    print(boxes)
-    print(boxes3D)
     boxes               = keras.backend.gather(boxes, indices)
     boxes3D = keras.backend.gather(boxes3D, indices)
-    print(indices)
     #translations = keras.backend.gather(translations, indices)
     #depths = keras.backend.gather(depths, indices)
     #rotations = keras.backend.gather(rotations, indices)
@@ -111,8 +108,6 @@ def filter_detections(
     labels              = keras.backend.gather(labels, top_indices)
     other_              = [keras.backend.gather(o, indices) for o in other]
 
-    print(boxes)
-    print(boxes3D)
     # zero pad the outputs
     pad_size = keras.backend.maximum(0, max_detections - keras.backend.shape(scores)[0])
     boxes    = backend.pad(boxes, [[0, pad_size], [0, 0]], constant_values=-1)
@@ -135,9 +130,9 @@ def filter_detections(
     #depths.set_shape([max_detections, 15, 1])
     #depths.set_shape([max_detections, 15, 80])
     #rotations.set_shape([max_detections, 15, 4])
-    #roll.set_shape([max_detections, 15, 30])
-    #pitch.set_shape([max_detections, 15, 30])
-    #yaw.set_shape([max_detections, 15, 30])
+    #roll.set_shape([max_detections, 15, 10])
+    #pitch.set_shape([max_detections, 15, 10])
+    #yaw.set_shape([max_detections, 15, 10])
     scores.set_shape([max_detections])
     labels.set_shape([max_detections])
     for o, s in zip(other_, [list(keras.backend.int_shape(o)) for o in other]):
@@ -260,7 +255,7 @@ class FilterDetections(keras.layers.Layer):
         """
         return [
             (input_shape[0][0], self.max_detections, 4),
-            (input_shape[1][0], self.max_detections, 16),
+            (input_shape[1][0], self.max_detections, 15, 16),
             #(input_shape[1][0], self.max_detections, 15, 2),
             #(input_shape[2][0], self.max_detections, 15, 1),   # depths regression
             #(input_shape[2][0], self.max_detections, 15, 80),  # depths classification
