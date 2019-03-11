@@ -143,8 +143,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image = image.transpose((2, 0, 1))
 
         # run network
-        #boxes, trans, deps, rots, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
-        boxes, trans, deps, rol, pit, ya, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        boxes, trans, deps, rots, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        #boxes, trans, deps, rol, pit, ya, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
 
         # correct boxes for image scale
         boxes /= scale
@@ -166,8 +166,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
         fn[t_cat] += 1
         fnit = True
         # compute predicted labels and scores
-        #for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
-        for box, trans, deps, rolls, pitchs, yaws, score, label in zip(boxes[0], trans[0], deps[0], rol[0], pit[0], ya[0], scores[0], labels[0]):
+        for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
+        #for box, trans, deps, rolls, pitchs, yaws, score, label in zip(boxes[0], trans[0], deps[0], rol[0], pit[0], ya[0], scores[0], labels[0]):
             # scores are sorted, so we can break
             if score < threshold:
                 continue
@@ -178,15 +178,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
             tra = trans[(cls-1), :]
             #dep = np.array([(np.argmax(deps[(cls-1), :]) * 0.03 ) - 0.015])
             dep = deps[(cls - 1), :]
-            #rot = quat[(cls-1), :]
-            #pose = tra.tolist() + dep.tolist() + rot.tolist()
+            rot = quat[(cls-1), :]
+            pose = tra.tolist() + dep.tolist() + rot.tolist()
             #roll = np.array([(np.argmax(rolls[(cls - 1), :]) * 0.69813170079) - np.pi])
             #pitch = np.array([(np.argmax(pitchs[(cls - 1), :]) * 0.69813170079) - np.pi])
             #yaw = np.array([(np.argmax(yaws[(cls - 1), :]) * 0.69813170079) - np.pi])
-            roll = np.array([(np.argmax(rolls[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
-            pitch = np.array([(np.argmax(pitchs[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
-            yaw = np.array([(np.argmax(yaws[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
-            pose = tra.tolist() + dep.tolist() + roll.tolist() + pitch.tolist() + yaw.tolist()
+            #roll = np.array([(np.argmax(rolls[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
+            #pitch = np.array([(np.argmax(pitchs[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
+            #yaw = np.array([(np.argmax(yaws[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
+            #pose = tra.tolist() + dep.tolist() + roll.tolist() + pitch.tolist() + yaw.tolist()
 
             # append detection for each positively labeled class
             image_result = {
@@ -331,14 +331,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #rot = np.array((roll, pitch, yaw), dtype=np.float32)
                         #quat = tf3d.euler.euler2quat(float(roll), float(pitch), float(yaw))
                         #quat_t = tf3d.euler.euler2quat(t_rot[0], t_rot[1], t_rot[2])
-                        rot_mat = tf3d.euler.euler2mat(float(roll), float(pitch), float(yaw))
-                        rot_t_mat = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
-                        #quat = pyquaternion.Quaternion(quat).unit
-                        #quat_t = pyquaternion.Quaternion(quat_t).unit
+                        #rot_mat = tf3d.euler.euler2mat(float(roll), float(pitch), float(yaw))
+                        #rot_t_mat = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
+                        quat = pyquaternion.Quaternion(rot).unit
+                        quat_t = pyquaternion.Quaternion(t_rot).unit
                         #rot_t_mat = geometry.rotations.rotation_from_quaternion(quat_t)
                         #rot_mat = geometry.rotations.rotation_from_quaternion(quat)
-                        rd = re(rot_mat, rot_t_mat)
-                        # rd = pyquaternion.Quaternion.distance(quat_t, quat)
+                        #rd = re(rot_mat, rot_t_mat)
+                        rd = pyquaternion.Quaternion.distance(quat_t, quat)
                         #rot = np.array((roll, pitch, yaw), dtype=np.float32)
                         #rot = np.linalg.norm(rot)
                         #t_rot = np.linalg.norm(t_rot)

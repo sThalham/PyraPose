@@ -90,14 +90,14 @@ def anchor_targets_bbox(
 
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
-    #xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
-    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
+    xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
+    dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
     #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 80 + 1), dtype=keras.backend.floatx()) # depths classification
-    #rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
+    rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
     #roll_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
     #pitch_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
     #yaw_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
-    regression_3D = np.zeros((batch_size, anchors.shape[0], num_classes, 16 + 1), dtype=keras.backend.floatx())
+    #regression_3D = np.zeros((batch_size, anchors.shape[0], num_classes, 16 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
@@ -111,14 +111,14 @@ def anchor_targets_bbox(
             regression_batch[index, ignore_indices, -1]   = -1
             regression_batch[index, positive_indices, -1] = 1
 
-            #xy_batch[index, ignore_indices, :, -1] = -1
-            #xy_batch[index, positive_indices, :, -1] = -1
+            xy_batch[index, ignore_indices, :, -1] = -1
+            xy_batch[index, positive_indices, :, -1] = -1
 
-            #dep_batch[index, ignore_indices, :, -1] = -1
-            #dep_batch[index, positive_indices, :, -1] = -1
+            dep_batch[index, ignore_indices, :, -1] = -1
+            dep_batch[index, positive_indices, :, -1] = -1
 
-            #rots_batch[index, ignore_indices, :, -1] = -1
-            #rots_batch[index, positive_indices, :, -1] = -1
+            rots_batch[index, ignore_indices, :, -1] = -1
+            rots_batch[index, positive_indices, :, -1] = -1
 
             #roll_batch[index, ignore_indices, :, -1] = -1
             #roll_batch[index, positive_indices, :, -1] = -1
@@ -129,22 +129,22 @@ def anchor_targets_bbox(
             #yaw_batch[index, ignore_indices, :, -1] = -1
             #yaw_batch[index, positive_indices, :, -1] = -1
 
-            regression_3D[index, ignore_indices, :, -1] = -1
-            regression_3D[index, positive_indices, :, -1] = -1
+            #regression_3D[index, ignore_indices, :, -1] = -1
+            #regression_3D[index, positive_indices, :, -1] = -1
 
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
             regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
-            #xy_batch[index, :, :, :-1] = xy_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #xy_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            xy_batch[index, :, :, :-1] = xy_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            xy_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            #dep_batch[index, :, :, :-1] = depth_transform(annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #dep_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            dep_batch[index, :, :, :-1] = depth_transform(annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            dep_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            #rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #rots_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
+            rots_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             #roll_batch[index, :, :, :-1] = roll_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             #roll_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
@@ -155,8 +155,8 @@ def anchor_targets_bbox(
             #yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
             #yaw_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            regression_3D[index, :, :, :-1] = box3D_transform(anchors, annotations['segmentations'][argmax_overlaps_inds, :], num_classes)
-            regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+            #regression_3D[index, :, :, :-1] = box3D_transform(anchors, annotations['segmentations'][argmax_overlaps_inds, :], num_classes)
+            #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
         # ignore annotations outside of image
         if image.shape:
@@ -165,17 +165,18 @@ def anchor_targets_bbox(
 
             labels_batch[index, indices, -1]     = -1
             regression_batch[index, indices, -1] = -1
-            #xy_batch[index, indices, :, -1] = -1
-            #dep_batch[index, indices, :, -1] = -1
-            #rots_batch[index, indices, :, -1] = -1
+            xy_batch[index, indices, :, -1] = -1
+            dep_batch[index, indices, :, -1] = -1
+            rots_batch[index, indices, :, -1] = -1
             #roll_batch[index, indices, :, -1] = -1
             #pitch_batch[index, indices, :, -1] = -1
             #yaw_batch[index, indices, :, -1] = -1
 
-            regression_3D[index, indices, :, -1] = -1
+            #regression_3D[index, indices, :, -1] = -1
 
-    return regression_batch, regression_3D, labels_batch
+    #return regression_batch, regression_3D, labels_batch
     #return regression_batch, xy_batch, dep_batch, roll_batch, pitch_batch, yaw_batch, labels_batch
+    return regression_batch, xy_batch, dep_batch, rots_batch, labels_batch
 
 
 def compute_gt_annotations(
@@ -565,11 +566,10 @@ def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
     targets_rx = (gt_poses[:, 3])
     targets_ry = (gt_poses[:, 4])
     targets_rz = (gt_poses[:, 5])
-    #targets_rw = (gt_poses[:, 6])
+    targets_rw = (gt_poses[:, 6])
 
-    #targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
-    targets = np.stack((targets_rx, targets_ry, targets_rz))
-    #targets = np.divide(targets, np.linalg.norm(targets, axis=0))
+    targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
+    #targets = np.stack((targets_rx, targets_ry, targets_rz))
     targets = targets.T
 
     targets = (targets - mean) / std
