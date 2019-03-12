@@ -328,25 +328,20 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #print('det: ', float(roll), float(pitch), float(yaw))
                         #print('gt: ', t_rot[0], t_rot[1], t_rot[2])
 
-                        #rot = np.array((roll, pitch, yaw), dtype=np.float32)
-                        #quat = tf3d.euler.euler2quat(float(roll), float(pitch), float(yaw))
-                        #quat_t = tf3d.euler.euler2quat(t_rot[0], t_rot[1], t_rot[2])
-                        #rot_mat = tf3d.euler.euler2mat(float(roll), float(pitch), float(yaw))
-                        #rot_t_mat = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
+                        # 2 times the distance of pyquaternion
+                        #mat_t_rot = t_rot / np.linalg.norm(t_rot)
+                        #mat_rot = rot / np.linalg.norm(rot)
+                        #rot_t_mat = geometry.rotations.rotation_from_quaternion(mat_t_rot)
+                        #rot_mat = geometry.rotations.rotation_from_quaternion(mat_rot)
+                        #matd = geometry.rotations.geodesic_distance_for_rotations(rot_t_mat, rot_mat)
+                        #print(' ')
+                        #print(matd * 180.0/math.pi)
+
                         quat = pyquaternion.Quaternion(rot).unit
                         quat_t = pyquaternion.Quaternion(t_rot).unit
-                        #rot_t_mat = geometry.rotations.rotation_from_quaternion(quat_t)
-                        #rot_mat = geometry.rotations.rotation_from_quaternion(quat)
-                        #rd = re(rot_mat, rot_t_mat)
                         rd = pyquaternion.Quaternion.distance(quat_t, quat)
-                        #rot = np.array((roll, pitch, yaw), dtype=np.float32)
-                        #rot = np.linalg.norm(rot)
-                        #t_rot = np.linalg.norm(t_rot)
-                        #rd = np.arccos(np.dot(rot, t_rot))
-
-
-                        print(' ')
-                        print(rd)
+                        #print(' ')
+                        #print(rd * 180/math.pi)
 
                         #print(' ')
                         #print(np.arccos(2 * np.power(np.dot(t_rot, rot), 2) - 1) * 180/math.pi, ' / ', (rd * 180/math.pi), (matd * 180/math.pi))
