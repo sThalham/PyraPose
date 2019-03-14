@@ -41,6 +41,129 @@ cxkin = 325.26110
 cykin = 242.04899
 
 
+threeD_boxes = np.ndarray((15, 8, 3), dtype=np.float32)
+threeD_boxes[0, :, :] = np.array([[0.038, 0.039, 0.046],  # ape [76, 78, 92]
+                                     [0.038, 0.039, -0.046],
+                                     [0.038, -0.039, -0.046],
+                                     [0.038, -0.039, 0.046],
+                                     [-0.038, 0.039, 0.046],
+                                     [-0.038, 0.039, -0.046],
+                                     [-0.038, -0.039, -0.046],
+                                     [-0.038, -0.039, 0.046]])
+threeD_boxes[1, :, :] = np.array([[0.108, 0.061, 0.1095],  # benchvise [216, 122, 219]
+                                     [0.108, 0.061, -0.1095],
+                                     [0.108, -0.061, -0.1095],
+                                     [0.108, -0.061, 0.1095],
+                                     [-0.108, 0.061, 0.1095],
+                                     [-0.108, 0.061, -0.1095],
+                                     [-0.108, -0.061, -0.1095],
+                                     [-0.108, -0.061, 0.1095]])
+threeD_boxes[2, :, :] = np.array([[0.083, 0.0825, 0.037],  # bowl [166, 165, 74]
+                                     [0.083, 0.0825, -0.037],
+                                     [0.083, -0.0825, -0.037],
+                                     [0.083, -0.0825, 0.037],
+                                     [-0.083, 0.0825, 0.037],
+                                     [-0.083, 0.0825, -0.037],
+                                     [-0.083, -0.0825, -0.037],
+                                     [-0.083, -0.0825, 0.037]])
+threeD_boxes[3, :, :] = np.array([[0.0685, 0.0715, 0.05],  # camera [137, 143, 100]
+                                     [0.0685, 0.0715, -0.05],
+                                     [0.0685, -0.0715, -0.05],
+                                     [0.0685, -0.0715, 0.05],
+                                     [-0.0685, 0.0715, 0.05],
+                                     [-0.0685, 0.0715, -0.05],
+                                     [-0.0685, -0.0715, -0.05],
+                                     [-0.0685, -0.0715, 0.05]])
+threeD_boxes[4, :, :] = np.array([[0.0505, 0.091, 0.097],  # can [101, 182, 194]
+                                     [0.0505, 0.091, -0.097],
+                                     [0.0505, -0.091, -0.097],
+                                     [0.0505, -0.091, 0.097],
+                                     [-0.0505, 0.091, 0.097],
+                                     [-0.0505, 0.091, -0.097],
+                                     [-0.0505, -0.091, -0.097],
+                                     [-0.0505, -0.091, 0.097]])
+threeD_boxes[5, :, :] = np.array([[0.0335, 0.064, 0.0585],  # cat [67, 128, 117]
+                                     [0.0335, 0.064, -0.0585],
+                                     [0.0335, -0.064, -0.0585],
+                                     [0.0335, -0.064, 0.0585],
+                                     [-0.0335, 0.064, 0.0585],
+                                     [-0.0335, 0.064, -0.0585],
+                                     [-0.0335, -0.064, -0.0585],
+                                     [-0.0335, -0.064, 0.0585]])
+threeD_boxes[6, :, :] = np.array([[0.059, 0.046, 0.0475],  # mug [118, 92, 95]
+                                     [0.059, 0.046, -0.0475],
+                                     [0.059, -0.046, -0.0475],
+                                     [0.059, -0.046, 0.0475],
+                                     [-0.059, 0.046, 0.0475],
+                                     [-0.059, 0.046, -0.0475],
+                                     [-0.059, -0.046, -0.0475],
+                                     [-0.059, -0.046, 0.0475]])
+threeD_boxes[7, :, :] = np.array([[0.115, 0.038, 0.104],  # drill [230, 76, 208]
+                                     [0.115, 0.038, -0.104],
+                                     [0.115, -0.038, -0.104],
+                                     [0.115, -0.038, 0.104],
+                                     [-0.115, 0.038, 0.104],
+                                     [-0.115, 0.038, -0.104],
+                                     [-0.115, -0.038, -0.104],
+                                     [-0.115, -0.038, 0.104]])
+threeD_boxes[8, :, :] = np.array([[0.052, 0.0385, 0.043],  # duck [104, 77, 86]
+                                     [0.052, 0.0385, -0.043],
+                                     [0.052, -0.0385, -0.043],
+                                     [0.052, -0.0385, 0.043],
+                                     [-0.052, 0.0385, 0.043],
+                                     [-0.052, 0.0385, -0.043],
+                                     [-0.052, -0.0385, -0.043],
+                                     [-0.052, -0.0385, 0.043]])
+threeD_boxes[9, :, :] = np.array([[0.075, 0.0535, 0.0345],  # eggbox [150, 107, 69]
+                                     [0.075, 0.0535, -0.0345],
+                                     [0.075, -0.0535, -0.0345],
+                                     [0.075, -0.0535, 0.0345],
+                                     [-0.075, 0.0535, 0.0345],
+                                     [-0.075, 0.0535, -0.0345],
+                                     [-0.075, -0.0535, -0.0345],
+                                     [-0.075, -0.0535, 0.0345]])
+threeD_boxes[10, :, :] = np.array([[0.0185, 0.039, 0.0865],  # glue [37, 78, 173]
+                                     [0.0185, 0.039, -0.0865],
+                                     [0.0185, -0.039, -0.0865],
+                                     [0.0185, -0.039, 0.0865],
+                                     [-0.0185, 0.039, 0.0865],
+                                     [-0.0185, 0.039, -0.0865],
+                                     [-0.0185, -0.039, -0.0865],
+                                     [-0.0185, -0.039, 0.0865]])
+threeD_boxes[11, :, :] = np.array([[0.0505, 0.054, 0.04505],  # holepuncher [101, 108, 91]
+                                     [0.0505, 0.054, -0.04505],
+                                     [0.0505, -0.054, -0.04505],
+                                     [0.0505, -0.054, 0.04505],
+                                     [-0.0505, 0.054, 0.04505],
+                                     [-0.0505, 0.054, -0.04505],
+                                     [-0.0505, -0.054, -0.04505],
+                                     [-0.0505, -0.054, 0.04505]])
+threeD_boxes[12, :, :] = np.array([[0.115, 0.038, 0.104],  # drill [230, 76, 208]
+                                     [0.115, 0.038, -0.104],
+                                     [0.115, -0.038, -0.104],
+                                     [0.115, -0.038, 0.104],
+                                     [-0.115, 0.038, 0.104],
+                                     [-0.115, 0.038, -0.104],
+                                     [-0.115, -0.038, -0.104],
+                                     [-0.115, -0.038, 0.104]])
+threeD_boxes[13, :, :] = np.array([[0.129, 0.059, 0.0705],  # iron [258, 118, 141]
+                                     [0.129, 0.059, -0.0705],
+                                     [0.129, -0.059, -0.0705],
+                                     [0.129, -0.059, 0.0705],
+                                     [-0.129, 0.059, 0.0705],
+                                     [-0.129, 0.059, -0.0705],
+                                     [-0.129, -0.059, -0.0705],
+                                     [-0.129, -0.059, 0.0705]])
+threeD_boxes[14, :, :] = np.array([[0.047, 0.0735, 0.0925],  # phone [94, 147, 185]
+                                     [0.047, 0.0735, -0.0925],
+                                     [0.047, -0.0735, -0.0925],
+                                     [0.047, -0.0735, 0.0925],
+                                     [-0.047, 0.0735, 0.0925],
+                                     [-0.047, 0.0735, -0.0925],
+                                     [-0.047, -0.0735, -0.0925],
+                                     [-0.047, -0.0735, 0.0925]])
+
+
 def create_point_cloud(depth, ds):
 
     rows, cols = depth.shape
@@ -143,8 +266,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image = image.transpose((2, 0, 1))
 
         # run network
-        boxes, trans, deps, rots, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        #boxes, trans, deps, rots, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
         #boxes, trans, deps, rol, pit, ya, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
 
         # correct boxes for image scale
         boxes /= scale
@@ -166,8 +290,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
         fn[t_cat] += 1
         fnit = True
         # compute predicted labels and scores
-        for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
+        #for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
         #for box, trans, deps, rolls, pitchs, yaws, score, label in zip(boxes[0], trans[0], deps[0], rol[0], pit[0], ya[0], scores[0], labels[0]):
+        for box, box3D, score, label in zip(boxes[0], boxes3D[0], scores[0], labels[0]):
             # scores are sorted, so we can break
             if score < threshold:
                 continue
@@ -175,11 +300,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
             if label < 0:
                 continue
             cls = generator.label_to_inv_label(label)
-            tra = trans[(cls-1), :]
+            control_points = box3D[(cls - 1), :]
+            #tra = trans[(cls-1), :]
             #dep = np.array([(np.argmax(deps[(cls-1), :]) * 0.03 ) - 0.015])
-            dep = deps[(cls - 1), :]
-            rot = quat[(cls-1), :]
-            pose = tra.tolist() + dep.tolist() + rot.tolist()
+            #dep = deps[(cls - 1), :]
+            #rot = quat[(cls-1), :]
+            #pose = tra.tolist() + dep.tolist() + rot.tolist()
             #roll = np.array([(np.argmax(rolls[(cls - 1), :]) * 0.69813170079) - np.pi])
             #pitch = np.array([(np.argmax(pitchs[(cls - 1), :]) * 0.69813170079) - np.pi])
             #yaw = np.array([(np.argmax(yaws[(cls - 1), :]) * 0.69813170079) - np.pi])
@@ -194,7 +320,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 'category_id' : generator.label_to_inv_label(label),
                 'score'       : float(score),
                 'bbox'        : box.tolist(),
-                'pose'        : pose
+                'pose'        : control_points.tolist()
             }
 
             # append detection to results
@@ -210,10 +336,51 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         tp[t_cat] += 1
                         fn[t_cat] -= 1
                         fnit = False
-                        #q1 = pyquaternion.Quaternion(t_pose)
-                        #q2 = pyquaternion.Quaternion(rot)
-                        #print('translation target: ', t_tra, '       estimation: ', tra)
-                        #print('depth target: ', t_dep, '             estimation: ', dep)
+
+                        '''
+                        obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :].T, dtype=np.float32).reshape((8, 1, 3))
+                        est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
+                        K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+                        #retval, orvec, otvec = cv2.solvePnP(obj_points, est_points, K, None, None, None, False, cv2.SOLVEPNP_ITERATIVE)
+                        retval, orvec, otvec = cv2.solvePnPRansac(objectPoints=obj_points, imagePoints=est_points, cameraMatrix=K, distCoeffs=None, iterationsCount=1000, reprojectionError=8.0, confidence=0.99, flags=cv2.SOLVEPNP_ITERATIVE)
+
+                        rmat, _ = cv2.Rodrigues(orvec)
+                        t_rmat = tf3d.quaternions.quat2mat(t_rot)
+                        rd = re(rmat, t_rmat)
+                        x_t = ((t_tra[0] - cxkin) * t_dep) / fxkin * 0.001
+                        y_t = ((t_tra[1] - cykin) * t_dep) / fykin * 0.001
+
+                        xyz = te(otvec * 1000.0, np.stack((x_t, y_t, t_dep), axis=0))
+
+                        if not math.isnan(rd):
+                            rotD.append(rd)
+                            if (rd * 180 / math.pi) < 5.0:
+                                less5deg.append(rd)
+                            if (rd * 180 / math.pi) < 10.0:
+                                less10deg.append(xyz)
+                            if (rd * 180 / math.pi) < 15.0:
+                                less15deg.append(xyz)
+                            if (rd * 180 / math.pi) < 20.0:
+                                less20deg.append(xyz)
+                            if (rd * 180 / math.pi) < 25.0:
+                                less25deg.append(xyz)
+
+                        if not math.isnan(xyz):
+                            xyzD.append(xyz)
+                            if xyz < 0.05:
+                                less5cm.append(xyz)
+                            if xyz < 0.1:
+                                less10cm.append(xyz)
+                            if xyz < 0.15:
+                                less15cm.append(xyz)
+                            if xyz < 0.2:
+                                less20cm.append(xyz)
+                            if xyz < 0.25:
+                                less25cm.append(xyz)
+                        '''
+
+                        '''
                         x = (((box[0] + box[2]*0.5) - cxkin) * dep) / fxkin * 0.001
                         y = (((box[1] + box[3]*0.5) - cykin) * dep) / fykin * 0.001
 
@@ -238,7 +405,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #path = generator.load_image_dep(index)
                         #image_dep =cv2.imread(path, cv2.IMREAD_UNCHANGED)
 
-                        '''
+                        
                         #dep_val = image_dep[int(box[1] + box[3] * 0.5), int(box[0] + box[2] * 0.5)]*0.001
                         dep_val = image_dep[int(y_o), int(x_o)] * 0.001
                         if cls == 1:
@@ -271,7 +438,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             dep = dep_val + 0.0888
                         elif cls == 15:
                             dep = dep_val + 0.071
-                        '''
+                        
 
                         zd = np.abs(np.abs(dep) - np.abs(t_dep * 0.001))
                         xyz = np.linalg.norm(np.asarray([xd, yd, zd], dtype=np.float32))
@@ -291,7 +458,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         if not math.isnan(zd):
                             zD.append(zd)
 
-                        '''
                         if len(rot) < 4 and len(t_rot) < 4:
                             lie = [[0.0, np.asscalar(rot[0]), np.asscalar(rot[1])],
                                     [np.asscalar(-rot[0]), 0.0, np.asscalar(rot[2])],
@@ -309,43 +475,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             t_rot = tf3d.euler.euler2quat(t_eul[0], t_eul[1], t_eul[2])
                             t_rot = np.asarray(t_rot, dtype=np.float32)
 
-                        q1 = pyquaternion.Quaternion(t_rot).unit
-                        q2 = pyquaternion.Quaternion(rot).unit
-                        rd = pyquaternion.Quaternion.absolute_distance(q1, q2)
-                        t_rot = t_rot / np.linalg.norm(t_rot)
-                        rot = rot / np.linalg.norm(rot)
-                        rot_t_mat = geometry.rotations.rotation_from_quaternion(t_rot)
-                        rot_mat = geometry.rotations.rotation_from_quaternion(rot)
-                        matd = geometry.rotations.geodesic_distance_for_rotations(rot_t_mat, rot_mat)
-                        rd = matd
-                        '''
-                        #print('roll, pitch, yaw cls')
-                        #print(np.argmax(rolls[(cls - 1), :]))
-                        #print(np.argmax(pitchs[(cls - 1), :]))
-                        #print(np.argmax(yaws[(cls - 1), :]))
-
-                        #print(' ')
-                        #print('det: ', float(roll), float(pitch), float(yaw))
-                        #print('gt: ', t_rot[0], t_rot[1], t_rot[2])
-
-                        # 2 times the distance of pyquaternion
-                        #mat_t_rot = t_rot / np.linalg.norm(t_rot)
-                        #mat_rot = rot / np.linalg.norm(rot)
-                        #rot_t_mat = geometry.rotations.rotation_from_quaternion(mat_t_rot)
-                        #rot_mat = geometry.rotations.rotation_from_quaternion(mat_rot)
-                        #matd = geometry.rotations.geodesic_distance_for_rotations(rot_t_mat, rot_mat)
-                        #print(' ')
-                        #print(matd * 180.0/math.pi)
-
-                        quat = pyquaternion.Quaternion(rot).unit
-                        quat_t = pyquaternion.Quaternion(t_rot).unit
+                        quat = pyquaternion.Quaternion(quat).unit
+                        quat_t = pyquaternion.Quaternion(quat_t).unit
                         rd = pyquaternion.Quaternion.distance(quat_t, quat)
-                        #print(' ')
-                        #print(rd * 180/math.pi)
-
-                        #print(' ')
-                        #print(np.arccos(2 * np.power(np.dot(t_rot, rot), 2) - 1) * 180/math.pi, ' / ', (rd * 180/math.pi), (matd * 180/math.pi))
-                        #print(1 - np.power(np.dot(t_rot, rot), 2), ' / ', (rd * 180 / math.pi))
 
                         if not math.isnan(rd):
                             rotD.append(rd)
@@ -359,15 +491,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                 less20deg.append(xyz)
                             if (rd * 180/math.pi) < 25.0:
                                 less25deg.append(xyz)
-
-                        #ADDS
-                        #mesh = mesh_dict[str(int(t_cat))]
-                        #mesh = np.dot(mesh, tf3d.quaternions.quat2mat(q2))
-                        #mesh = np.add(mesh, np.asarray([t_tra[0]*0.001, t_tra[1]*0.001, t_dep*0.001], dtype=np.float32))
-                        #kd_true = sci_spa.KDTree(mesh)
-
-                        #crop = image_raw[int(box[1]):int(box[1] + box[3]), int(box[0]):int(box[0] + box[2]), :]
-                        #create_point_cloud(crop, 0.01)
+                        '''
 
                 else:
                     fp[t_cat] += 1
@@ -404,23 +528,25 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     dataset_recall = sum(tp) / (sum(tp) + sum(fp))
     dataset_precision = sum(tp) / (sum(tp) + sum(fn))
-    dataset_xyz_diff = (sum(xyzD) / len(xyzD))
-    dataset_xy_diff = (sum(xyD) / len(xyD))
+    #dataset_xyz_diff = (sum(xyzD) / len(xyzD))
+    #dataset_xy_diff = (sum(xyD) / len(xyD))
     print(' ')
-    print('center difference in image plane', dataset_xy_diff)
-    print('percent < 5cm in image plane', len(less5cm_imgplane)/len(xyD))
-    dataset_depth_diff = (sum(zD) / len(zD))
-    dataset_rot_diff = (sum(rotD) / len(rotD)) * 180.0 / math.pi
-    less5cm = len(less5cm)/len(xyzD)
-    less10cm = len(less10cm) / len(xyzD)
-    less15cm = len(less15cm) / len(xyzD)
-    less20cm = len(less20cm) / len(xyzD)
-    less25cm = len(less25cm) / len(xyzD)
-    less5deg = len(less5deg) / len(rotD)
-    less10deg = len(less10deg) / len(rotD)
-    less15deg = len(less15deg) / len(rotD)
-    less20deg = len(less20deg) / len(rotD)
-    less25deg = len(less25deg) / len(rotD)
+    #print('center difference in image plane', dataset_xy_diff)
+    #print('percent < 5cm in image plane', len(less5cm_imgplane)/len(xyD))
+    #dataset_depth_diff = (sum(zD) / len(zD))
+    #dataset_rot_diff = (sum(rotD) / len(rotD)) * 180.0 / math.pi
+    #less5cm = len(less5cm)/len(xyzD)
+    #less10cm = len(less10cm) / len(xyzD)
+    #less15cm = len(less15cm) / len(xyzD)
+    #less20cm = len(less20cm) / len(xyzD)
+    #less25cm = len(less25cm) / len(xyzD)
+    #less5deg = len(less5deg) / len(rotD)
+    #less10deg = len(less10deg) / len(rotD)
+    #less15deg = len(less15deg) / len(rotD)
+    #less20deg = len(less20deg) / len(rotD)
+    #less25deg = len(less25deg) / len(rotD)
+    print('dataset recall: ', dataset_recall, '%')
+    print('dataset precision: ', dataset_precision, '%')
     print('linemod::percent below 5 cm: ', less5cm, '%')
     print('linemod::percent below 10 cm: ', less10cm, '%')
     print('linemod::percent below 15 cm: ', less15cm, '%')

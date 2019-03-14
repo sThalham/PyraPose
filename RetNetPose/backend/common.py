@@ -64,8 +64,8 @@ def box3D_transform_inv(boxes, deltas, mean=None, std=None):
     boxes_exp = keras.backend.expand_dims(boxes, axis=2)
     boxes_exp = keras.backend.repeat_elements(boxes_exp, num_classes, axis=2)
 
-    width  = boxes[:, :, 2] - boxes[:, :, 0]
-    height = boxes[:, :, 3] - boxes[:, :, 1]
+    width  = boxes_exp[:, :, :, 2] - boxes_exp[:, :, :, 0]
+    height = boxes_exp[:, :, :, 3] - boxes_exp[:, :, :, 1]
 
     x1 = boxes_exp[:, :, :, 0] + (deltas[:, :, :, 0] * std[0] + mean[0]) * width
     y1 = boxes_exp[:, :, :, 1] + (deltas[:, :, :, 1] * std[1] + mean[1]) * height

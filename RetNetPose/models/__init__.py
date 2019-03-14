@@ -118,8 +118,8 @@ def assert_training_model(model):
     """ Assert that the model is a training model.
     """
     #assert(all(output in model.output_names for output in ['bbox', 'xy', 'depth', 'roll', 'pitch', 'yaw', 'cls'])), "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
-    #assert (all(output in model.output_names for output in ['bbox', '3Dbox', 'cls'])), "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
-    assert (all(output in model.output_names for output in ['bbox', 'xy', 'dep', 'rot', 'cls'])), "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
+    assert (all(output in model.output_names for output in ['bbox', '3Dbox', 'cls'])), "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
+    #assert (all(output in model.output_names for output in ['bbox', 'xy', 'dep', 'rot', 'cls'])), "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
 
 
 def check_training_model(model):
