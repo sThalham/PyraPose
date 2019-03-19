@@ -149,12 +149,9 @@ def main(args=None):
         evaluate_coco(generator, model, args.score_threshold)
     elif args.dataset_type == 'linemod':
         from ..utils.linemod_eval import evaluate_linemod
-        rec, pre, xyd, zd, rotd, l5cm, l5deg = evaluate_linemod(generator, model, args.score_threshold)
+        rec, pre, l5cm, l5deg = evaluate_linemod(generator, model, args.score_threshold)
         print('evaluate::mean recall: ', rec, '%')
         print('evaluate::mean precision: ', pre, '%')
-        print('evaluate::mean translation difference: ', xyd, 'm')
-        print('evaluate::mean depth difference: ', zd, 'm')
-        print('evaluate::mean rotation difference: ', rotd, '°')
         print('evaluate::percent below 5cm: ', l5cm, '%')
         print('evaluate::percent below 5deg: ', l5deg, '%')
 

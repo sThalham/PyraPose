@@ -284,14 +284,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
         else:
             t_cat = int(anno['labels']) + 1
         t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-        t_tra = anno['poses'][0][:2]
-        t_dep = anno['poses'][0][2]
+        t_tra = anno['poses'][0][:3]
         t_rot = anno['poses'][0][3:]
         fn[t_cat] += 1
         fnit = True
+
         # compute predicted labels and scores
-        #for box, trans, deps, quat, score, label in zip(boxes[0], trans[0], deps[0], rots[0], scores[0], labels[0]):
-        #for box, trans, deps, rolls, pitchs, yaws, score, label in zip(boxes[0], trans[0], deps[0], rol[0], pit[0], ya[0], scores[0], labels[0]):
         for box, box3D, score, label in zip(boxes[0], boxes3D[0], scores[0], labels[0]):
             # scores are sorted, so we can break
             if score < threshold:
@@ -301,18 +299,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
             cls = generator.label_to_inv_label(label)
             control_points = box3D[(cls - 1), :]
-            #tra = trans[(cls-1), :]
-            #dep = np.array([(np.argmax(deps[(cls-1), :]) * 0.03 ) - 0.015])
-            #dep = deps[(cls - 1), :]
-            #rot = quat[(cls-1), :]
-            #pose = tra.tolist() + dep.tolist() + rot.tolist()
-            #roll = np.array([(np.argmax(rolls[(cls - 1), :]) * 0.69813170079) - np.pi])
-            #pitch = np.array([(np.argmax(pitchs[(cls - 1), :]) * 0.69813170079) - np.pi])
-            #yaw = np.array([(np.argmax(yaws[(cls - 1), :]) * 0.69813170079) - np.pi])
-            #roll = np.array([(np.argmax(rolls[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
-            #pitch = np.array([(np.argmax(pitchs[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
-            #yaw = np.array([(np.argmax(yaws[(cls - 1), :]) * 0.21666156231) - np.pi]) + (0.21666156231*0.5)
-            #pose = tra.tolist() + dep.tolist() + roll.tolist() + pitch.tolist() + yaw.tolist()
 
             # append detection for each positively labeled class
             image_result = {
@@ -337,77 +323,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         fn[t_cat] -= 1
                         fnit = False
 
-                        '''
-                        obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :].T, dtype=np.float32).reshape((8, 1, 3))
-                        est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
-                        K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+                        path = generator.load_image_dep(index)
+                        image_dep = cv2.imread(path, cv2.IMREAD_UNCHANGED)
 
-                        #retval, orvec, otvec = cv2.solvePnP(obj_points, est_points, K, None, None, None, False, cv2.SOLVEPNP_ITERATIVE)
-                        retval, orvec, otvec = cv2.solvePnPRansac(objectPoints=obj_points, imagePoints=est_points, cameraMatrix=K, distCoeffs=None, iterationsCount=1000, reprojectionError=8.0, confidence=0.99, flags=cv2.SOLVEPNP_ITERATIVE)
-
-                        rmat, _ = cv2.Rodrigues(orvec)
-                        t_rmat = tf3d.quaternions.quat2mat(t_rot)
-                        rd = re(rmat, t_rmat)
-                        x_t = ((t_tra[0] - cxkin) * t_dep) / fxkin * 0.001
-                        y_t = ((t_tra[1] - cykin) * t_dep) / fykin * 0.001
-
-                        xyz = te(otvec * 1000.0, np.stack((x_t, y_t, t_dep), axis=0))
-
-                        if not math.isnan(rd):
-                            rotD.append(rd)
-                            if (rd * 180 / math.pi) < 5.0:
-                                less5deg.append(rd)
-                            if (rd * 180 / math.pi) < 10.0:
-                                less10deg.append(xyz)
-                            if (rd * 180 / math.pi) < 15.0:
-                                less15deg.append(xyz)
-                            if (rd * 180 / math.pi) < 20.0:
-                                less20deg.append(xyz)
-                            if (rd * 180 / math.pi) < 25.0:
-                                less25deg.append(xyz)
-
-                        if not math.isnan(xyz):
-                            xyzD.append(xyz)
-                            if xyz < 0.05:
-                                less5cm.append(xyz)
-                            if xyz < 0.1:
-                                less10cm.append(xyz)
-                            if xyz < 0.15:
-                                less15cm.append(xyz)
-                            if xyz < 0.2:
-                                less20cm.append(xyz)
-                            if xyz < 0.25:
-                                less25cm.append(xyz)
-                        '''
-
-                        '''
-                        x = (((box[0] + box[2]*0.5) - cxkin) * dep) / fxkin * 0.001
-                        y = (((box[1] + box[3]*0.5) - cykin) * dep) / fykin * 0.001
-
-                        x_t = ((t_tra[0] - cxkin) * t_dep) / fxkin * 0.001
-                        y_t = ((t_tra[1] - cykin) * t_dep) / fykin * 0.001
-
-                        #only image plane
-                        x_o = ((tra[0] - cxkin) * t_dep) / fxkin * 0.001
-                        y_o = ((tra[1] - cykin) * t_dep) / fykin * 0.001
-                        x_o_d = np.abs(np.abs(x_o) - np.abs(x_t))
-                        y_o_d = np.abs(np.abs(y_o) - np.abs(y_t))
-                        xy = np.linalg.norm(np.asarray([x_o_d, y_o_d], dtype=np.float32))
-                        if not math.isnan(xy):
-                            xyD.append(xy)
-                            if xy < 0.05:
-                                less5cm_imgplane.append(xy)
-
-                        xd = np.abs(np.abs(x) - np.abs(x_t))
-                        yd = np.abs(np.abs(y) - np.abs(y_t))
-
-                        # naive depth estimate
-                        #path = generator.load_image_dep(index)
-                        #image_dep =cv2.imread(path, cv2.IMREAD_UNCHANGED)
-
-                        
-                        #dep_val = image_dep[int(box[1] + box[3] * 0.5), int(box[0] + box[2] * 0.5)]*0.001
-                        dep_val = image_dep[int(y_o), int(x_o)] * 0.001
+                        dep_val = image_dep[int(box[1] + (box[3] * 0.5)), int(box[0] + (box[2] * 0.5))]*0.001
                         if cls == 1:
                             dep = dep_val + 0.041
                         elif cls == 2:
@@ -438,10 +357,44 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             dep = dep_val + 0.0888
                         elif cls == 15:
                             dep = dep_val + 0.071
-                        
 
-                        zd = np.abs(np.abs(dep) - np.abs(t_dep * 0.001))
-                        xyz = np.linalg.norm(np.asarray([xd, yd, zd], dtype=np.float32))
+                        x_o = (((box[0] + (box[2] * 0.5)) - cxkin) * dep) / fxkin
+                        y_o = (((box[1] + (box[3] * 0.5)) - cykin) * dep) / fykin
+
+                        itvec = np.array([x_o, y_o, dep], dtype=np.float32)
+
+                        obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :], dtype=np.float32) #.reshape((8, 1, 3))
+                        est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
+
+                        K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+                        #retval, orvec, otvec = cv2.solvePnP(obj_points, est_points, K, None, None, None, False, cv2.SOLVEPNP_ITERATIVE)
+                        retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                                           imagePoints=est_points, cameraMatrix=K,
+                                                                           distCoeffs=None, rvec=None, tvec=itvec,
+                                                                           useExtrinsicGuess=True, iterationsCount=100,
+                                                                           reprojectionError=5.0, confidence=0.99,
+                                                                           flags=cv2.SOLVEPNP_ITERATIVE)
+
+                        rmat, _ = cv2.Rodrigues(orvec)
+                        t_rmat, _ = cv2.Rodrigues(t_rot)
+                        t_rmat = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
+                        rd = re(t_rmat, rmat)
+                        xyz = te((np.asarray(t_tra)*0.001), (otvec.T))
+
+                        if not math.isnan(rd):
+                            rotD.append(rd)
+                            if (rd) < 5.0:
+                                less5deg.append(rd)
+                            if (rd) < 10.0:
+                                less10deg.append(rd)
+                            if (rd) < 15.0:
+                                less15deg.append(rd)
+                            if (rd) < 20.0:
+                                less20deg.append(rd)
+                            if (rd) < 25.0:
+                                less25deg.append(rd)
+
                         if not math.isnan(xyz):
                             xyzD.append(xyz)
                             if xyz < 0.05:
@@ -454,44 +407,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                 less20cm.append(xyz)
                             if xyz < 0.25:
                                 less25cm.append(xyz)
-
-                        if not math.isnan(zd):
-                            zD.append(zd)
-
-                        if len(rot) < 4 and len(t_rot) < 4:
-                            lie = [[0.0, np.asscalar(rot[0]), np.asscalar(rot[1])],
-                                    [np.asscalar(-rot[0]), 0.0, np.asscalar(rot[2])],
-                                    [np.asscalar(-rot[1]), np.asscalar(-rot[2]), 0.0]]
-                            lie = np.asarray(lie, dtype=np.float32)
-                            eul = geometry.rotations.map_hat(lie)
-                            rot = tf3d.euler.euler2quat(eul[0], eul[1], eul[2])
-                            rot = np.asarray(rot, dtype=np.float32)
-
-                            t_lie = [[0.0, np.asscalar(t_rot[0]), np.asscalar(t_rot[1])],
-                                   [np.asscalar(-t_rot[0]), 0.0, np.asscalar(t_rot[2])],
-                                   [np.asscalar(-t_rot[1]), np.asscalar(-t_rot[2]), 0.0]]
-                            t_lie = np.asarray(t_lie, dtype=np.float32)
-                            t_eul = geometry.rotations.map_hat(t_lie)
-                            t_rot = tf3d.euler.euler2quat(t_eul[0], t_eul[1], t_eul[2])
-                            t_rot = np.asarray(t_rot, dtype=np.float32)
-
-                        quat = pyquaternion.Quaternion(quat).unit
-                        quat_t = pyquaternion.Quaternion(quat_t).unit
-                        rd = pyquaternion.Quaternion.distance(quat_t, quat)
-
-                        if not math.isnan(rd):
-                            rotD.append(rd)
-                            if (rd * 180/math.pi) < 5.0:
-                                less5deg.append(rd)
-                            if (rd * 180/math.pi) < 10.0:
-                                less10deg.append(xyz)
-                            if (rd * 180/math.pi) < 15.0:
-                                less15deg.append(xyz)
-                            if (rd * 180/math.pi) < 20.0:
-                                less20deg.append(xyz)
-                            if (rd * 180/math.pi) < 25.0:
-                                less25deg.append(xyz)
-                        '''
 
                 else:
                     fp[t_cat] += 1
@@ -528,23 +443,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     dataset_recall = sum(tp) / (sum(tp) + sum(fp))
     dataset_precision = sum(tp) / (sum(tp) + sum(fn))
-    #dataset_xyz_diff = (sum(xyzD) / len(xyzD))
-    #dataset_xy_diff = (sum(xyD) / len(xyD))
+    less5cm = len(less5cm)/len(xyzD)
+    less10cm = len(less10cm) / len(xyzD)
+    less15cm = len(less15cm) / len(xyzD)
+    less20cm = len(less20cm) / len(xyzD)
+    less25cm = len(less25cm) / len(xyzD)
+    less5deg = len(less5deg) / len(rotD)
+    less10deg = len(less10deg) / len(rotD)
+    less15deg = len(less15deg) / len(rotD)
+    less20deg = len(less20deg) / len(rotD)
+    less25deg = len(less25deg) / len(rotD)
     print(' ')
-    #print('center difference in image plane', dataset_xy_diff)
-    #print('percent < 5cm in image plane', len(less5cm_imgplane)/len(xyD))
-    #dataset_depth_diff = (sum(zD) / len(zD))
-    #dataset_rot_diff = (sum(rotD) / len(rotD)) * 180.0 / math.pi
-    #less5cm = len(less5cm)/len(xyzD)
-    #less10cm = len(less10cm) / len(xyzD)
-    #less15cm = len(less15cm) / len(xyzD)
-    #less20cm = len(less20cm) / len(xyzD)
-    #less25cm = len(less25cm) / len(xyzD)
-    #less5deg = len(less5deg) / len(rotD)
-    #less10deg = len(less10deg) / len(rotD)
-    #less15deg = len(less15deg) / len(rotD)
-    #less20deg = len(less20deg) / len(rotD)
-    #less25deg = len(less25deg) / len(rotD)
     print('dataset recall: ', dataset_recall, '%')
     print('dataset precision: ', dataset_precision, '%')
     print('linemod::percent below 5 cm: ', less5cm, '%')
@@ -558,4 +467,4 @@ def evaluate_linemod(generator, model, threshold=0.05):
     print('linemod::percent below 20 deg: ', less20deg, '%')
     print('linemod::percent below 25 deg: ', less25deg, '%')
 
-    return dataset_recall, dataset_precision, dataset_xyz_diff, dataset_depth_diff, dataset_rot_diff, less5cm, less5deg
+    return dataset_recall, dataset_precision, less5cm, less5deg
