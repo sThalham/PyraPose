@@ -122,8 +122,8 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     training_model.compile(
         loss={
             'bbox': losses.smooth_l1(),
-            #'3Dbox': losses.smooth_l1_xy(),
-            '3Dbox':losses.orthogonal_mse(),
+            '3Dbox': losses.smooth_l1_xy(),
+            #'3Dbox':losses.orthogonal_mse(),
             'cls'          : losses.focal()
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
@@ -225,24 +225,14 @@ def create_generators(args, preprocess_image):
         'preprocess_image' : preprocess_image,
     }
 
-    # create random transform generator for augmenting training data
-    if args.random_transform:
-        transform_generator = random_transform_generator(
+    transform_generator = random_transform_generator(
             min_rotation=-0.1,
             max_rotation=0.1,
-            min_translation=(-0.1, -0.1),
-            max_translation=(0.1, 0.1),
-            min_shear=-0.1,
-            max_shear=0.1,
+            min_translation=(-0.2, -0.2),
+            max_translation=(0.2, 0.2),
             min_scaling=(0.9, 0.9),
             max_scaling=(1.1, 1.1),
-            #flip_x_chance=0.5,
-            #flip_y_chance=0.5,
-            flip_x_chance=0.0,
-            flip_y_chance=0.0,
         )
-    else:
-        transform_generator = random_transform_generator(flip_x_chance=0.5)
 
     if args.dataset_type == 'coco':
         # import here to prevent unnecessary dependency on cocoapi
@@ -303,7 +293,7 @@ def parse_args(args):
     group.add_argument('--weights',           help='Initialize the model with weights from a file.')
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
 
-    parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='resnet101', type=str)
+    parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='resnet50', type=str)
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
@@ -314,7 +304,6 @@ def parse_args(args):
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
-    parser.add_argument('--random-transform', help='Randomly transform image and annotations.', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
     parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file.')

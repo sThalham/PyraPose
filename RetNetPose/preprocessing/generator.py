@@ -33,7 +33,7 @@ from ..utils.image import (
     preprocess_image,
     resize_image,
 )
-from ..utils.transform import transform_aabb
+from ..utils.transform import transform_aabb, transform_box3d
 
 
 class Generator(keras.utils.Sequence):
@@ -161,7 +161,39 @@ class Generator(keras.utils.Sequence):
                 (annotations['bboxes'][:, 0] < 0) |
                 (annotations['bboxes'][:, 1] < 0) |
                 (annotations['bboxes'][:, 2] > image.shape[1]) |
-                (annotations['bboxes'][:, 3] > image.shape[0])
+                (annotations['bboxes'][:, 3] > image.shape[0]) |
+                (annotations['segmentations'][:, 0] < 0) |
+                (annotations['segmentations'][:, 0] > image.shape[1]) |
+                (annotations['segmentations'][:, 1] < 0) |
+                (annotations['segmentations'][:, 1] > image.shape[0]) |
+                (annotations['segmentations'][:, 2] < 0) |
+                (annotations['segmentations'][:, 2] > image.shape[1]) |
+                (annotations['segmentations'][:, 3] < 0) |
+                (annotations['segmentations'][:, 3] > image.shape[0]) |
+                (annotations['segmentations'][:, 4] < 0) |
+                (annotations['segmentations'][:, 4] > image.shape[1]) |
+                (annotations['segmentations'][:, 5] < 0) |
+                (annotations['segmentations'][:, 5] > image.shape[0]) |
+                (annotations['segmentations'][:, 6] < 0) |
+                (annotations['segmentations'][:, 6] > image.shape[1]) |
+                (annotations['segmentations'][:, 7] < 0) |
+                (annotations['segmentations'][:, 7] > image.shape[0]) |
+                (annotations['segmentations'][:, 8] < 0) |
+                (annotations['segmentations'][:, 8] > image.shape[1]) |
+                (annotations['segmentations'][:, 9] < 0) |
+                (annotations['segmentations'][:, 9] > image.shape[0]) |
+                (annotations['segmentations'][:, 10] < 0) |
+                (annotations['segmentations'][:, 10] > image.shape[1]) |
+                (annotations['segmentations'][:, 11] < 0) |
+                (annotations['segmentations'][:, 11] > image.shape[0]) |
+                (annotations['segmentations'][:, 12] < 0) |
+                (annotations['segmentations'][:, 12] > image.shape[1]) |
+                (annotations['segmentations'][:, 13] < 0) |
+                (annotations['segmentations'][:, 13] > image.shape[0]) |
+                (annotations['segmentations'][:, 14] < 0) |
+                (annotations['segmentations'][:, 14] > image.shape[1]) |
+                (annotations['segmentations'][:, 15] < 0) |
+                (annotations['segmentations'][:, 15] > image.shape[0])
             )[0]
 
             # delete invalid indices
@@ -194,8 +226,10 @@ class Generator(keras.utils.Sequence):
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()
+            annotations['segmentations'] = annotations['segmentations'].copy()
             for index in range(annotations['bboxes'].shape[0]):
                 annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
+                annotations['segmentations'][index, :] = transform_box3d(transform, annotations['segmentations'][index, :])
 
         return image, annotations
 
@@ -227,6 +261,7 @@ class Generator(keras.utils.Sequence):
 
         # apply resizing to annotations too
         annotations['bboxes'] *= image_scale
+        annotations['segmentations'] *= image_scale
 
         # convert to the wanted keras floatx
         image = keras.backend.cast_to_floatx(image)

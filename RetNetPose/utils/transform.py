@@ -54,6 +54,31 @@ def transform_aabb(transform, aabb):
     return [min_corner[0], min_corner[1], max_corner[0], max_corner[1]]
 
 
+def transform_box3d(transform, box3d):
+    """ Apply a transformation to an axis aligned bounding box.
+
+    The result is a new AABB in the same coordinate system as the original AABB.
+    The new AABB contains all corner points of the original AABB after applying the given transformation.
+
+    Args
+        transform: The transformation to apply.
+        x1:        The minimum x value of the AABB.
+        y1:        The minimum y value of the AABB.
+        x2:        The maximum x value of the AABB.
+        y2:        The maximum y value of the AABB.
+    Returns
+        The new AABB as tuple (x1, y1, x2, y2)
+    """
+    x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7, x8, y8 = box3d
+    points = transform.dot([
+        [x1, x2, x3, x4, x5, x6, x7, x8],
+        [y1, y2, y3, y4, y5, y6, y7, y8],
+        [1,  1,  1,  1,  1,  1,  1,  1 ],
+    ])
+
+    return [points[0, 0], points[1, 0], points[0, 1], points[1, 1],points[0, 2], points[1, 2], points[0, 3], points[1, 3], points[0, 4], points[1, 4], points[0, 5], points[1, 5], points[0, 6], points[1, 6], points[0, 7], points[1, 7]]
+
+
 def _random_vector(min, max, prng=DEFAULT_PRNG):
     """ Construct a random vector between min and max.
     Args
@@ -119,32 +144,6 @@ def random_translation(min, max, prng=DEFAULT_PRNG):
     return translation(_random_vector(min, max, prng))
 
 
-def shear(angle):
-    """ Construct a homogeneous 2D shear matrix.
-    Args
-        angle: the shear angle in radians
-    Returns
-        the shear matrix as 3 by 3 numpy array
-    """
-    return np.array([
-        [1, -np.sin(angle), 0],
-        [0,  np.cos(angle), 0],
-        [0, 0, 1]
-    ])
-
-
-def random_shear(min, max, prng=DEFAULT_PRNG):
-    """ Construct a random 2D shear matrix with shear angle between -max and max.
-    Args
-        min:  the minimum shear angle in radians.
-        max:  the maximum shear angle in radians.
-        prng: the pseudo-random number generator to use.
-    Returns
-        a homogeneous 3 by 3 shear matrix
-    """
-    return shear(prng.uniform(min, max))
-
-
 def scaling(factor):
     """ Construct a homogeneous 2D scaling matrix.
     Args
@@ -171,21 +170,6 @@ def random_scaling(min, max, prng=DEFAULT_PRNG):
     return scaling(_random_vector(min, max, prng))
 
 
-def random_flip(flip_x_chance, flip_y_chance, prng=DEFAULT_PRNG):
-    """ Construct a transformation randomly containing X/Y flips (or not).
-    Args
-        flip_x_chance: The chance that the result will contain a flip along the X axis.
-        flip_y_chance: The chance that the result will contain a flip along the Y axis.
-        prng:          The pseudo-random number generator to use.
-    Returns
-        a homogeneous 3 by 3 transformation matrix
-    """
-    flip_x = prng.uniform(0, 1) < flip_x_chance
-    flip_y = prng.uniform(0, 1) < flip_y_chance
-    # 1 - 2 * bool gives 1 for False and -1 for True.
-    return scaling((1 - 2 * flip_x, 1 - 2 * flip_y))
-
-
 def change_transform_origin(transform, center):
     """ Create a new transform representing the same transformation,
         only with the origin of the linear part changed.
@@ -200,16 +184,12 @@ def change_transform_origin(transform, center):
 
 
 def random_transform(
-    min_rotation=0,
-    max_rotation=0,
-    min_translation=(0, 0),
-    max_translation=(0, 0),
-    min_shear=0,
-    max_shear=0,
-    min_scaling=(1, 1),
-    max_scaling=(1, 1),
-    flip_x_chance=0,
-    flip_y_chance=0,
+    min_rotation=-0.1,
+    max_rotation=0.1,
+    min_translation=(-0.2, -0.2),
+    max_translation=(0.2, 0.2),
+    min_scaling=(0.9, 0.9),
+    max_scaling=(1.1, 1.1),
     prng=DEFAULT_PRNG
 ):
     """ Create a random transformation.
@@ -243,9 +223,7 @@ def random_transform(
     return np.linalg.multi_dot([
         random_rotation(min_rotation, max_rotation, prng),
         random_translation(min_translation, max_translation, prng),
-        random_shear(min_shear, max_shear, prng),
         random_scaling(min_scaling, max_scaling, prng),
-        random_flip(flip_x_chance, flip_y_chance, prng)
     ])
 
 
