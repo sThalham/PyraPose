@@ -90,13 +90,6 @@ def anchor_targets_bbox(
 
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
-    #xy_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 2 + 1), dtype=keras.backend.floatx())
-    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 1 + 1), dtype=keras.backend.floatx()) # depths regression
-    #dep_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 80 + 1), dtype=keras.backend.floatx()) # depths classification
-    #rots_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 4 + 1), dtype=keras.backend.floatx())
-    #roll_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
-    #pitch_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
-    #yaw_batch = np.zeros((batch_size, anchors.shape[0], num_classes, 10 + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], num_classes, 16 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
@@ -111,24 +104,6 @@ def anchor_targets_bbox(
             regression_batch[index, ignore_indices, -1]   = -1
             regression_batch[index, positive_indices, -1] = 1
 
-            #xy_batch[index, ignore_indices, :, -1] = -1
-            #xy_batch[index, positive_indices, :, -1] = -1
-
-            #dep_batch[index, ignore_indices, :, -1] = -1
-            #dep_batch[index, positive_indices, :, -1] = -1
-
-            #rots_batch[index, ignore_indices, :, -1] = -1
-            #rots_batch[index, positive_indices, :, -1] = -1
-
-            #roll_batch[index, ignore_indices, :, -1] = -1
-            #roll_batch[index, positive_indices, :, -1] = -1
-
-            #pitch_batch[index, ignore_indices, :, -1] = -1
-            #pitch_batch[index, positive_indices, :, -1] = -1
-
-            #yaw_batch[index, ignore_indices, :, -1] = -1
-            #yaw_batch[index, positive_indices, :, -1] = -1
-
             regression_3D[index, ignore_indices, :, -1] = -1
             regression_3D[index, positive_indices, :, -1] = -1
 
@@ -136,24 +111,6 @@ def anchor_targets_bbox(
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
             regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
-
-            #xy_batch[index, :, :, :-1] = xy_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #xy_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-
-            #dep_batch[index, :, :, :-1] = depth_transform(annotations['bboxes'][argmax_overlaps_inds, :], annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #dep_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-
-            #rots_batch[index, :, :, :-1] = rotation_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #rots_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-
-            #roll_batch[index, :, :, :-1] = roll_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #roll_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-
-            #pitch_batch[index, :, :, :-1] = pitch_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #pitch_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-
-            #yaw_batch[index, :, :, :-1] = yaw_transform(anchors, annotations['poses'][argmax_overlaps_inds, :], num_classes)
-            #yaw_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             regression_3D[index, :, :, :-1] = box3D_transform(anchors, annotations['segmentations'][argmax_overlaps_inds, :], num_classes)
             regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
@@ -165,18 +122,9 @@ def anchor_targets_bbox(
 
             labels_batch[index, indices, -1]     = -1
             regression_batch[index, indices, -1] = -1
-            #xy_batch[index, indices, :, -1] = -1
-            #dep_batch[index, indices, :, -1] = -1
-            #rots_batch[index, indices, :, -1] = -1
-            #roll_batch[index, indices, :, -1] = -1
-            #pitch_batch[index, indices, :, -1] = -1
-            #yaw_batch[index, indices, :, -1] = -1
-
             regression_3D[index, indices, :, -1] = -1
 
     return regression_batch, regression_3D, labels_batch
-    #return regression_batch, xy_batch, dep_batch, roll_batch, pitch_batch, yaw_batch, labels_batch
-    #return regression_batch, xy_batch, dep_batch, rots_batch, labels_batch
 
 
 def compute_gt_annotations(
@@ -399,8 +347,6 @@ def bbox_transform(anchors, gt_boxes, mean=None, std=None):
     targets = targets.T
 
     targets = (targets - mean) / std
-    #print('bbox: ', targets[0, :].shape)
-    #print('bbox: ', targets[0, :])
 
     return targets
 
@@ -452,205 +398,3 @@ def box3D_transform(anchors, gt_boxes, num_classes, mean=None, std=None):
     return allTargets
 
 
-def xy_transform(anchors, gt_boxes, gt_poses, num_classes, mean=None, std=None):
-    """Compute 2D-offset regression targets for an image.
-    prepare data for L0-loss (Sock et al. BMVC2018)
-    loss can be calculated using simple L1-distance"""
-
-    if mean is None:
-        mean = np.array([0, 0])
-    if std is None:
-        std = np.array([0.4, 0.4])
-
-    if isinstance(mean, (list, tuple)):
-        mean = np.array(mean)
-    elif not isinstance(mean, np.ndarray):
-        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
-
-    if isinstance(std, (list, tuple)):
-        std = np.array(std)
-    elif not isinstance(std, np.ndarray):
-        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
-
-    #box_widths  = anchors[:, 2] - anchors[:, 0]
-    #box_heights = anchors[:, 3] - anchors[:, 1]
-    box_widths = gt_boxes[:, 2] - gt_boxes[:, 0]
-    box_heights = gt_boxes[:, 3] - gt_boxes[:, 1]
-
-    #targets_dx = (gt_poses[:, 0] - anchors[:, 0]) / box_widths
-    #targets_dy = (gt_poses[:, 1] - anchors[:, 1]) / box_heights
-    targets_dx = (gt_poses[:, 0] - gt_boxes[:, 0]) / box_widths
-    targets_dy = (gt_poses[:, 1] - gt_boxes[:, 1]) / box_heights
-
-    targets = np.stack((targets_dx, targets_dy))
-    targets = targets.T
-
-    targets = (targets - mean) / std
-    #print(targets[0,:])
-    allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
-
-    return allTargets
-
-
-def depth_transform(gt_boxes, gt_poses, num_classes, mean=None, std=None):
-    """Compute 2D-offset regression targets for an image.
-    prepare data for L0-loss (Sock et al. BMVC2018)
-    loss can be calculated using simple L1-distance"""
-
-    if mean is None:
-        mean = np.array([0.0])
-    if std is None:
-        std = np.array([0.4])
-
-    if isinstance(mean, (list, tuple)):
-        mean = np.array(mean)
-    elif not isinstance(mean, np.ndarray):
-        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
-
-    if isinstance(std, (list, tuple)):
-        std = np.array(std)
-    elif not isinstance(std, np.ndarray):
-        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
-
-    #box_widths = (gt_boxes[:, 2] - gt_boxes[:, 0])
-    #box_heights = (gt_boxes[:, 3] - gt_boxes[:, 1])
-    #box_diag = np.sqrt((np.square(box_widths) + np.square(box_heights)))
-
-    #targets_dz = gt_poses[:, 2] * 100.0 / box_diag
-    #targets_dz = gt_poses[:, 2]
-    #targets = np.stack((targets_dz))
-    #targets = targets.T
-    #targets = (targets - mean) / std
-    #allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
-    #allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
-
-    # regression
-    targets_dz = gt_poses[:, 2]
-    targets = np.stack((targets_dz))
-    targets = targets.T
-    targets = (targets - mean) / std
-    allTargets = np.repeat(targets[:, np.newaxis], num_classes, axis=1)
-    allTargets = np.repeat(allTargets[:, :, np.newaxis], 1, axis=2)
-
-    # classification
-    #indices = np.asarray(gt_poses[:, 2], dtype=np.float32) / 0.03   # bin every 2 cm
-    #indices = np.round(indices).astype(dtype=np.int32)
-    #allTargets = np.zeros((indices.shape[0], 80))
-    #sampple Gauss sigma=1
-    #allTargets[np.arange(allTargets.shape[0]), indices-2] = 0.1335
-    #allTargets[np.arange(allTargets.shape[0]), indices-1] = 0.6049
-    #allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    #allTargets[np.arange(allTargets.shape[0]), indices+1] = 0.6049
-    #allTargets[np.arange(allTargets.shape[0]), indices+2] = 0.1335
-    #allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
-
-    return allTargets
-
-
-def rotation_transform(anchors, gt_poses, num_classes, mean=None, std=None):
-    if mean is None:
-       mean = [0.0, 0.0, 0.0, 0.0]
-    if std is None:
-        std = [1.0, 1.0, 1.0, 1.0]
-
-    if isinstance(mean, (list, tuple)):
-        mean = np.array(mean)
-    elif not isinstance(mean, np.ndarray):
-        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
-
-    if isinstance(std, (list, tuple)):
-        std = np.array(std)
-    elif not isinstance(std, np.ndarray):
-        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
-
-    targets_rx = (gt_poses[:, 3])
-    targets_ry = (gt_poses[:, 4])
-    targets_rz = (gt_poses[:, 5])
-    targets_rw = (gt_poses[:, 6])
-
-    targets = np.stack((targets_rx, targets_ry, targets_rz, targets_rw))
-    #targets = np.stack((targets_rx, targets_ry, targets_rz))
-    targets = targets.T
-
-    targets = (targets - mean) / std
-    allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
-
-    return allTargets
-
-
-def roll_transform(anchors, gt_poses, num_classes, mean=None, std=None):
-    if mean is None:
-       mean = [0.0, 0.0, 0.0, 0.0]
-    if std is None:
-        std = [1.0, 1.0, 1.0, 1.0]
-
-    if isinstance(mean, (list, tuple)):
-        mean = np.array(mean)
-    elif not isinstance(mean, np.ndarray):
-        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
-
-    if isinstance(std, (list, tuple)):
-        std = np.array(std)
-    elif not isinstance(std, np.ndarray):
-        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
-
-    #print('roll: ', gt_poses[0,3])
-    indices = ((np.asarray(gt_poses[:, 3], dtype=np.float32) + np.pi) / 0.69813170079 ) #/ 0.21666156231) #/ 0.69813170079 ) # bin every 2 cm
-    indices = np.floor(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 10))
-    allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
-
-    return allTargets
-
-
-def pitch_transform(anchors, gt_poses, num_classes, mean=None, std=None):
-    if mean is None:
-       mean = [0.0, 0.0, 0.0, 0.0]
-    if std is None:
-        std = [1.0, 1.0, 1.0, 1.0]
-
-    if isinstance(mean, (list, tuple)):
-        mean = np.array(mean)
-    elif not isinstance(mean, np.ndarray):
-        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
-
-    if isinstance(std, (list, tuple)):
-        std = np.array(std)
-    elif not isinstance(std, np.ndarray):
-        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
-
-    #print('pitch: ', gt_poses[0, 4])
-    indices = ((np.asarray(gt_poses[:, 4], dtype=np.float32) + np.pi) / 0.69813170079 ) # / 0.21666156231) # / 0.69813170079 )   # bin every 2 cm
-    indices = np.floor(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 10))
-    allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
-
-    return allTargets
-
-
-def yaw_transform(anchors, gt_poses, num_classes, mean=None, std=None):
-    if mean is None:
-       mean = [0.0, 0.0, 0.0, 0.0]
-    if std is None:
-        std = [1.0, 1.0, 1.0, 1.0]
-
-    if isinstance(mean, (list, tuple)):
-        mean = np.array(mean)
-    elif not isinstance(mean, np.ndarray):
-        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
-
-    if isinstance(std, (list, tuple)):
-        std = np.array(std)
-    elif not isinstance(std, np.ndarray):
-        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
-
-    #print('yaw: ', gt_poses[0, 5])
-    indices = ((np.asarray(gt_poses[:, 5], dtype=np.float32) + np.pi) / 0.69813170079 ) #/ 0.21666156231) # / 0.69813170079 )  # bin every 2 cm
-    indices = np.floor(indices).astype(dtype=np.int32)
-    allTargets = np.zeros((indices.shape[0], 10))
-    allTargets[np.arange(allTargets.shape[0]), indices] = 1
-    allTargets = np.repeat(allTargets[:, np.newaxis, :], num_classes, axis=1)
-
-    return allTargets

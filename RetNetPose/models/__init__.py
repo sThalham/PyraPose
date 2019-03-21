@@ -24,12 +24,8 @@ class Backbone(object):
             '_cross'           : losses.cross(),
             '_wMSE'            : losses.weighted_mse(),
             '_smooth_l1_xy'    : losses.smooth_l1_xy(),
-            '_smooth_l1_z'     : losses.smooth_l1_z(),
-            '_vl1'             : losses.vanilla_l1(),
-            '_wAE'             : losses.weighted_ae(),
-            '_qd'              : losses.quat_dist(),
-            '_cross_pose'      : losses.cross_pose(),
             'l2_norm'          : retinanet.l2_norm(),
+            '_orth_mse'        : losses.orthogonal_mse(),
         }
 
         self.backbone = backbone

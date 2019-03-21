@@ -380,7 +380,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         t_rmat, _ = cv2.Rodrigues(t_rot)
                         t_rmat = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
                         rd = re(t_rmat, rmat)
-                        xyz = te((np.asarray(t_tra)*0.001), (otvec.T))
+                        #xyz = te((np.asarray(t_tra)*0.001), (otvec.T))
+                        xyz = te((np.asarray(t_tra) * 0.001), (itvec.T))
 
                         if not math.isnan(rd):
                             rotD.append(rd)

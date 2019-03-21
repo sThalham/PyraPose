@@ -122,16 +122,8 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     training_model.compile(
         loss={
             'bbox': losses.smooth_l1(),
-            '3Dbox': losses.smooth_l1_xy(),
-            #'xy'           : losses.smooth_l1_xy(),
-            #'dep'         : losses.smooth_l1_z(),
-            #'depth'        : losses.cross(),
-            #'rot'     : losses.weighted_mse(),
-            #'rotation'      : losses.quat_dist(),
-            #'roll': losses.cross_pose(),
-            #'pitch': losses.cross_pose(),
-            #'yaw': losses.cross_pose(),
-            #'rotation'     : losses.weighted_ae(),
+            #'3Dbox': losses.smooth_l1_xy(),
+            '3Dbox':losses.orthogonal_mse(),
             'cls'          : losses.focal()
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
@@ -172,9 +164,6 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         callbacks.append(tensorboard_callback)
 
     if args.evaluation and validation_generator:
-        best_rec = 0.0
-        best_pre = 0.0
-        best_pose = 180.0
         if args.dataset_type == 'coco':
             from ..callbacks.coco import CocoEval
 
