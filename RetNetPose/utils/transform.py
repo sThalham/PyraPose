@@ -75,7 +75,6 @@ def transform_box3d(transform, box3d):
         [y1, y2, y3, y4, y5, y6, y7, y8],
         [1,  1,  1,  1,  1,  1,  1,  1 ],
     ])
-
     return [points[0, 0], points[1, 0], points[0, 1], points[1, 1],points[0, 2], points[1, 2], points[0, 3], points[1, 3], points[0, 4], points[1, 4], points[0, 5], points[1, 5], points[0, 6], points[1, 6], points[0, 7], points[1, 7]]
 
 
@@ -221,7 +220,6 @@ def random_transform(
         prng:            The pseudo-random number generator to use.
     """
     return np.linalg.multi_dot([
-        random_rotation(min_rotation, max_rotation, prng),
         random_translation(min_translation, max_translation, prng),
         random_scaling(min_scaling, max_scaling, prng),
     ])
