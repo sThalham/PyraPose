@@ -169,7 +169,7 @@ def weighted_mse(weight=3.0):
     return _wMSE
 
 
-def orthogonal_mse(weight=1.0):
+def orthogonal_mse(weight=0.5):
 
     weight_xy = 0.5
     weight_orth = 0.5
@@ -210,7 +210,6 @@ def orthogonal_mse(weight=1.0):
         x12 = (regression[:, 12] - regression[:, 14]) - (regression[:, 10] - regression[:, 8])
         y12 = (regression[:, 13] - regression[:, 15]) - (regression[:, 11] - regression[:, 9])
         orths = keras.backend.stack([x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7, x8, y8, x9, y9, x10, y10, x11, y11, x12, y12], axis=1)
-        print(orths)
 
         xt1 = (regression_target[:, 0] - regression_target[:, 6]) - (regression_target[:, 2] - regression_target[:, 4])
         yt1 = (regression_target[:, 1] - regression_target[:, 7]) - (regression_target[:, 3] - regression_target[:, 5])
@@ -239,9 +238,8 @@ def orthogonal_mse(weight=1.0):
         orths_target = keras.backend.stack(
             [xt1, yt1, xt2, yt2, xt3, yt3, xt4, yt4, xt5, yt5, xt6, yt6, xt7, yt7, xt8, yt8, xt9, yt9, xt10, yt10, xt11, yt11, xt12, yt12],
             axis=1)
-        print(orths_target)
 
-        regression_loss = weight_xy * keras.losses.mean_squared_error(regression, regression_target) + weight_orth * keras.losses.mean_absolute_error(orths, orths_target)
+        regression_loss = weight * (weight_xy * keras.losses.mean_squared_error(regression, regression_target) + weight_orth * keras.losses.mean_absolute_error(orths, orths_target))
 
         #### compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
