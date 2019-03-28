@@ -193,10 +193,34 @@ def weighted_l1(weight=1.5):
     return _wl1
 
 
-def orthogonal_mse(weight=0.4):
+def weighted_msle(weight=1.5):
 
-    weight_xy = 0.75
-    weight_orth = 0.25
+    def _msle(y_true, y_pred):
+
+        regression        = y_pred
+        regression_target = y_true[:, :, :, :-1]
+        anchor_state      = y_true[:, :, :, -1]
+
+        # somethings fucky here
+        #### filter out "ignore" anchors
+        indices           = backend.where(keras.backend.equal(anchor_state, 1))
+        regression        = backend.gather_nd(regression, indices)
+        regression_target = backend.gather_nd(regression_target, indices)
+
+        regression_loss = weight * keras.losses.mean_squared_logarithmic_error(regression, regression_target)
+
+        #### compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        return keras.backend.sum(regression_loss) / normalizer
+
+    return _msle
+
+
+def orthogonal_mse(weight=0.5):
+
+    weight_xy = 0.5
+    weight_orth = 0.5
 
     def _orth_mse(y_true, y_pred):
 
