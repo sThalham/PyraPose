@@ -244,17 +244,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
     less25deg = []
 
     # load meshes
-    mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    sub = os.listdir(mesh_path)
-    mesh_dict = {}
-    for m in sub:
-        if m.endswith('.ply'):
-            name = m[:-4]
-            key = str(int(name[-2:]))
-            mesh = np.genfromtxt(mesh_path+m, skip_header=16, usecols=(0, 1, 2))
-            mask = np.where(mesh[:, 0] != 3)
-            mesh = mesh[mask]
-            mesh_dict[key] = mesh
+    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    #sub = os.listdir(mesh_path)
+    #mesh_dict = {}
+    #for m in sub:
+    #    if m.endswith('.ply'):
+    #        name = m[:-4]
+    #        key = str(int(name[-2:]))
+    #        mesh = np.genfromtxt(mesh_path+m, skip_header=16, usecols=(0, 1, 2))
+    #        mask = np.where(mesh[:, 0] != 3)
+    #        mesh = mesh[mask]
+    #        mesh_dict[key] = mesh
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
 

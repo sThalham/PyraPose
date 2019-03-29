@@ -193,7 +193,7 @@ def weighted_l1(weight=1.5):
     return _wl1
 
 
-def weighted_msle(weight=1.5):
+def weighted_msle(weight=5.0):
 
     def _msle(y_true, y_pred):
 
