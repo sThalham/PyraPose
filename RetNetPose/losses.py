@@ -217,10 +217,10 @@ def weighted_msle(weight=5.0):
     return _msle
 
 
-def orthogonal_mse(weight=0.5):
+def orthogonal_mse(weight=0.4):
 
-    weight_xy = 0.5
-    weight_orth = 0.5
+    weight_xy = 0.75
+    weight_orth = 0.15
 
     def _orth_mse(y_true, y_pred):
 
