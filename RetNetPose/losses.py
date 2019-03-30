@@ -140,7 +140,8 @@ def smooth_l1(sigma=3.0):
         # compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return keras.backend.sum(regression_loss) / normalizer
+        loss = keras.backend.sum(regression_loss) / normalizer
+        return loss
 
     return _smooth_l1
 
@@ -164,7 +165,7 @@ def weighted_mse(weight=0.3):
         #### compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return keras.backend.sum(regression_loss) / normalizer
+        return regression_loss / normalizer
 
     return _wMSE
 
@@ -217,12 +218,13 @@ def weighted_msle(weight=5.0):
     return _msle
 
 
-def orthogonal_mse(weight=0.4):
+def orthogonal_l1(weight=1.5, sigma=3.0):
 
-    weight_xy = 0.75
-    weight_orth = 0.15
+    weight_xy = 0.5
+    weight_orth = 0.5
+    sigma_squared = sigma ** 2
 
-    def _orth_mse(y_true, y_pred):
+    def _orth_l1(y_true, y_pred):
 
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
@@ -287,14 +289,22 @@ def orthogonal_mse(weight=0.4):
             [xt1, yt1, xt2, yt2, xt3, yt3, xt4, yt4, xt5, yt5, xt6, yt6, xt7, yt7, xt8, yt8, xt9, yt9, xt10, yt10, xt11, yt11, xt12, yt12],
             axis=1)
 
-        regression_loss = weight * (weight_xy * keras.losses.mean_squared_error(regression, regression_target) + weight_orth * keras.losses.mean_absolute_error(orths, orths_target))
+        regression_diff = regression - regression_target
+        regression_diff = keras.backend.abs(regression_diff)
+        regression_xy = keras.backend.mean(backend.where(
+            keras.backend.less(regression_diff, 1.0 / sigma_squared),
+            0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
+            regression_diff - 0.5 / sigma_squared
+        ), axis=1)
+        regression_orth = keras.losses.mean_absolute_error(orths, orths_target)
+        regression_loss = weight * (weight_xy * regression_xy + weight_orth * regression_orth)
 
         #### compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
         return keras.backend.sum(regression_loss) / normalizer
 
-    return _orth_mse
+    return _orth_l1
 
 
 def smooth_l1_xy(sigma=3.0, weight=0.1):

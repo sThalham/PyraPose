@@ -27,7 +27,7 @@ class Backbone(object):
             '_msle'           : losses.weighted_msle(),
             '_smooth_l1_xy'    : losses.smooth_l1_xy(),
             'l2_norm'          : retinanet.l2_norm(),
-            '_orth_mse'        : losses.orthogonal_mse(),
+            '_orth_l1'        : losses.orthogonal_l1(),
         }
 
         self.backbone = backbone
