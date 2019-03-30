@@ -24,7 +24,7 @@ class Backbone(object):
             '_cross'           : losses.cross(),
             '_wMSE'            : losses.weighted_mse(),
             '_wl1'            : losses.weighted_l1(),
-            '_wmsle'           : losses.weighted_msle(),
+            '_msle'           : losses.weighted_msle(),
             '_smooth_l1_xy'    : losses.smooth_l1_xy(),
             'l2_norm'          : retinanet.l2_norm(),
             '_orth_mse'        : losses.orthogonal_mse(),
