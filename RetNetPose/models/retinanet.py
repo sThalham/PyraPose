@@ -171,6 +171,7 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
             **options
         )(outputs)
 
+    outputs = keras.layers.BatchNormalization(axis=3)(outputs)
     outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', **options)(outputs)
     #outputs = keras.layers.Dropout(0.2)(outputs)
     if keras.backend.image_data_format() == 'channels_first':
