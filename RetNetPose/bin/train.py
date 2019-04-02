@@ -122,8 +122,8 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     training_model.compile(
         loss={
             'bbox'         : losses.smooth_l1(),
-            #'3Dbox': losses.smooth_l1_xy(),
-            '3Dbox'        : losses.orthogonal_l1(),
+            '3Dbox': losses.smooth_l1_xy(),
+            #'3Dbox'        : losses.orthogonal_l1(),
             #'3Dbox'        : losses.weighted_mse(),
             #'3Dbox': losses.weighted_l1(),
             #'3Dbox': losses.weighted_msle(),
@@ -176,7 +176,6 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
             from ..callbacks.linemod import LinemodEval
             evaluation = LinemodEval(validation_generator, tensorboard=tensorboard_callback)
 
-
         else:
             evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
         evaluation = RedirectModel(evaluation, prediction_model)
@@ -191,10 +190,10 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
                 args.snapshot_path,
                 '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
             ),
-            verbose=1,
-                # save_best_only=True,
-                # monitor="mAP",
-                # mode='max'
+            #verbose=1,
+            #save_best_only=True,
+            #monitor="val_loss",
+            #mode='auto'
         )
         checkpoint = RedirectModel(checkpoint, model)
         callbacks.append(checkpoint)
@@ -396,7 +395,10 @@ def main(args=None):
     # start training
     training_model.fit_generator(
         generator=train_generator,
+        #validation_data=validation_generator,
+        #validation_steps=50,
         steps_per_epoch=train_iterations,
+        #steps_per_epoch=100,
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,

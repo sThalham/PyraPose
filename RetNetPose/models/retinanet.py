@@ -172,10 +172,10 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
         )(outputs)
 
     #outputs = keras.layers.BatchNormalization(axis=3, fre)(outputs)
-    outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', **options)(outputs)
+    outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', kernel_regularizer=keras.regularizers.l2(0.01), bias_regularizer=keras.regularizers.l2(0.01), **options)(outputs)
     #outputs = keras.layers.Dropout(0.2)(outputs)
-    outputs = keras.layers.Dense(num_anchors * num_classes * num_values, name='pyramid_regression3D_dense')(
-        outputs)
+    #outputs = keras.layers.Dense(num_anchors * num_classes * num_values, name='pyramid_regression3D_dense')(outputs)
+    #outputs = keras.layers.Dense(num_anchors * num_classes * num_values, kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), name='pyramid_regression3D_dense')(outputs)
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute')(outputs)
     outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_regression3D_reshape')(outputs)
