@@ -189,7 +189,7 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
             **options
         )(outputs)
 
-    outputs = batch_norm()(outputs)
+        outputs = batch_norm()(outputs)
     # weight_decay
     # l1
     # l2
