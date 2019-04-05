@@ -122,8 +122,8 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     training_model.compile(
         loss={
             'bbox'         : losses.smooth_l1(),
-            '3Dbox': losses.smooth_l1_xy(),
-            #'3Dbox'        : losses.orthogonal_l1(),
+            #'3Dbox': losses.smooth_l1_xy(),
+            '3Dbox'        : losses.orthogonal_l1(),
             #'3Dbox'        : losses.weighted_mse(),
             #'3Dbox': losses.weighted_l1(),
             #'3Dbox': losses.weighted_msle(),
@@ -298,7 +298,7 @@ def parse_args(args):
     parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='resnet50', type=str)
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
-    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=50)
+    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
     #parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=10000)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
