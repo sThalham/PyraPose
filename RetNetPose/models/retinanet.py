@@ -173,7 +173,9 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
         'strides'            : 1,
         'padding'            : 'same',
         'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
-        'bias_initializer'   : 'zeros'
+        'bias_initializer'   : 'zeros',
+        'kernel_regularizer' : keras.regularizers.l2(0.001),
+        'bias_regularizer'   : keras.regularizers.l2(0.001)
     }
 
     if keras.backend.image_data_format() == 'channels_first':
@@ -195,7 +197,6 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
     # l2
     # l1_l2 Elastic net regularization
     # kernel_constraint=keras.constraints.max_norm(3.0)
-    #outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', kernel_regularizer=keras.regularizers.l2(0.0001), bias_regularizer=keras.regularizers.l2(0.01), **options)(outputs)
     outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', **options)(outputs)
     #outputs = keras.layers.Dropout(0.2)(outputs)
     #outputs = keras.layers.Dense(num_anchors * num_classes * num_values, name='pyramid_regression3D_dense')(outputs)
