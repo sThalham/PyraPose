@@ -24,7 +24,9 @@ import math
 import transforms3d as tf3d
 import geometry
 import os
+import copy
 import cv2
+from ..utils import ply_loader
 from .pose_error import add
 from .pose_error import adi
 from .pose_error import reproj
@@ -163,6 +165,17 @@ threeD_boxes[14, :, :] = np.array([[0.047, 0.0735, 0.0925],  # phone [94, 147, 1
                                      [-0.047, -0.0735, -0.0925],
                                      [-0.047, -0.0735, 0.0925]])
 
+model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.0853, 0.0445, 0.0543, 0.048, 0.05, 0.0862, 0.0888, 0.071])
+
+
+def load_pcd(cat):
+    # load meshes
+    mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    ply_path = mesh_path + 'obj_' + cat + '.ply'
+    model_vsd = ply_loader.load_ply(ply_path)
+    return model_vsd
+
 
 def create_point_cloud(depth, ds):
 
@@ -227,34 +240,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
     tp = np.zeros((16), dtype=np.uint32)
     fp = np.zeros((16), dtype=np.uint32)
     fn = np.zeros((16), dtype=np.uint32)
-    xyD = []
-    xyzD = []
-    zD = []
-    less5cm_imgplane = []
-    less5cm = []
-    less10cm = []
-    less15cm = []
-    less20cm = []
-    less25cm = []
-    rotD = []
-    less5deg = []
-    less10deg = []
-    less15deg = []
-    less20deg = []
-    less25deg = []
 
-    # load meshes
-    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    #sub = os.listdir(mesh_path)
-    #mesh_dict = {}
-    #for m in sub:
-    #    if m.endswith('.ply'):
-    #        name = m[:-4]
-    #        key = str(int(name[-2:]))
-    #        mesh = np.genfromtxt(mesh_path+m, skip_header=16, usecols=(0, 1, 2))
-    #        mask = np.where(mesh[:, 0] != 3)
-    #        mesh = mesh[mask]
-    #        mesh_dict[key] = mesh
+    rotD = np.zeros((16), dtype=np.uint32)
+    less5 = np.zeros((16), dtype=np.uint32)
+    rep_e = np.zeros((16), dtype=np.uint32)
+    rep_less5 = np.zeros((16), dtype=np.uint32)
+    add_e = np.zeros((16), dtype=np.uint32)
+    add_less_d = np.zeros((16), dtype=np.uint32)
+    vsd_e = np.zeros((16), dtype=np.uint32)
+    vsd_less_t = np.zeros((16), dtype=np.uint32)
+
+    model_pre = []
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
 
@@ -280,9 +276,25 @@ def evaluate_linemod(generator, model, threshold=0.05):
         # target annotation
         anno = generator.load_annotations(index)
         if len(anno['labels']) > 1:
+            print('anno > 1')
             continue
         else:
             t_cat = int(anno['labels']) + 1
+            obj_name = str(t_cat)
+            if len(obj_name) < 2:
+                obj_name = '0' + obj_name
+        if obj_name is '03' or obj_name is '07':
+            print(t_cat, ' ====> skip')
+            continue
+
+        if obj_name is not model_pre:
+            model_vsd = load_pcd(obj_name)
+            model_pre = obj_name
+
+        rotD[t_cat] += 1
+        rep_e[t_cat] += 1
+        add_e[t_cat] += 1
+        vsd_e[t_cat] += 1
         t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
         t_tra = anno['poses'][0][:3]
         t_rot = anno['poses'][0][3:]
@@ -323,46 +335,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         fn[t_cat] -= 1
                         fnit = False
 
-                        path = generator.load_image_dep(index)
-                        image_dep = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-
-                        dep_val = image_dep[int(box[1] + (box[3] * 0.5)), int(box[0] + (box[2] * 0.5))]*0.001
-                        if cls == 1:
-                            dep = dep_val + 0.041
-                        elif cls == 2:
-                            dep = dep_val + 0.0928
-                        elif cls == 3:
-                            dep = dep_val + 0.0675
-                        elif cls == 4:
-                            dep = dep_val + 0.0633
-                        elif cls == 5:
-                            dep = dep_val + 0.0795
-                        elif cls == 6:
-                            dep = dep_val + 0.052
-                        elif cls == 7:
-                            dep = dep_val + 0.0508
-                        elif cls == 8:
-                            dep = dep_val + 0.0853
-                        elif cls == 9:
-                            dep = dep_val + 0.0445
-                        elif cls == 10:
-                            dep = dep_val + 0.0543
-                        elif cls == 11:
-                            dep = dep_val + 0.048
-                        elif cls == 12:
-                            dep = dep_val + 0.05
-                        elif cls == 13:
-                            dep = dep_val + 0.0862
-                        elif cls == 14:
-                            dep = dep_val + 0.0888
-                        elif cls == 15:
-                            dep = dep_val + 0.071
-
-                        x_o = (((box[0] + (box[2] * 0.5)) - cxkin) * dep) / fxkin
-                        y_o = (((box[1] + (box[3] * 0.5)) - cykin) * dep) / fykin
-
-                        itvec = np.array([x_o, y_o, dep], dtype=np.float32)
-
                         obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :], dtype=np.float32) #.reshape((8, 1, 3))
                         est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
 
@@ -371,43 +343,47 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #retval, orvec, otvec = cv2.solvePnP(obj_points, est_points, K, None, None, None, False, cv2.SOLVEPNP_ITERATIVE)
                         retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
                                                                            imagePoints=est_points, cameraMatrix=K,
-                                                                           distCoeffs=None, rvec=None, tvec=itvec,
-                                                                           useExtrinsicGuess=True, iterationsCount=100,
+                                                                           distCoeffs=None, rvec=None, tvec=None,
+                                                                           useExtrinsicGuess=False, iterationsCount=100,
                                                                            reprojectionError=5.0, confidence=0.99,
                                                                            flags=cv2.SOLVEPNP_ITERATIVE)
 
-                        rmat, _ = cv2.Rodrigues(orvec)
-                        t_rmat, _ = cv2.Rodrigues(t_rot)
-                        t_rmat = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
-                        rd = re(t_rmat, rmat)
-                        #xyz = te((np.asarray(t_tra)*0.001), (otvec.T))
-                        xyz = te((np.asarray(t_tra) * 0.001), (itvec.T))
+                        R_est, _ = cv2.Rodrigues(orvec)
+                        t_est = otvec
+
+                        t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
+                        R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+                        t_gt = np.array(t_tra, dtype=np.float32) * 0.001
+
+                        rd = re(R_gt, R_est)
+                        xyz = te(t_gt, t_est.T)
 
                         if not math.isnan(rd):
-                            rotD.append(rd)
-                            if (rd) < 5.0:
-                                less5deg.append(rd)
-                            if (rd) < 10.0:
-                                less10deg.append(rd)
-                            if (rd) < 15.0:
-                                less15deg.append(rd)
-                            if (rd) < 20.0:
-                                less20deg.append(rd)
-                            if (rd) < 25.0:
-                                less25deg.append(rd)
+                            if rd < 5.0 and xyz < 0.05:
+                                less5[t_cat] += 1
 
-                        if not math.isnan(xyz):
-                            xyzD.append(xyz)
-                            if xyz < 0.05:
-                                less5cm.append(xyz)
-                            if xyz < 0.1:
-                                less10cm.append(xyz)
-                            if xyz < 0.15:
-                                less15cm.append(xyz)
-                            if xyz < 0.2:
-                                less20cm.append(xyz)
-                            if xyz < 0.25:
-                                less25cm.append(xyz)
+                        #err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
+                        # print('vsd: ', err_vsd)
+                        #if not math.isnan(err_vsd):
+                        #    vsd_e.append(err_vsd)
+                        #    if err_vsd < 0.3:
+                        #        vsd_less_t.append(err_vsd)
+
+                        err_repr = reproj(K, R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+                        if not math.isnan(err_repr):
+                            if err_repr < 5.0:
+                                rep_less5[t_cat] += 1
+
+                        if cls == 3 or cls == 7 or cls == 10 or cls == 11:
+                            err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+                        else:
+                            err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+                        if not math.isnan(err_add):
+                            if err_add < (model_radii[cls - 1] * 2 * 0.1):
+                                add_less_d[t_cat] += 1
 
                 else:
                     fp[t_cat] += 1
@@ -424,10 +400,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
     json.dump(results, open('{}_bbox_results.json'.format(generator.set_name), 'w'), indent=4)
     #json.dump(image_ids, open('{}_processed_image_ids.json'.format(generator.set_name), 'w'), indent=4)
 
-    detPre = [0] * 16
-    detRec = [0] * 16
+    detPre = [0.0] * 16
+    detRec = [0.0] * 16
+    less_55 = [0.0] * 16
+    less_repr_5 = [0.0] * 16
+    less_add_d = [0.0] * 16
+    less_vsd_t = [0.0] * 16
 
     np.set_printoptions(precision=2)
+    print('')
     for ind in range(1, 16):
         if ind == 0:
             continue
@@ -435,37 +416,26 @@ def evaluate_linemod(generator, model, threshold=0.05):
         if tp[ind] == 0:
             detPre[ind] = 0.0
             detRec[ind] = 0.0
+            less_55[ind] = 0.0
+            less_repr_5[ind] = 0.0
+            less_add_d[ind] = 0.0
+            less_vsd_t[ind] = 0.0
         else:
             detRec[ind] = tp[ind] / (tp[ind] + fn[ind])
             detPre[ind] = tp[ind] / (tp[ind] + fp[ind])
+            less_55[ind] = sum(less5[ind]) / sum(rotD[ind]) * 100.0
+            less_repr_5[ind] = sum(rep_less5[ind]) / sum(rep_e[ind]) * 100.0
+            less_add_d[ind] = sum(add_less_d[ind]) / sum(add_e[ind]) * 100.0
+            less_vsd_t[ind] = sum(vsd_less_t[ind]) / sum(vsd_e[ind]) * 100.0
 
-        #print('precision category ', ind, ': ', detPre[ind])
-        #print('recall category ', ind, ': ', detRec[ind])
+        print('cat ', ind, ' rec ', detPre[ind], ' pre ', detRec[ind], ' less5 ', less_55[ind], ' repr ',
+                  less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind])
 
     dataset_recall = sum(tp) / (sum(tp) + sum(fp))
     dataset_precision = sum(tp) / (sum(tp) + sum(fn))
-    less5cm = len(less5cm)/len(xyzD)
-    less10cm = len(less10cm) / len(xyzD)
-    less15cm = len(less15cm) / len(xyzD)
-    less20cm = len(less20cm) / len(xyzD)
-    less25cm = len(less25cm) / len(xyzD)
-    less5deg = len(less5deg) / len(rotD)
-    less10deg = len(less10deg) / len(rotD)
-    less15deg = len(less15deg) / len(rotD)
-    less20deg = len(less20deg) / len(rotD)
-    less25deg = len(less25deg) / len(rotD)
-    print(' ')
-    print('dataset recall: ', dataset_recall, '%')
-    print('dataset precision: ', dataset_precision, '%')
-    print('linemod::percent below 5 cm: ', less5cm, '%')
-    print('linemod::percent below 10 cm: ', less10cm, '%')
-    print('linemod::percent below 15 cm: ', less15cm, '%')
-    print('linemod::percent below 20 cm: ', less20cm, '%')
-    print('linemod::percent below 25 cm: ', less25cm, '%')
-    print('linemod::percent below 5 deg: ', less5deg, '%')
-    print('linemod::percent below 10 deg: ', less10deg, '%')
-    print('linemod::percent below 15 deg: ', less15deg, '%')
-    print('linemod::percent below 20 deg: ', less20deg, '%')
-    print('linemod::percent below 25 deg: ', less25deg, '%')
+    less_55 = sum(less5) / sum(rotD) * 100.0
+    less_repr_5 = sum(rep_less5) / sum(rep_e) * 100.0
+    less_add_d = sum(add_less_d) / sum(add_e) * 100.0
+    less_vsd_t = sum(vsd_less_t) / sum(vsd_e) * 100.0
 
-    return dataset_recall, dataset_precision, less5cm, less5deg
+    return dataset_recall, dataset_precision, less_55, less_vsd_t, less_repr_5, less_add_d

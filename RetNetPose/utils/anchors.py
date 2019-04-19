@@ -48,7 +48,7 @@ AnchorParameters.default = AnchorParameters(
     strides = [8, 16, 32, 64, 128],
     ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
     scales  = np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
-)
+)   # scales: 1, 1.26, 1.59
 
 
 def anchor_targets_bbox(
