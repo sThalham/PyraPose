@@ -33,6 +33,8 @@ from .pose_error import vsd, reproj, add, adi, re, te
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
 
+print('imports done')
+
 # LineMOD
 fxkin = 572.41140
 fykin = 573.57043
