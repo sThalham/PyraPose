@@ -306,7 +306,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             continue
 
         if obj_name is not model_pre:
+            print('pre model loading')
             model_vsd, model_vsd_mm = load_pcd(obj_name)
+            print('post model loading')
             model_pre = obj_name
 
         rotD[t_cat] += 1
