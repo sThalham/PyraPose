@@ -9,7 +9,7 @@ import numpy as np
 from scipy import spatial
 from transforms3d.quaternions import quat2mat, mat2quat
 import cv2
-import .hodan_renderer
+from .hodan_renderer import render
 
 
 def estimate_visib_mask(d_test, d_model, delta):
@@ -127,10 +127,10 @@ def vsd(R_est, t_est, R_gt, t_gt, model, depth_test, K, delta, tau,
 
     #depth_gt = project2img(model, im_size, K, R_gt, t_gt)
 
-    depth_est = hodan_renderer.render(model, im_size, K, R_est, t_est, clip_near=100,
+    depth_est = render(model, im_size, K, R_est, t_est, clip_near=100,
                                 clip_far=10000, mode='depth')
 
-    depth_gt = hodan_renderer.render(model, im_size, K, R_gt, t_gt, clip_near=100,
+    depth_gt = render(model, im_size, K, R_gt, t_gt, clip_near=100,
                                clip_far=10000, mode='depth')
 
     # Convert depth images to distance images
