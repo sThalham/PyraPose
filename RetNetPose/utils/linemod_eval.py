@@ -170,8 +170,8 @@ model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.
 
 def load_pcd(cat):
     # load meshes
-    mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     return model_vsd
@@ -280,13 +280,22 @@ def evaluate_linemod(generator, model, threshold=0.05):
         # target annotation
         anno = generator.load_annotations(index)
         if len(anno['labels']) > 1:
-            print('anno > 1')
-            continue
+            t_cat = 2
+            obj_name = '02'
+            ent = np.where(anno['labels'] == 1.0)
+            t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[ent][0]
+            t_tra = anno['poses'][ent][0][:3]
+            t_rot = anno['poses'][ent][0][3:]
+
         else:
             t_cat = int(anno['labels']) + 1
             obj_name = str(t_cat)
             if len(obj_name) < 2:
                 obj_name = '0' + obj_name
+                t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
+                t_tra = anno['poses'][0][:3]
+                t_rot = anno['poses'][0][3:]
+
         if obj_name is '03' or obj_name is '07':
             print(t_cat, ' ====> skip')
             continue
@@ -299,9 +308,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
         rep_e[t_cat] += 1
         add_e[t_cat] += 1
         vsd_e[t_cat] += 1
-        t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-        t_tra = anno['poses'][0][:3]
-        t_rot = anno['poses'][0][3:]
+        #t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
+        #t_tra = anno['poses'][0][:3]
+        #t_rot = anno['poses'][0][3:]
         fn[t_cat] += 1
         fnit = True
 
@@ -391,7 +400,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         if not math.isnan(err_add):
                             if err_add < (model_radii[cls - 1] * 2 * 0.15):
                                 tp_add[t_cat] += 1
-                            else
+                            else:
                                 fn_add[t_cat] -= 1
 
                 else:
