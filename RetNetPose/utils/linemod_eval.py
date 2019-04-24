@@ -286,6 +286,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         # target annotation
         anno = generator.load_annotations(index)
+        print('annotations loaded')
         if len(anno['labels']) > 1:
             t_cat = 2
             obj_name = '02'
