@@ -27,11 +27,7 @@ import os
 import copy
 import cv2
 from ..utils import ply_loader
-from .pose_error import add
-from .pose_error import adi
-from .pose_error import reproj
-from .pose_error import re
-from .pose_error import te
+from .pose_error import vsd, reproj, add, adi, re, te
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
