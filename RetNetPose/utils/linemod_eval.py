@@ -33,7 +33,6 @@ from .pose_error import vsd, reproj, add, adi, re, te
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
 
-print('imports done')
 
 # LineMOD
 fxkin = 572.41140
@@ -263,23 +262,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     model_pre = []
 
-    print('pre loop')
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
-        print(index)
         image_raw = generator.load_image(index)
-        print(image_raw.shape)
         image = generator.preprocess_image(image_raw)
-        cv2.imwrite('/home/stefan/img1.jpg', image)
-        print(image.shape)
         image, scale = generator.resize_image(image)
-        cv2.imwrite('/home/stefan/img2.jpg', image)
-        print(image.shape)
 
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
 
         # run network
-        print('start predicting')
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
 
         # correct boxes for image scale
@@ -291,7 +282,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         # target annotation
         anno = generator.load_annotations(index)
-        print('annotations loaded')
         if len(anno['labels']) > 1:
             t_cat = 2
             obj_name = '02'
@@ -314,9 +304,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             continue
 
         if obj_name is not model_pre:
-            print('pre model loading')
             model_vsd, model_vsd_mm = load_pcd(obj_name)
-            print('post model loading')
             model_pre = obj_name
 
         rotD[t_cat] += 1
@@ -392,9 +380,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         image_dep_path = generator.load_image_dep(index)
                         image_dep = cv2.imread(image_dep_path, cv2.IMREAD_UNCHANGED)
-                        print('post-vsd')
                         err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
-                        print('vsd: ', err_vsd)
                         if not math.isnan(err_vsd):
                             if err_vsd < 0.3:
                                 vsd_less_t[t_cat] += 1
