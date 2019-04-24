@@ -273,8 +273,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image = image.transpose((2, 0, 1))
 
         # run network
-        #boxes, trans, deps, rots, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
-        #boxes, trans, deps, rol, pit, ya, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        print('start predicting')
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
 
         # correct boxes for image scale
