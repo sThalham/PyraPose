@@ -152,7 +152,6 @@ class LinemodGenerator(Generator):
 
         return read_image_bgr(path)
 
-
     def load_image_dep(self, image_index):
         """ Load an image at the image_index.
         """
@@ -163,7 +162,6 @@ class LinemodGenerator(Generator):
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
 
         return path[:-4] + '_dep.png'
-
 
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.

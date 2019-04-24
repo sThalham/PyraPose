@@ -26,6 +26,7 @@ import geometry
 import os
 import copy
 import cv2
+import open3d
 from ..utils import ply_loader
 from .pose_error import vsd, reproj, add, adi, re, te
 
@@ -166,11 +167,19 @@ model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.
 
 def load_pcd(cat):
     # load meshes
-    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
-    return model_vsd
+    pcd_model = open3d.PointCloud()
+    pcd_model.points = open3d.Vector3dVector(model_vsd['pts'])
+    open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=0.1, max_nn=30))
+    # open3d.draw_geometries([pcd_model])
+    model_vsd_mm = copy.deepcopy(model_vsd)
+    model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
+
+    return model_vsd, model_vsd_mm
 
 
 def create_point_cloud(depth, ds):
@@ -288,16 +297,16 @@ def evaluate_linemod(generator, model, threshold=0.05):
             obj_name = str(t_cat)
             if len(obj_name) < 2:
                 obj_name = '0' + obj_name
-                t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-                t_tra = anno['poses'][0][:3]
-                t_rot = anno['poses'][0][3:]
+            t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
+            t_tra = anno['poses'][0][:3]
+            t_rot = anno['poses'][0][3:]
 
         if obj_name is '03' or obj_name is '07':
             print(t_cat, ' ====> skip')
             continue
 
         if obj_name is not model_pre:
-            model_vsd = load_pcd(obj_name)
+            model_vsd, model_vsd_mm = load_pcd(obj_name)
             model_pre = obj_name
 
         rotD[t_cat] += 1
@@ -371,6 +380,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             if rd < 5.0 and xyz < 0.05:
                                 less5[t_cat] += 1
 
+                        image_dep_path = generator.load_image_dep(index)
+                        image_dep = cv2.imread(image_dep_path, cv2.IMREAD_UNCHANGED)
                         err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
                         # print('vsd: ', err_vsd)
                         if not math.isnan(err_vsd):
