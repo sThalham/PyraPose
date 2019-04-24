@@ -9,7 +9,7 @@ import numpy as np
 from scipy import spatial
 from transforms3d.quaternions import quat2mat, mat2quat
 import cv2
-import hodan_renderer
+import .hodan_renderer
 
 
 def estimate_visib_mask(d_test, d_model, delta):
