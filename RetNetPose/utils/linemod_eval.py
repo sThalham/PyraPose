@@ -382,8 +382,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         image_dep_path = generator.load_image_dep(index)
                         image_dep = cv2.imread(image_dep_path, cv2.IMREAD_UNCHANGED)
+                        print('post-vsd')
                         err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
-                        # print('vsd: ', err_vsd)
+                        print('vsd: ', err_vsd)
                         if not math.isnan(err_vsd):
                             if err_vsd < 0.3:
                                 vsd_less_t[t_cat] += 1
