@@ -269,9 +269,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image_raw = generator.load_image(index)
         print(image_raw.shape)
         image = generator.preprocess_image(image_raw)
+        cv2.imwrite('/home/stefan/img1.jpg', image)
         print(image.shape)
         image, scale = generator.resize_image(image)
-        print(scale)
+        cv2.imwrite('/home/stefan/img2.jpg', image)
+        print(image.shape)
 
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
