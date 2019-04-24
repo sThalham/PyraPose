@@ -263,8 +263,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     model_pre = []
 
+    print('pre loop')
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
-
+        print(index)
         image_raw = generator.load_image(index)
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
