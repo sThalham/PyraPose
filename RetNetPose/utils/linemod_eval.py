@@ -241,6 +241,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
     fp = np.zeros((16), dtype=np.uint32)
     fn = np.zeros((16), dtype=np.uint32)
 
+    tp_add = np.zeros((16), dtype=np.uint32)
+    fp_add = np.zeros((16), dtype=np.uint32)
+    fn_add = np.zeros((16), dtype=np.uint32)
+
     rotD = np.zeros((16), dtype=np.uint32)
     less5 = np.zeros((16), dtype=np.uint32)
     rep_e = np.zeros((16), dtype=np.uint32)
@@ -362,12 +366,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             if rd < 5.0 and xyz < 0.05:
                                 less5[t_cat] += 1
 
-                        #err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
+                        err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
                         # print('vsd: ', err_vsd)
-                        #if not math.isnan(err_vsd):
-                        #    vsd_e.append(err_vsd)
-                        #    if err_vsd < 0.3:
-                        #        vsd_less_t.append(err_vsd)
+                        if not math.isnan(err_vsd):
+                            if err_vsd < 0.3:
+                                vsd_less_t[t_cat] += 1
 
                         err_repr = reproj(K, R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
@@ -385,8 +388,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             if err_add < (model_radii[cls - 1] * 2 * 0.1):
                                 add_less_d[t_cat] += 1
 
+                        if not math.isnan(err_add):
+                            if err_add < (model_radii[cls - 1] * 2 * 0.15):
+                                tp_add[t_cat] += 1
+                            else
+                                fn_add[t_cat] -= 1
+
                 else:
                     fp[t_cat] += 1
+                    fp_add[t_cat] += 1
 
         # append image to list of processed images
         image_ids.append(generator.image_ids[index])
@@ -402,6 +412,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     detPre = [0.0] * 16
     detRec = [0.0] * 16
+    detPre_add = [0.0] * 16
+    detRec_add = [0.0] * 16
+    F1_add = [0.0] * 16
     less_55 = [0.0] * 16
     less_repr_5 = [0.0] * 16
     less_add_d = [0.0] * 16
@@ -416,23 +429,32 @@ def evaluate_linemod(generator, model, threshold=0.05):
         if tp[ind] == 0:
             detPre[ind] = 0.0
             detRec[ind] = 0.0
+            detPre_add[ind] = 0.0
+            detRec_add[ind] = 0.0
             less_55[ind] = 0.0
             less_repr_5[ind] = 0.0
             less_add_d[ind] = 0.0
             less_vsd_t[ind] = 0.0
         else:
-            detRec[ind] = tp[ind] / (tp[ind] + fn[ind])
-            detPre[ind] = tp[ind] / (tp[ind] + fp[ind])
+            detRec[ind] = tp[ind] / (tp[ind] + fn[ind]) * 100.0
+            detPre[ind] = tp[ind] / (tp[ind] + fp[ind]) * 100.0
+            detRec_add[ind] = tp_add[ind] / (tp_add[ind] + fn_add[ind]) * 100.0
+            detPre_add[ind] = tp_add[ind] / (tp_add[ind] + fp_add[ind]) * 100.0
+            F1_add[ind] = 2 * ((detPre_add[ind] * detRec_add[ind])/(detPre_add[ind] + detRec_add[ind]))
             less_55[ind] = sum(less5[ind]) / sum(rotD[ind]) * 100.0
             less_repr_5[ind] = sum(rep_less5[ind]) / sum(rep_e[ind]) * 100.0
             less_add_d[ind] = sum(add_less_d[ind]) / sum(add_e[ind]) * 100.0
             less_vsd_t[ind] = sum(vsd_less_t[ind]) / sum(vsd_e[ind]) * 100.0
 
         print('cat ', ind, ' rec ', detPre[ind], ' pre ', detRec[ind], ' less5 ', less_55[ind], ' repr ',
-                  less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind])
+                  less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind], ' F1 add 0.15d ', F1_add[ind])
 
-    dataset_recall = sum(tp) / (sum(tp) + sum(fp))
-    dataset_precision = sum(tp) / (sum(tp) + sum(fn))
+    dataset_recall = sum(tp) / (sum(tp) + sum(fp)) * 100.0
+    dataset_precision = sum(tp) / (sum(tp) + sum(fn)) * 100.0
+    dataset_recall_add = sum(tp_add) / (sum(tp_add) + sum(fp_add)) * 100.0
+    dataset_precision_add = sum(tp_add) / (sum(tp_add) + sum(fn_add)) * 100.0
+    F1_add_all = 2 * ((dataset_precision_add * dataset_recall_add)/(dataset_precision_add + dataset_recall_add))
+    print('F1 add 0.15d: ', F1_add_all)
     less_55 = sum(less5) / sum(rotD) * 100.0
     less_repr_5 = sum(rep_less5) / sum(rep_e) * 100.0
     less_add_d = sum(add_less_d) / sum(add_e) * 100.0
