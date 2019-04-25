@@ -28,7 +28,7 @@ import copy
 import cv2
 import open3d
 from ..utils import ply_loader
-from .pose_error import reproj, add, adi, re, te#, vsd
+from .pose_error import reproj, add, adi, re, te, vsd
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -270,6 +270,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
 
+        #anno = generator.load_annotations(index)
+        #if len(anno['labels']) > 1:
+        #    temp_cat = 2
+        #else:
+        #    temp_cat = int(anno['labels']) + 1
+        #if temp_cat != 2:
+        #    continue
+
         # run network
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
 
@@ -315,6 +323,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         #t_tra = anno['poses'][0][:3]
         #t_rot = anno['poses'][0][3:]
         fn[t_cat] += 1
+        fn_add[t_cat] += 1
         fnit = True
 
         # compute predicted labels and scores
@@ -378,12 +387,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             if rd < 5.0 and xyz < 0.05:
                                 less5[t_cat] += 1
 
-                        #image_dep_path = generator.load_image_dep(index)
-                        #image_dep = cv2.imread(image_dep_path, cv2.IMREAD_UNCHANGED)
-                        #err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
-                        #if not math.isnan(err_vsd):
-                        #    if err_vsd < 0.3:
-                        #        vsd_less_t[t_cat] += 1
+                        image_dep_path = generator.load_image_dep(index)
+                        image_dep = cv2.imread(image_dep_path, cv2.IMREAD_UNCHANGED)
+                        err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
+                        if not math.isnan(err_vsd):
+                            if err_vsd < 0.3:
+                                vsd_less_t[t_cat] += 1
 
                         err_repr = reproj(K, R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
@@ -466,10 +475,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
     dataset_recall_add = sum(tp_add) / (sum(tp_add) + sum(fp_add)) * 100.0
     dataset_precision_add = sum(tp_add) / (sum(tp_add) + sum(fn_add)) * 100.0
     F1_add_all = 2 * ((dataset_precision_add * dataset_recall_add)/(dataset_precision_add + dataset_recall_add))
-    print('F1 add 0.15d: ', F1_add_all)
     less_55 = sum(less5) / sum(rotD) * 100.0
     less_repr_5 = sum(rep_less5) / sum(rep_e) * 100.0
     less_add_d = sum(add_less_d) / sum(add_e) * 100.0
     less_vsd_t = sum(vsd_less_t) / sum(vsd_e) * 100.0
 
-    return dataset_recall, dataset_precision, less_55, less_vsd_t, less_repr_5, less_add_d
+    return dataset_recall, dataset_precision, less_55, less_vsd_t, less_repr_5, less_add_d, F1_add_all
