@@ -299,7 +299,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             t_tra = anno['poses'][0][:3]
             t_rot = anno['poses'][0][3:]
 
-        if obj_name is '03' or obj_name is '07':
+        if t_cat == 3 or t_cat == 7:
             print(t_cat, ' ====> skip')
             continue
 
@@ -404,7 +404,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         if not math.isnan(err_add):
                             if err_add < (model_radii[cls - 1] * 2 * 0.15):
                                 tp_add[t_cat] += 1
-                            else:
                                 fn_add[t_cat] -= 1
 
                 else:
@@ -454,10 +453,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             detRec_add[ind] = tp_add[ind] / (tp_add[ind] + fn_add[ind]) * 100.0
             detPre_add[ind] = tp_add[ind] / (tp_add[ind] + fp_add[ind]) * 100.0
             F1_add[ind] = 2 * ((detPre_add[ind] * detRec_add[ind])/(detPre_add[ind] + detRec_add[ind]))
-            less_55[ind] = sum(less5[ind]) / sum(rotD[ind]) * 100.0
-            less_repr_5[ind] = sum(rep_less5[ind]) / sum(rep_e[ind]) * 100.0
-            less_add_d[ind] = sum(add_less_d[ind]) / sum(add_e[ind]) * 100.0
-            less_vsd_t[ind] = sum(vsd_less_t[ind]) / sum(vsd_e[ind]) * 100.0
+            less_55[ind] = (less5[ind]) / (rotD[ind]) * 100.0
+            less_repr_5[ind] = (rep_less5[ind]) / (rep_e[ind]) * 100.0
+            less_add_d[ind] = (add_less_d[ind]) / (add_e[ind]) * 100.0
+            less_vsd_t[ind] = (vsd_less_t[ind]) / (vsd_e[ind]) * 100.0
 
         print('cat ', ind, ' rec ', detPre[ind], ' pre ', detRec[ind], ' less5 ', less_55[ind], ' repr ',
                   less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind], ' F1 add 0.15d ', F1_add[ind])
