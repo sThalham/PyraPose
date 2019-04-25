@@ -168,8 +168,8 @@ model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.
 
 def load_pcd(cat):
     # load meshes
-    mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
