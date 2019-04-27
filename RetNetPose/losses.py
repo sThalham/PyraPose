@@ -170,7 +170,7 @@ def weighted_mse(weight=60.0):
     return _wMSE
 
 
-def weighted_l1(weight=1.5):
+def weighted_l1(weight=1.6):
 
     def _wl1(y_true, y_pred):
 
@@ -189,7 +189,7 @@ def weighted_l1(weight=1.5):
         #### compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return regression_loss / normalizer
+        return keras.backend.sum(regression_loss) / normalizer
 
     return _wl1
 

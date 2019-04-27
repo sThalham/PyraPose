@@ -28,7 +28,7 @@ import copy
 import cv2
 import open3d
 from ..utils import ply_loader
-from .pose_error import reproj, add, adi, re, te#, vsd
+from .pose_error import reproj, add, adi, re, te, vsd
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -168,8 +168,8 @@ model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.
 
 def load_pcd(cat):
     # load meshes
-    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -270,25 +270,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
 
-        #anno = generator.load_annotations(index)
-        #if len(anno['labels']) > 1:
-        #    temp_cat = 2
-        #else:
-        #    temp_cat = int(anno['labels']) + 1
-        #if temp_cat != 2:
-        #    continue
-
-        # run network
-        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
-
-        # correct boxes for image scale
-        boxes /= scale
-
-        # change to (x, y, w, h) (MS COCO standard)
-        boxes[:, :, 2] -= boxes[:, :, 0]
-        boxes[:, :, 3] -= boxes[:, :, 1]
-
-        # target annotation
         anno = generator.load_annotations(index)
         if len(anno['labels']) > 1:
             t_cat = 2
@@ -310,6 +291,18 @@ def evaluate_linemod(generator, model, threshold=0.05):
         if t_cat == 3 or t_cat == 7:
             print(t_cat, ' ====> skip')
             continue
+
+        # run network
+        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+
+        # correct boxes for image scale
+        boxes /= scale
+
+        # change to (x, y, w, h) (MS COCO standard)
+        boxes[:, :, 2] -= boxes[:, :, 0]
+        boxes[:, :, 3] -= boxes[:, :, 1]
+
+        # target annotation
 
         if obj_name is not model_pre:
             model_vsd, model_vsd_mm = load_pcd(obj_name)
@@ -387,12 +380,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             if rd < 5.0 and xyz < 0.05:
                                 less5[t_cat] += 1
 
-                        #image_dep_path = generator.load_image_dep(index)
-                        #image_dep = cv2.imread(image_dep_path, cv2.IMREAD_UNCHANGED)
-                        #err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
-                        #if not math.isnan(err_vsd):
-                        #    if err_vsd < 0.3:
-                        #        vsd_less_t[t_cat] += 1
+                        image_dep_path = generator.load_image_dep(index)
+                        image_dep = cv2.imread(image_dep_path, cv2.IMREAD_UNCHANGED)
+                        err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
+                        if not math.isnan(err_vsd):
+                            if err_vsd < 0.3:
+                                vsd_less_t[t_cat] += 1
 
                         err_repr = reproj(K, R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
