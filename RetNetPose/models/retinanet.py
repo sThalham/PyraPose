@@ -175,7 +175,6 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
         'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
         'bias_initializer'   : 'zeros',
         'kernel_regularizer' : keras.regularizers.l2(0.001),
-        #'bias_regularizer'   : keras.regularizers.l1(0.001)
     }
 
     if keras.backend.image_data_format() == 'channels_first':
@@ -190,83 +189,22 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
             name='pyramid_regression3D_{}'.format(i),
             **options
         )(outputs)
+    #output_list = []
+    #for c in range(num_classes):
+    #    print('c: ', c)
+    #    outputs_cls = keras.layers.Conv2D(num_anchors * num_values, name='pyramid_regression3D' + str(c), **options)(outputs)
+    #    if keras.backend.image_data_format() == 'channels_first':
+    #        outputs_cls = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute' + str(c))(outputs_cls)
+    #    outputs_cls = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_regression3D_reshape' + str(c))(outputs_cls)
+    #    output_list.append(outputs_cls)
+    #return output_list
 
-        #outputs = batch_norm()(outputs)
-    # weight_decay
-    # l1
-    # l2
-    # l1_l2 Elastic net regularization
-    # kernel_constraint=keras.constraints.max_norm(3.0)
     outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', **options)(outputs)
-    #outputs = keras.layers.Dropout(0.2)(outputs)
-    #outputs = keras.layers.Dense(num_anchors * num_classes * num_values, name='pyramid_regression3D_dense')(outputs)
-    #outputs = keras.layers.Dense(num_anchors * num_classes * num_values, kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), name='pyramid_regression3D_dense')(outputs)
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute')(outputs)
     outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_regression3D_reshape')(outputs)
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
-
-
-def default_pose_regression_model(num_values, num_anchors, num_classes, pyramid_feature_size=256, regression_feature_size=256, name='pose_regression_submodel'):
-
-    if keras.backend.image_data_format() == 'channels_first':
-        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
-    else:
-        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
-
-    outputs = inputs
-    outputs = keras.layers.Dense(num_anchors * num_classes * num_values, activation='relu', name='pyramid_rotation_regression_sharedF')(outputs)
-    #outputs = keras.layers.Dropout(0.5)(outputs)
-    # TRANSLATION
-    outputsT = keras.layers.Dense(num_anchors * num_classes * 2, name='pyramid_xy_regression_orientationF')(outputs)
-    #outputsT = keras.layers.Dropout(0.5)(outputsT)
-    if keras.backend.image_data_format() == 'channels_first':
-        outputsT = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_xy')(outputsT)
-    outputsT = keras.layers.Reshape((-1, num_classes, 2), name='pyramid_xy_regression_reshape')(outputsT)
-
-    # DEPTH classification
-    #outputsD = keras.layers.Dense(num_anchors * num_classes * 80, name='pyramid_depth_classificationF')(outputs)
-    #if keras.backend.image_data_format() == 'channels_first':
-    #    outputsD = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsD)
-    #outputsD = keras.layers.Reshape((-1, num_classes, 80), name='pyramid_depth_classification_reshape')(outputsD)
-    #outputsD = keras.layers.Activation('sigmoid', name='pyramid_depth_classification_sigmoid')(outputsD)
-
-    # DEPTH regression
-    outputsD = keras.layers.Dense(num_anchors * num_classes * 1, activation='relu', name='pyramid_depth_regression_orientationF')(outputs)
-    outputsD = keras.layers.Dropout(0.5)(outputsD)
-    if keras.backend.image_data_format() == 'channels_first':
-        outputsD = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_depth')(outputsD)
-    outputsD = keras.layers.Reshape((-1, num_classes, 1), name='pyramid_depth_regression_reshape')(outputsD)
-
-    # ROTATION
-    outputsQ = keras.layers.Dense(num_anchors * num_classes * 4, name='pyramid_rotation_regression_orientationF')(outputs)
-    outputsQ = keras.layers.Dropout(0.5)(outputsQ)
-    if keras.backend.image_data_format() == 'channels_first':
-        outputsQ = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute_ori')(outputsQ)
-    outputsQ = keras.layers.Reshape((-1, num_classes, 4), name='pyramid_ori_regression_reshape')(outputsQ)
-    outputsQ = l2_norm()(outputsQ)
-
-    #num_rots = 10
-    #outputsR = keras.layers.Dense(num_anchors * num_classes * num_rots, name='pyramid_depth_classificationF')(outputs)
-    #if keras.backend.image_data_format() == 'channels_first':
-    #    outputsR = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsR)
-    #outputsR = keras.layers.Reshape((-1, num_classes, num_rots), name='pyramid_depth_classification_reshape')(outputsR)
-    #outputsR = keras.layers.Activation('sigmoid', name='pyramid_depth_classification_sigmoid')(outputsR)
-
-    #outputsP = keras.layers.Dense(num_anchors * num_classes * num_rots, name='pyramid_depth_classificationF')(outputs)
-    #if keras.backend.image_data_format() == 'channels_first':
-    #    outputsP = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsP)
-    #outputsP = keras.layers.Reshape((-1, num_classes, num_rots), name='pyramid_depth_classification_reshape')(outputsP)
-    #outputsP = keras.layers.Activation('sigmoid', name='pyramid_depth_classification_sigmoid')(outputsP)
-
-    #outputsY = keras.layers.Dense(num_anchors * num_classes * num_rots, name='pyramid_depth_classificationF')(outputs)
-    #if keras.backend.image_data_format() == 'channels_first':
-    #    outputsY = keras.layers.Permute((2, 3, 1), name='pyramid_depth_classification_permute')(outputsY)
-    #outputsY = keras.layers.Reshape((-1, num_classes, num_rots), name='pyramid_depth_classification_reshape')(outputsY)
-    #outputsY = keras.layers.Activation('sigmoid', name='pyramid_depth_classification_sigmoid')(outputsY)
-
-    return keras.models.Model(inputs=inputs, outputs=outputsT, name='xy_regression_submodel'), keras.models.Model(inputs=inputs, outputs=outputsD, name='depth_classification_submodel'), keras.models.Model(inputs=inputs, outputs=outputsQ, name='rotation_regression_submodel')
 
 
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
@@ -319,16 +257,24 @@ def default_submodels(num_classes, num_anchors):
     Returns
         A list of tuple, where the first element is the name of the submodel and the second element is the submodel itself.
     """
-    #xy, dep, rot = default_pose_regression_model(3, num_anchors, num_classes)
 
     #return [
     #    ('bbox', default_regression_model(4, num_anchors)),
-    #    ('xy', xy),
-    #    ('dep', dep),
-    #    ('rot', rot),
-    #    ('roll', roll),
-    #    ('pitch', pitch),
-    #    ('yaw', yaw),
+    #    ('3Dbox_1', default_3Dregression_model(16, num_anchors, 15)[0]),
+    #    ('3Dbox_2', default_3Dregression_model(16, num_anchors, 15)[1]),
+    #    ('3Dbox_3', default_3Dregression_model(16, num_anchors, 15)[2]),
+    #    ('3Dbox_4', default_3Dregression_model(16, num_anchors, 15)[3]),
+    #    ('3Dbox_5', default_3Dregression_model(16, num_anchors, 15)[4]),
+    #    ('3Dbox_6', default_3Dregression_model(16, num_anchors, 15)[5]),
+    #    ('3Dbox_7', default_3Dregression_model(16, num_anchors, 15)[6]),
+    #    ('3Dbox_8', default_3Dregression_model(16, num_anchors, 15)[7]),
+    #    ('3Dbox_9', default_3Dregression_model(16, num_anchors, 15)[8]),
+    #    ('3Dbox_10', default_3Dregression_model(16, num_anchors, 15)[9]),
+    #    ('3Dbox_11', default_3Dregression_model(16, num_anchors, 15)[10]),
+    #    ('3Dbox_12', default_3Dregression_model(16, num_anchors, 15)[11]),
+    #    ('3Dbox_13', default_3Dregression_model(16, num_anchors, 15)[12]),
+    #    ('3Dbox_14', default_3Dregression_model(16, num_anchors, 15)[13]),
+    #    ('3Dbox_15', default_3Dregression_model(16, num_anchors, 15)[14]),
     #    ('cls', default_classification_model(num_classes, num_anchors))
     #]
 
