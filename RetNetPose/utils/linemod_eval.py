@@ -164,12 +164,14 @@ threeD_boxes[14, :, :] = np.array([[0.047, 0.0735, 0.0925],  # phone [94, 147, 1
                                      [-0.047, -0.0735, 0.0925]])
 
 #model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.0853, 0.0445, 0.0543, 0.048, 0.05, 0.0862, 0.0888, 0.071])
-model_radii = np.array([0.0515, 0.143454, 0.0675, 0.0865, 0.101, 0.0775, 0.0508, 0.131, 0.545, 0.88182, 0.088, 0.081, 0.1515765, 0.1425775, 0.1065])
+#model_radii = np.array([0.0515, 0.143454, 0.0675, 0.0865, 0.101, 0.0775, 0.0508, 0.131, 0.545, 0.88182, 0.088, 0.081, 0.1515765, 0.1425775, 0.1065])
+model_dia = np.array([102.09865663, 247.50624233, 167.35486092, 172.49224865, 201.40358597, 154.54551808, 124.26430816, 261.47178102, 108.99920102, 164.62758848, 175.88933422, 145.54287471, 278.07811733, 282.60129399, 212.35825148])
+
 
 def load_pcd(cat):
     # load meshes
-    mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -400,11 +402,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
                         if not math.isnan(err_add):
-                            if err_add < (model_radii[cls - 1] * 2 * 0.1):
+                            if err_add < (model_dia[cls - 1] * 0.1):
                                 add_less_d[t_cat] += 1
 
                         if not math.isnan(err_add):
-                            if err_add < (model_radii[cls - 1] * 2 * 0.15):
+                            if err_add < (model_dia[cls - 1] * 0.15):
                                 tp_add[t_cat] += 1
                                 fn_add[t_cat] -= 1
 
