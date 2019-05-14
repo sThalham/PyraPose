@@ -328,7 +328,7 @@ def default_submodels(num_classes, num_anchors):
 
     return [
         ('bbox', default_regression_model(4, num_anchors)),
-        ('3Dbox', default_3Dregression_model(16, num_anchors, 15)),
+        ('3Dbox', separate_3Dregression_model(16, num_anchors, 15)),
         ('cls', default_classification_model(num_classes, num_anchors))
     ]
 
