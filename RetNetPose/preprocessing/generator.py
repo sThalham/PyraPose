@@ -234,6 +234,18 @@ class Generator(keras.utils.Sequence):
                 annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
                 annotations['segmentations'][index, :] = transform_box3d(transform, annotations['segmentations'][index, :])
 
+            #image_ann = image
+            #for segs in annotations['segmentations']:
+            #    print(segs)
+            #    for i in range(0,8):
+            #        print(segs)
+            #        segs = np.asarray(segs, dtype=np.uint16)
+            #        print(segs)
+            #        cv2.circle(image_ann, (segs[int(2*i)], segs[int(2*i+1)]), 1, (255, 255, 255), thickness=3)
+            #cv2.imwrite('/home/sthalham/after_transform.jpg', image_ann)
+
+            #print('stop')
+
         return image, annotations
 
     def random_transform_group(self, image_group, annotations_group):

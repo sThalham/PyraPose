@@ -189,20 +189,68 @@ def default_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fea
             name='pyramid_regression3D_{}'.format(i),
             **options
         )(outputs)
-    #output_list = []
-    #for c in range(num_classes):
-    #    print('c: ', c)
-    #    outputs_cls = keras.layers.Conv2D(num_anchors * num_values, name='pyramid_regression3D' + str(c), **options)(outputs)
-    #    if keras.backend.image_data_format() == 'channels_first':
-    #        outputs_cls = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute' + str(c))(outputs_cls)
-    #    outputs_cls = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_regression3D_reshape' + str(c))(outputs_cls)
-    #    output_list.append(outputs_cls)
-    #return output_list
 
     outputs = keras.layers.Conv2D(num_anchors * num_classes * num_values, name='pyramid_regression3D', **options)(outputs)
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute')(outputs)
     outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_regression3D_reshape')(outputs)
+
+    print(outputs)
+
+    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
+
+
+def separate_3Dregression_model(num_values, num_anchors, num_classes, pyramid_feature_size=256, regression_feature_size=256, name='sep3Dregression_submodel'):
+    """ Creates the default regression submodel.
+
+    Args
+        num_values              : Number of values to regress.
+        num_anchors             : Number of anchors to regress for each feature level.
+        pyramid_feature_size    : The number of filters to expect from the feature pyramid levels.
+        regression_feature_size : The number of filters to use in the layers in the regression submodel.
+        name                    : The name of the submodel.
+
+    Returns
+        A keras.models.Model that predicts regression values for each anchor.
+    """
+    # All new conv layers except the final one in the
+    # RetinaNet (classification) subnets are initialized
+    # with bias b = 0 and a Gaussian weight fill with stddev = 0.01.
+    options = {
+        'kernel_size'        : 3,
+        'strides'            : 1,
+        'padding'            : 'same',
+        'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer'   : 'zeros',
+        'kernel_regularizer' : keras.regularizers.l2(0.001),
+    }
+
+    if keras.backend.image_data_format() == 'channels_first':
+        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+    else:
+        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
+    outputs = inputs
+
+    output_list = []
+    for c in range(num_classes):
+        for i in range(4):
+            outputs = keras.layers.Conv2D(
+                filters=regression_feature_size,
+                activation='relu',
+                name='pyramid_regression3D_{}_{}'.format(c, i),
+                **options
+            )(outputs)
+        outputs_cls = keras.layers.Conv2D(num_anchors * num_values, name='pyramid_regression3D_{}'.format(c), **options)(outputs)
+        if keras.backend.image_data_format() == 'channels_first':
+            outputs_cls = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute_{}'.format(c))(outputs_cls)
+        outputs_cls = keras.layers.Reshape((-1, num_values), name='pyramid_regression3D_reshape_{}'.format(c))(outputs_cls)
+        output_list.append(outputs_cls)
+
+    #outputs = keras.backend.expand_dims(outputs, axis=2)
+    outputs = keras.layers.concatenate(output_list, axis=2)
+    outputs = keras.layers.Reshape((-1, num_classes, num_values), name='pyramid_regression3D_reshape')(outputs)
+
+    print(outputs.shape)
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
@@ -436,17 +484,6 @@ def retinanet_bbox(
     anchors  = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output
-    #regression     = model.outputs[0]
-    #translation_regression = model.outputs[1]
-    #depth_regression = model.outputs[2]
-    #depth_classification = model.outputs[2]
-    #rotation_regression = model.outputs[3]
-    #roll_classification = model.outputs[3]
-    #pitch_classification = model.outputs[4]
-    #yaw_classification = model.outputs[5]
-    #classification = model.outputs[4]
-    #other = model.outputs[5:]
-
     regression = model.outputs[0]
     regression3D = model.outputs[1]
     classification = model.outputs[2]
@@ -455,9 +492,6 @@ def retinanet_bbox(
     # apply predicted regression to anchors
     boxes = layers.RegressBoxes(name='boxes')([anchors, regression])
     boxes = layers.ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
-    #translations = layers.RegressTranslation(name='tras_out')([anchors, boxes, translation_regression])
-    #depths = layers.RegressDepth(name='deps_outs')([anchors, boxes, depth_regression])
-    #rotations = layers.RegressRotation(name='rots_out')([anchors, rotation_regression])
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
@@ -466,9 +500,6 @@ def retinanet_bbox(
         nms                   = nms,
         class_specific_filter = class_specific_filter,
         name                  = 'filtered_detections'
-    #)([boxes, translations, depth_classification, rotations, classification] + other)
-    #)([boxes, translations, depths, rotations, classification] + other)
-    #)([boxes, translations, depths, roll_classification, pitch_classification, yaw_classification, classification] + other)
     )([boxes, boxes3D, classification] + other)
 
     # construct the model

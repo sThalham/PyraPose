@@ -168,10 +168,19 @@ threeD_boxes[14, :, :] = np.array([[0.047, 0.0735, 0.0925],  # phone [94, 147, 1
 model_dia = np.array([0.10209865663, 0.24750624233, 0.16735486092, 0.17249224865, 0.20140358597, 0.15454551808, 0.12426430816, 0.26147178102, 0.10899920102, 0.16462758848, 0.17588933422, 0.14554287471, 0.27807811733, 0.28260129399, 0.21235825148])
 
 
+def toPix_array(translation):
+
+    xpix = ((translation[:, 0] * fxkin) / translation[:, 2]) + cxkin
+    ypix = ((translation[:, 1] * fykin) / translation[:, 2]) + cykin
+    #zpix = translation[2] * fxkin
+
+    return np.stack((xpix, ypix), axis=1) #, zpix]
+
+
 def load_pcd(cat):
     # load meshes
-    #mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -290,12 +299,16 @@ def evaluate_linemod(generator, model, threshold=0.05):
             t_tra = anno['poses'][0][:3]
             t_rot = anno['poses'][0][3:]
 
+        #if t_cat != 2:
+        #    continue
+
         if t_cat == 3 or t_cat == 7:
             print(t_cat, ' ====> skip')
             continue
 
         # run network
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+
 
         # correct boxes for image scale
         boxes /= scale
@@ -331,6 +344,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
             cls = generator.label_to_inv_label(label)
             control_points = box3D[(cls - 1), :]
+            #print(control_points)
 
             # append detection for each positively labeled class
             image_result = {
@@ -377,6 +391,19 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         rd = re(R_gt, R_est)
                         xyz = te(t_gt, t_est.T)
+                        #print(control_points)
+
+                        #tDbox = R_gt.dot(obj_points.T).T
+                        #tDbox = tDbox + np.repeat(t_gt[np.newaxis, :], 8, axis=0)
+                        #box3D = toPix_array(tDbox)
+                        #tDbox = np.reshape(box3D, (16))
+                        #print(tDbox)
+
+                        #for i in range(0,8):
+                        #    cv2.circle(image, (control_points[2*i], control_points[2*i+1]), 1, (0, 255, 0), thickness=3)
+                        #    cv2.circle(image, (tDbox[2 * i], tDbox[2 * i + 1]), 1, (255, 0, 0), thickness=3)
+
+                        #cv2.imwrite('/home/sthalham/inRetNetPose.jpg', image)
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
@@ -390,6 +417,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #        vsd_less_t[t_cat] += 1
 
                         err_repr = reproj(K, R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                        print(err_repr)
 
                         if not math.isnan(err_repr):
                             if err_repr < 5.0:
@@ -400,6 +428,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         else:
                             err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+                        print(err_add)
 
                         if not math.isnan(err_add):
                             if err_add < (model_dia[cls - 1] * 0.1):

@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import keras.backend
+import tensorflow as tf
 from .dynamic import meshgrid
 
 
@@ -85,6 +86,7 @@ def box3D_transform_inv(boxes, deltas, mean=None, std=None):
     y8 = boxes_exp[:, :, :, 3] + (deltas[:, :, :, 15] * std[15] + mean[15]) * height
 
     pred_boxes = keras.backend.stack([x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7, x8, y8], axis=3)
+    #pred_boxes = tf.Print(pred_boxes, [tf.shape(pred_boxes)])
 
     return pred_boxes
 
