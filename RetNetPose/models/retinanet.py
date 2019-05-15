@@ -233,7 +233,7 @@ def separate_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fe
 
     output_list = []
     for c in range(num_classes):
-        for i in range(4):
+        for i in range(1):
             outputs = keras.layers.Conv2D(
                 filters=regression_feature_size,
                 activation='relu',
