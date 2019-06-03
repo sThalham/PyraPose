@@ -290,6 +290,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             t_tra = anno['poses'][0][:3]
             t_rot = anno['poses'][0][3:]
 
+        if t_cat != 8:
+            continue
+         
         if t_cat == 3 or t_cat == 7:
             print(t_cat, ' ====> skip')
             continue
@@ -329,8 +332,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             if label < 0:
                 continue
-            cls = generator.label_to_inv_label(label)
-            control_points = box3D[(cls - 1), :]
+            cls = 8
+            #cls = generator.label_to_inv_label(label)
+            control_points = box3D[0, :]
+            #control_points = box3D[(cls - 1), :]
 
             # append detection for each positively labeled class
             image_result = {
@@ -418,6 +423,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image_ids.append(generator.image_ids[index])
         image_indices.append(index)
         idx += 1
+
+    print(len(image_ids))
 
     if not len(results):
         return
