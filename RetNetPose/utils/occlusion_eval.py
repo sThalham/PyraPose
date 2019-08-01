@@ -281,7 +281,7 @@ def boxoverlap(a, b):
     return ovlap
 
 
-def evaluate_linemod(generator, model, threshold=0.05):
+def evaluate_occlusion(generator, model, threshold=0.05):
     threshold = 0.5
     """ Use the pycocotools to evaluate a COCO model on a dataset.
 
@@ -359,7 +359,25 @@ def evaluate_linemod(generator, model, threshold=0.05):
     vsd_e = np.zeros((16), dtype=np.uint32)
     vsd_less_t = np.zeros((16), dtype=np.uint32)
 
-    model_pre = []
+    add_less_d005 = np.zeros((16), dtype=np.uint32)
+    add_less_d015 = np.zeros((16), dtype=np.uint32)
+    add_less_d02 = np.zeros((16), dtype=np.uint32)
+    add_less_d025 = np.zeros((16), dtype=np.uint32)
+    add_less_d03 = np.zeros((16), dtype=np.uint32)
+    add_less_d035 = np.zeros((16), dtype=np.uint32)
+    add_less_d04 = np.zeros((16), dtype=np.uint32)
+    add_less_d045 = np.zeros((16), dtype=np.uint32)
+    add_less_d05 = np.zeros((16), dtype=np.uint32)
+
+    # target annotation
+    pc1, mv1, mv1_mm = load_pcd('01')
+    pc5, mv5, mv5_mm = load_pcd('05')
+    pc6, mv6, mv6_mm = load_pcd('06')
+    pc8, mv8, mv8_mm = load_pcd('08')
+    pc9, mv9, mv9_mm = load_pcd('09')
+    pc10, mv10, mv10_mm = load_pcd('10')
+    pc11, mv11, mv11_mm = load_pcd('11')
+    pc12, mv12, mv12_mm = load_pcd('12')
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
@@ -370,29 +388,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image = image.transpose((2, 0, 1))
 
         anno = generator.load_annotations(index)
-        if len(anno['labels']) > 1:
-            t_cat = 2
-            obj_name = '02'
-            ent = np.where(anno['labels'] == 1.0)
-            t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[ent][0]
-            t_tra = anno['poses'][ent][0][:3]
-            t_rot = anno['poses'][ent][0][3:]
 
-        else:
-            t_cat = int(anno['labels']) + 1
-            obj_name = str(t_cat)
-            if len(obj_name) < 2:
-                obj_name = '0' + obj_name
-            t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-            t_tra = anno['poses'][0][:3]
-            t_rot = anno['poses'][0][3:]
-
-        #if t_cat != 2:
-        #    continue
-
-        if t_cat == 3 or t_cat == 7:
-            print(t_cat, ' ====> skip')
-            continue
+        print(anno['labels'])
+        t_cat = anno['labels'].astype(np.int8) + 1
+        obj_name = []
+        for idx, obj_temp in enumerate(t_cat):
+            if obj_temp < 10:
+                obj_name.append('0' + str(obj_temp))
+            else:
+                obj_name.append(str(obj_temp))
+        t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)
+        gt_poses = anno['poses']
 
         # run network
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
@@ -404,21 +410,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
         boxes[:, :, 2] -= boxes[:, :, 0]
         boxes[:, :, 3] -= boxes[:, :, 1]
 
-        # target annotation
-
-        if obj_name != model_pre:
-            point_cloud, model_vsd, model_vsd_mm = load_pcd(obj_name)
-            model_pre = obj_name
-
         rotD[t_cat] += 1
         rep_e[t_cat] += 1
         add_e[t_cat] += 1
         vsd_e[t_cat] += 1
-        #t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-        #t_tra = anno['poses'][0][:3]
-        #t_rot = anno['poses'][0][3:]
         fn[t_cat] += 1
-        #interlude
         fn55[t_cat] += 1
         fn6[t_cat] += 1
         fn65[t_cat] += 1
@@ -433,7 +429,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         # end interlude
         fn_add[t_cat] += 1
-        fnit = True
+        fnit = np.ones((16), dtype=np.bool)
 
         # compute predicted labels and scores
         for box, box3D, score, label in zip(boxes[0], boxes3D[0], scores[0], labels[0]):
@@ -442,6 +438,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
 
             if label < 0:
+                continue
+
+            if label == 1:
                 continue
 
             cls = generator.label_to_inv_label(label)
@@ -461,75 +460,78 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # append detection to results
             results.append(image_result)
 
-            if cls == t_cat:
+            if cls in t_cat:
                 b1 = np.array([box[0], box[1], box[0] + box[2], box[1] + box[3]])
-                b2 = np.array([t_bbox[0], t_bbox[1], t_bbox[2], t_bbox[3]])
+                odx = np.where(t_cat==cls)
+                print(cls)
+                b2 = np.array([t_bbox[odx[0]][0][0], t_bbox[odx[0]][0][1], t_bbox[odx[0]][0][2], t_bbox[odx[0]][0][3]])
+
                 IoU = boxoverlap(b1, b2)
                 # occurences of 2 or more instances not possible in LINEMOD
                 if IoU > 0.5:
-                    if fnit is True:
+                    if fnit[cls] == True:
                         # interlude
                         if IoU > 0.55:
-                            tp55[t_cat] += 1
-                            fn55[t_cat] -= 1
+                            tp55[t_cat[odx[0]]] += 1
+                            fn55[t_cat[odx[0]]] -= 1
                         else:
-                            fp55[t_cat] += 1
+                            fp55[t_cat[odx[0]]] += 1
                         if IoU > 0.6:
-                            tp6[t_cat] += 1
-                            fn6[t_cat] -= 1
+                            tp6[t_cat[odx[0]]] += 1
+                            fn6[t_cat[odx[0]]] -= 1
                         else:
-                            fp6[t_cat] += 1
+                            fp6[t_cat[odx[0]]] += 1
                         if IoU > 0.65:
-                            tp65[t_cat] += 1
-                            fn65[t_cat] -= 1
+                            tp65[t_cat[odx[0]]] += 1
+                            fn65[t_cat[odx[0]]] -= 1
                         else:
-                            fp65[t_cat] += 1
+                            fp65[t_cat[odx[0]]] += 1
                         if IoU > 0.7:
-                            tp7[t_cat] += 1
-                            fn7[t_cat] -= 1
+                            tp7[t_cat[odx[0]]] += 1
+                            fn7[t_cat[odx[0]]] -= 1
                         else:
-                            fp7[t_cat] += 1
+                            fp7[t_cat[odx[0]]] += 1
                         if IoU > 0.75:
-                            tp75[t_cat] += 1
-                            fn75[t_cat] -= 1
+                            tp75[t_cat[odx[0]]] += 1
+                            fn75[t_cat[odx[0]]] -= 1
                         else:
-                            fp75[t_cat] += 1
+                            fp75[t_cat[odx[0]]] += 1
                         if IoU > 0.8:
-                            tp8[t_cat] += 1
-                            fn8[t_cat] -= 1
+                            tp8[t_cat[odx[0]]] += 1
+                            fn8[t_cat[odx[0]]] -= 1
                         else:
-                            fp8[t_cat] += 1
+                            fp8[t_cat[odx[0]]] += 1
                         if IoU > 0.85:
-                            tp85[t_cat] += 1
-                            fn85[t_cat] -= 1
+                            tp85[t_cat[odx[0]]] += 1
+                            fn85[t_cat[odx[0]]] -= 1
                         else:
-                            fp85[t_cat] += 1
+                            fp85[t_cat[odx[0]]] += 1
                         if IoU > 0.9:
-                            tp9[t_cat] += 1
-                            fn9[t_cat] -= 1
+                            tp9[t_cat[odx[0]]] += 1
+                            fn9[t_cat[odx[0]]] -= 1
                         else:
-                            fp9[t_cat] += 1
+                            fp9[t_cat[odx[0]]] += 1
                         if IoU > 0.925:
-                            tp925[t_cat] += 1
-                            fn925[t_cat] -= 1
+                            tp925[t_cat[odx[0]]] += 1
+                            fn925[t_cat[odx[0]]] -= 1
                         else:
-                            fp925[t_cat] += 1
+                            fp925[t_cat[odx[0]]] += 1
                         if IoU > 0.95:
-                            tp95[t_cat] += 1
-                            fn95[t_cat] -= 1
+                            tp95[t_cat[odx[0]]] += 1
+                            fn95[t_cat[odx[0]]] -= 1
                         else:
-                            fp95[t_cat] += 1
+                            fp95[t_cat[odx[0]]] += 1
                         if IoU > 0.975:
-                            tp975[t_cat] += 1
-                            fn975[t_cat] -= 1
+                            tp975[t_cat[odx[0]]] += 1
+                            fn975[t_cat[odx[0]]] -= 1
                         else:
-                            fp975[t_cat] += 1
+                            fp975[t_cat[odx[0]]] += 1
 
                         # interlude end
 
-                        tp[t_cat] += 1
-                        fn[t_cat] -= 1
-                        fnit = False
+                        tp[t_cat[odx[0]]] += 1
+                        fn[t_cat[odx[0]]] -= 1
+                        fnit[cls] = False
 
                         obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :], dtype=np.float32) #.reshape((8, 1, 3))
                         est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
@@ -547,10 +549,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         R_est, _ = cv2.Rodrigues(orvec)
                         t_est = otvec
 
-                        rot = tf3d.quaternions.mat2quat(R_est)
-                        #pose = np.concatenate(
-                        #            (np.array(t_est[:, 0], dtype=np.float32), np.array(rot, dtype=np.float32)), axis=0)
 
+                        cur_pose = gt_poses[odx[0]]
+                        t_rot = cur_pose[0][3:]
+                        t_tra = cur_pose[0][:3]
 
                         t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
                         R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
@@ -700,60 +702,93 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         cv2.imwrite(name_est, img_con)
 
                         '''
-
-                        #for i in range(0,8):
-                        #    cv2.circle(image, (control_points[2*i], control_points[2*i+1]), 1, (0, 255, 0), thickness=3)
-                        #    cv2.circle(image, (tDbox[2 * i], tDbox[2 * i + 1]), 1, (255, 0, 0), thickness=3)
-
-                        #cv2.imwrite('/home/sthalham/inRetNetPose.jpg', image)
+                        if cls == 1:
+                            model_vsd = mv1
+                        elif cls == 5:
+                            model_vsd = mv5
+                        elif cls == 6:
+                            model_vsd = mv6
+                        elif cls == 8:
+                            model_vsd = mv8
+                        elif cls == 9:
+                            model_vsd = mv9
+                        elif cls == 10:
+                            model_vsd = mv10
+                        elif cls == 11:
+                            model_vsd = mv11
+                        elif cls == 12:
+                            model_vsd = mv12
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
-                                less5[t_cat] += 1
-
-                        #err_vsd = vsd(R_est, t_est * 1000.0, R_gt, t_gt * 1000.0, model_vsd_mm, image_dep, K, 0.3, 20.0)
-                        #if not math.isnan(err_vsd):
-                        #    if err_vsd < 0.3:
-                        #        vsd_less_t[t_cat] += 1
+                                less5[cls - 1] += 1
 
                         err_repr = reproj(K, R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
                         if not math.isnan(err_repr):
                             if err_repr < 5.0:
-                                rep_less5[t_cat] += 1
+                                rep_less5[cls - 1] += 1
 
-                        #if cls == 3 or cls == 7 or cls == 10 or cls == 11:
-                        #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-
-                        #else:
                         err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
                         print(err_add)
 
                         if not math.isnan(err_add):
+                            if err_add < (model_dia[cls - 1] * 0.05):
+                                add_less_d005[cls - 1] += 1
                             if err_add < (model_dia[cls - 1] * 0.1):
-                                add_less_d[t_cat] += 1
+                                add_less_d[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.15):
+                                add_less_d015[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.2):
+                                add_less_d02[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.25):
+                                add_less_d025[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.3):
+                                add_less_d03[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.35):
+                                add_less_d035[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.4):
+                                add_less_d04[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.45):
+                                add_less_d045[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.5):
+                                add_less_d05[cls - 1] += 1
 
                         if not math.isnan(err_add):
                             if err_add < (model_dia[cls - 1] * 0.15):
-                                tp_add[t_cat] += 1
-                                fn_add[t_cat] -= 1
+                                tp_add[cls - 1] += 1
+                                fn_add[cls - 1] -= 1
+                    else:
+                        fp[cls] += 1
+                        fp_add[cls] += 1
 
+                        fp55[cls] += 1
+                        fp6[cls] += 1
+                        fp65[cls] += 1
+                        fp7[cls] += 1
+                        fp75[cls] += 1
+                        fp8[cls] += 1
+                        fp85[cls] += 1
+                        fp9[cls] += 1
+                        fp925[cls] += 1
+                        fp95[cls] += 1
+                        fp975[cls] += 1
                 else:
-                    fp[t_cat] += 1
-                    fp_add[t_cat] += 1
+                    fp[cls] += 1
+                    fp_add[cls] += 1
 
-                    fp55[t_cat] += 1
-                    fp6[t_cat] += 1
-                    fp65[t_cat] += 1
-                    fp7[t_cat] += 1
-                    fp75[t_cat] += 1
-                    fp8[t_cat] += 1
-                    fp85[t_cat] += 1
-                    fp9[t_cat] += 1
-                    fp925[t_cat] += 1
-                    fp95[t_cat] += 1
-                    fp975[t_cat] += 1
+                    fp55[cls] += 1
+                    fp6[cls] += 1
+                    fp65[cls] += 1
+                    fp7[cls] += 1
+                    fp75[cls] += 1
+                    fp8[cls] += 1
+                    fp85[cls] += 1
+                    fp9[cls] += 1
+                    fp925[cls] += 1
+                    fp95[cls] += 1
+                    fp975[cls] += 1
 
                 print('Stop')
 
@@ -781,6 +816,16 @@ def evaluate_linemod(generator, model, threshold=0.05):
     less_add_d = [0.0] * 16
     less_vsd_t = [0.0] * 16
 
+    less_add_d005 = [0.0] * 16
+    less_add_d015 = [0.0] * 16
+    less_add_d02 = [0.0] * 16
+    less_add_d025 = [0.0] * 16
+    less_add_d03 = [0.0] * 16
+    less_add_d035 = [0.0] * 16
+    less_add_d04 = [0.0] * 16
+    less_add_d045 = [0.0] * 16
+    less_add_d05 = [0.0] * 16
+
     np.set_printoptions(precision=2)
     print('')
     for ind in range(1, 16):
@@ -806,6 +851,28 @@ def evaluate_linemod(generator, model, threshold=0.05):
             less_repr_5[ind] = (rep_less5[ind]) / (rep_e[ind]) * 100.0
             less_add_d[ind] = (add_less_d[ind]) / (add_e[ind]) * 100.0
             less_vsd_t[ind] = (vsd_less_t[ind]) / (vsd_e[ind]) * 100.0
+
+            less_add_d005[ind] = (add_less_d005[ind]) / (add_e[ind]) * 100.0
+            less_add_d015[ind] = (add_less_d015[ind]) / (add_e[ind]) * 100.0
+            less_add_d02[ind] = (add_less_d02[ind]) / (add_e[ind]) * 100.0
+            less_add_d025[ind] = (add_less_d025[ind]) / (add_e[ind]) * 100.0
+            less_add_d03[ind] = (add_less_d03[ind]) / (add_e[ind]) * 100.0
+            less_add_d035[ind] = (add_less_d035[ind]) / (add_e[ind]) * 100.0
+            less_add_d04[ind] = (add_less_d04[ind]) / (add_e[ind]) * 100.0
+            less_add_d045[ind] = (add_less_d045[ind]) / (add_e[ind]) * 100.0
+            less_add_d05[ind] = (add_less_d05[ind]) / (add_e[ind]) * 100.0
+
+        print('cat', ind)
+        print('add < 0.05: ', less_add_d005[ind])
+        print('add < 0.1: ', less_add_d[ind])
+        print('add < 0.15: ', less_add_d015[ind])
+        print('add < 0.2: ', less_add_d02[ind])
+        print('add < 0.25: ', less_add_d025[ind])
+        print('add < 0.3: ', less_add_d03[ind])
+        print('add < 0.35: ', less_add_d035[ind])
+        print('add < 0.4: ', less_add_d04[ind])
+        print('add < 0.45: ', less_add_d045[ind])
+        print('add < 0.5: ', less_add_d05[ind])
 
         print('cat ', ind, ' rec ', detPre[ind], ' pre ', detRec[ind], ' less5 ', less_55[ind], ' repr ',
                   less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind], ' F1 add 0.15d ', F1_add[ind])

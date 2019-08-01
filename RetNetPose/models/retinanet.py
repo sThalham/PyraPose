@@ -225,6 +225,8 @@ def separate_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fe
         'kernel_regularizer' : keras.regularizers.l2(0.001),
     }
 
+    print(inputs)
+
     if keras.backend.image_data_format() == 'channels_first':
         inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
@@ -232,14 +234,16 @@ def separate_3Dregression_model(num_values, num_anchors, num_classes, pyramid_fe
     outputs = inputs
 
     output_list = []
+
+    for i in range(4):
+        outputs = keras.layers.Conv2D(
+            filters=regression_feature_size,
+            activation='relu',
+            name='pyramid_regression3D_{}_{}'.format(c, i),
+            **options
+        )(outputs)
+
     for c in range(num_classes):
-        for i in range(1):
-            outputs = keras.layers.Conv2D(
-                filters=regression_feature_size,
-                activation='relu',
-                name='pyramid_regression3D_{}_{}'.format(c, i),
-                **options
-            )(outputs)
         outputs_cls = keras.layers.Conv2D(num_anchors * num_values, name='pyramid_regression3D_{}'.format(c), **options)(outputs)
         if keras.backend.image_data_format() == 'channels_first':
             outputs_cls = keras.layers.Permute((2, 3, 1), name='pyramid_regression3D_permute_{}'.format(c))(outputs_cls)
@@ -328,7 +332,7 @@ def default_submodels(num_classes, num_anchors):
 
     return [
         ('bbox', default_regression_model(4, num_anchors)),
-        ('3Dbox', default_3Dregression_model(16, num_anchors, num_classes)),
+        ('3Dbox', default_3Dregression_model(16, num_anchors, 15)),
         ('cls', default_classification_model(num_classes, num_anchors))
     ]
 
