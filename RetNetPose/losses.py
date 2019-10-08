@@ -227,8 +227,8 @@ def orthogonal_l1(weight=0.125, sigma=3.0):
     def _orth_l1(y_true, y_pred):
 
         regression        = y_pred
-        regression_target = y_true[:, :, :, :-1]
-        anchor_state      = y_true[:, :, :, -1]
+        regression_target = y_true[:, :, :-1]
+        anchor_state      = y_true[:, :, -1]
 
         #### filter out "ignore" anchors
         indices           = backend.where(keras.backend.equal(anchor_state, 1))
