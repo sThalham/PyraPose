@@ -68,6 +68,29 @@ def create_generator(args):
             image_max_side=args.image_max_side,
             config=args.config
         )
+    elif args.dataset_type == 'occlusion':
+        # import here to prevent unnecessary dependency on cocoapi
+        from ..preprocessing.occlusion import OcclusionGenerator
+
+        validation_generator = OcclusionGenerator(
+            args.occlusion_path,
+            'val',
+            image_min_side=args.image_min_side,
+            image_max_side=args.image_max_side,
+            config=args.config
+        )
+    elif args.dataset_type == 'tless':
+        # import here to prevent unnecessary dependency on cocoapi
+        from ..preprocessing.tless import TlessGenerator
+
+        validation_generator = TlessGenerator(
+            args.tless_path,
+            'val',
+            image_min_side=args.image_min_side,
+            image_max_side=args.image_max_side,
+            config=args.config
+        )
+
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
 
@@ -87,6 +110,12 @@ def parse_args(args):
     linemod_parser = subparsers.add_parser('linemod')
     linemod_parser.add_argument('linemod_path', help='Path to dataset directory (ie. /tmp/LineMOD).')
 
+    occlusion_parser = subparsers.add_parser('occlusion')
+    occlusion_parser.add_argument('occlusion_path', help='Path to dataset directory (ie. /tmp/Occlusion).')
+
+    tless_parser = subparsers.add_parser('tless')
+    tless_parser.add_argument('tless_path', help='Path to dataset directory (ie. /tmp/Tless).')
+
     parser.add_argument('model',              help='Path to RetinaNet model.')
     parser.add_argument('--convert-model',    help='Convert the model to an inference model (ie. the input is a training model).', action='store_true')
     parser.add_argument('--backbone',         help='The backbone of the model.', default='resnet50')
@@ -95,8 +124,8 @@ def parse_args(args):
     parser.add_argument('--iou-threshold',    help='IoU Threshold to count for a positive detection (defaults to 0.5).', default=0.5, type=float)
     parser.add_argument('--max-detections',   help='Max Detections per image (defaults to 100).', default=100, type=int)
     parser.add_argument('--save-path',        help='Path for saving images with detections (doesn\'t work for COCO).')
-    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
+    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=540)
+    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=720)
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file (only used with --convert-model).')
 
     return parser.parse_args(args)
@@ -150,6 +179,30 @@ def main(args=None):
     elif args.dataset_type == 'linemod':
         from ..utils.linemod_eval import evaluate_linemod
         dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_linemod(generator, model, args.score_threshold)
+        print('RESULTS LINEMOD')
+        print('dataset recall:              ', dataset_recall, '%')
+        print('dataset precision:           ', dataset_precision, '%')
+        print('poses below 5cm and 5°:      ', less55, '%')
+        print('VSD below tau 0.02m:         ', less_vsd_t, '%')
+        print('reprojection below 5 pixel:  ', less_repr_5, '%')
+        print('ADD below model diameter:    ', less_add_d, '%')
+        print('F1 ADD < 0.15d:              ', F1_add_015, '%')
+
+    elif args.dataset_type == 'occlusion':
+        from ..utils.occlusion_eval import evaluate_occlusion
+        dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_occlusion(generator, model, args.score_threshold)
+        print('RESULTS LINEMOD')
+        print('dataset recall:              ', dataset_recall, '%')
+        print('dataset precision:           ', dataset_precision, '%')
+        print('poses below 5cm and 5°:      ', less55, '%')
+        print('VSD below tau 0.02m:         ', less_vsd_t, '%')
+        print('reprojection below 5 pixel:  ', less_repr_5, '%')
+        print('ADD below model diameter:    ', less_add_d, '%')
+        print('F1 ADD < 0.15d:              ', F1_add_015, '%')
+
+    elif args.dataset_type == 'tless':
+        from ..utils.tless_eval import evaluate_tless
+        dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_tless(generator, model, args.score_threshold)
         print('RESULTS LINEMOD')
         print('dataset recall:              ', dataset_recall, '%')
         print('dataset precision:           ', dataset_precision, '%')

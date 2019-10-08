@@ -1,15 +1,3 @@
-"""
-Copyright 2017-2018 Fizyr (https://fizyr.com)
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 
 #from pycocotools.cocoeval import COCOeval
 
@@ -32,138 +20,110 @@ import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
 
 
-# LineMOD
-fxkin = 572.41140
-fykin = 573.57043
-cxkin = 325.26110
-cykin = 242.04899
+# Tless
+od1 = np.array([35.087, 35.787, 60.686], dtype=np.float32)
+od2 = np.array([43.704, 43.833, 60.563], dtype=np.float32)
+od3 = np.array([46.905, 46.885, 60.585], dtype=np.float32)
+od4 = np.array([40.091, 40.382, 73.388], dtype=np.float32)
+od5 = np.array([96.528, 56.043, 59.841], dtype=np.float32)
+od6 = np.array([92.618, 53.609, 57.424], dtype=np.float32)
+od7 = np.array([152.934, 90.79, 63.504], dtype=np.float32)
+od8 = np.array([184.453, 105.453, 62.845], dtype=np.float32)
+od9 = np.array([123.896, 84.207, 62.303], dtype=np.float32)
+od10 = np.array([82.916, 45.675, 60.05], dtype=np.float32)
+od11 = np.array([55.228, 47.329, 56.95], dtype=np.float32)
+od12 = np.array([80.742, 56.024, 57.268], dtype=np.float32)
+od13 = np.array([38.31, 38.589, 46.288], dtype=np.float32)
+od14 = np.array([43.632, 43.688, 62.542], dtype=np.float32)
+od15 = np.array([43.585, 43.681, 55.335], dtype=np.float32)
+od16 = np.array([53.333, 53.588, 47.245], dtype=np.float32)
+od17 = np.array([108.423, 107.962, 60.941], dtype=np.float32)
+od18 = np.array([97.25, 97.885, 60.489], dtype=np.float32)
+od19 = np.array([67.678, 60.668, 48.258], dtype=np.float32)
+od20 = np.array([85.498, 60.635, 48.853], dtype=np.float32)
+od21 = np.array([80.518, 62.183, 44.819], dtype=np.float32)
+od22 = np.array([80.167, 59.827, 43.724], dtype=np.float32)
+od23 = np.array([137.774, 58.024, 52.21], dtype=np.float32)
+od24 = np.array([42.438, 42.147, 78.282], dtype=np.float32)
+od25 = np.array([91.977, 61.903, 59.515], dtype=np.float32)
+od26 = np.array([91.929, 61.831, 59.563], dtype=np.float32)
+od27 = np.array([107.639, 107.598, 55.694], dtype=np.float32)
+od28 = np.array([100.059, 100.356, 48.037], dtype=np.float32)
+od29 = np.array([112.52, 77.735, 59.244], dtype=np.float32)
+od30 = np.array([78.32, 78.27, 51.252], dtype=np.float32)
 
+tdbox_transform = np.array([[0.0005, 0.0005, 0.0005], #[35.087, 35.787, 60.686]
+                                     [0.0005, 0.0005, -0.0005],
+                                     [0.0005, -0.0005, -0.0005],
+                                     [0.0005, -0.0005, 0.0005],
+                                     [-0.0005, 0.0005, 0.0005],
+                                     [-0.0005, 0.0005, -0.0005],
+                                     [-0.0005, -0.0005, -0.0005],
+                                     [-0.0005, -0.0005, 0.0005]])
 
-threeD_boxes = np.ndarray((15, 8, 3), dtype=np.float32)
-threeD_boxes[0, :, :] = np.array([[0.038, 0.039, 0.046],  # ape [76, 78, 92]
-                                     [0.038, 0.039, -0.046],
-                                     [0.038, -0.039, -0.046],
-                                     [0.038, -0.039, 0.046],
-                                     [-0.038, 0.039, 0.046],
-                                     [-0.038, 0.039, -0.046],
-                                     [-0.038, -0.039, -0.046],
-                                     [-0.038, -0.039, 0.046]])
-threeD_boxes[1, :, :] = np.array([[0.108, 0.061, 0.1095],  # benchvise [216, 122, 219]
-                                     [0.108, 0.061, -0.1095],
-                                     [0.108, -0.061, -0.1095],
-                                     [0.108, -0.061, 0.1095],
-                                     [-0.108, 0.061, 0.1095],
-                                     [-0.108, 0.061, -0.1095],
-                                     [-0.108, -0.061, -0.1095],
-                                     [-0.108, -0.061, 0.1095]])
-threeD_boxes[2, :, :] = np.array([[0.083, 0.0825, 0.037],  # bowl [166, 165, 74]
-                                     [0.083, 0.0825, -0.037],
-                                     [0.083, -0.0825, -0.037],
-                                     [0.083, -0.0825, 0.037],
-                                     [-0.083, 0.0825, 0.037],
-                                     [-0.083, 0.0825, -0.037],
-                                     [-0.083, -0.0825, -0.037],
-                                     [-0.083, -0.0825, 0.037]])
-threeD_boxes[3, :, :] = np.array([[0.0685, 0.0715, 0.05],  # camera [137, 143, 100]
-                                     [0.0685, 0.0715, -0.05],
-                                     [0.0685, -0.0715, -0.05],
-                                     [0.0685, -0.0715, 0.05],
-                                     [-0.0685, 0.0715, 0.05],
-                                     [-0.0685, 0.0715, -0.05],
-                                     [-0.0685, -0.0715, -0.05],
-                                     [-0.0685, -0.0715, 0.05]])
-threeD_boxes[4, :, :] = np.array([[0.0505, 0.091, 0.097],  # can [101, 182, 194]
-                                     [0.0505, 0.091, -0.097],
-                                     [0.0505, -0.091, -0.097],
-                                     [0.0505, -0.091, 0.097],
-                                     [-0.0505, 0.091, 0.097],
-                                     [-0.0505, 0.091, -0.097],
-                                     [-0.0505, -0.091, -0.097],
-                                     [-0.0505, -0.091, 0.097]])
-threeD_boxes[5, :, :] = np.array([[0.0335, 0.064, 0.0585],  # cat [67, 128, 117]
-                                     [0.0335, 0.064, -0.0585],
-                                     [0.0335, -0.064, -0.0585],
-                                     [0.0335, -0.064, 0.0585],
-                                     [-0.0335, 0.064, 0.0585],
-                                     [-0.0335, 0.064, -0.0585],
-                                     [-0.0335, -0.064, -0.0585],
-                                     [-0.0335, -0.064, 0.0585]])
-threeD_boxes[6, :, :] = np.array([[0.059, 0.046, 0.0475],  # mug [118, 92, 95]
-                                     [0.059, 0.046, -0.0475],
-                                     [0.059, -0.046, -0.0475],
-                                     [0.059, -0.046, 0.0475],
-                                     [-0.059, 0.046, 0.0475],
-                                     [-0.059, 0.046, -0.0475],
-                                     [-0.059, -0.046, -0.0475],
-                                     [-0.059, -0.046, 0.0475]])
-threeD_boxes[7, :, :] = np.array([[0.115, 0.038, 0.104],  # drill [230, 76, 208]
-                                     [0.115, 0.038, -0.104],
-                                     [0.115, -0.038, -0.104],
-                                     [0.115, -0.038, 0.104],
-                                     [-0.115, 0.038, 0.104],
-                                     [-0.115, 0.038, -0.104],
-                                     [-0.115, -0.038, -0.104],
-                                     [-0.115, -0.038, 0.104]])
-threeD_boxes[8, :, :] = np.array([[0.052, 0.0385, 0.043],  # duck [104, 77, 86]
-                                     [0.052, 0.0385, -0.043],
-                                     [0.052, -0.0385, -0.043],
-                                     [0.052, -0.0385, 0.043],
-                                     [-0.052, 0.0385, 0.043],
-                                     [-0.052, 0.0385, -0.043],
-                                     [-0.052, -0.0385, -0.043],
-                                     [-0.052, -0.0385, 0.043]])
-threeD_boxes[9, :, :] = np.array([[0.075, 0.0535, 0.0345],  # eggbox [150, 107, 69]
-                                     [0.075, 0.0535, -0.0345],
-                                     [0.075, -0.0535, -0.0345],
-                                     [0.075, -0.0535, 0.0345],
-                                     [-0.075, 0.0535, 0.0345],
-                                     [-0.075, 0.0535, -0.0345],
-                                     [-0.075, -0.0535, -0.0345],
-                                     [-0.075, -0.0535, 0.0345]])
-threeD_boxes[10, :, :] = np.array([[0.0185, 0.039, 0.0865],  # glue [37, 78, 173]
-                                     [0.0185, 0.039, -0.0865],
-                                     [0.0185, -0.039, -0.0865],
-                                     [0.0185, -0.039, 0.0865],
-                                     [-0.0185, 0.039, 0.0865],
-                                     [-0.0185, 0.039, -0.0865],
-                                     [-0.0185, -0.039, -0.0865],
-                                     [-0.0185, -0.039, 0.0865]])
-threeD_boxes[11, :, :] = np.array([[0.0505, 0.054, 0.04505],  # holepuncher [101, 108, 91]
-                                     [0.0505, 0.054, -0.04505],
-                                     [0.0505, -0.054, -0.04505],
-                                     [0.0505, -0.054, 0.04505],
-                                     [-0.0505, 0.054, 0.04505],
-                                     [-0.0505, 0.054, -0.04505],
-                                     [-0.0505, -0.054, -0.04505],
-                                     [-0.0505, -0.054, 0.04505]])
-threeD_boxes[12, :, :] = np.array([[0.115, 0.038, 0.104],  # drill [230, 76, 208]
-                                     [0.115, 0.038, -0.104],
-                                     [0.115, -0.038, -0.104],
-                                     [0.115, -0.038, 0.104],
-                                     [-0.115, 0.038, 0.104],
-                                     [-0.115, 0.038, -0.104],
-                                     [-0.115, -0.038, -0.104],
-                                     [-0.115, -0.038, 0.104]])
-threeD_boxes[13, :, :] = np.array([[0.129, 0.059, 0.0705],  # iron [258, 118, 141]
-                                     [0.129, 0.059, -0.0705],
-                                     [0.129, -0.059, -0.0705],
-                                     [0.129, -0.059, 0.0705],
-                                     [-0.129, 0.059, 0.0705],
-                                     [-0.129, 0.059, -0.0705],
-                                     [-0.129, -0.059, -0.0705],
-                                     [-0.129, -0.059, 0.0705]])
-threeD_boxes[14, :, :] = np.array([[0.047, 0.0735, 0.0925],  # phone [94, 147, 185]
-                                     [0.047, 0.0735, -0.0925],
-                                     [0.047, -0.0735, -0.0925],
-                                     [0.047, -0.0735, 0.0925],
-                                     [-0.047, 0.0735, 0.0925],
-                                     [-0.047, 0.0735, -0.0925],
-                                     [-0.047, -0.0735, -0.0925],
-                                     [-0.047, -0.0735, 0.0925]])
+threeD_boxes = np.ndarray((30, 8, 3), dtype=np.float32)
+threeD_boxes[0, :, :] = np.multiply(tdbox_transform, od1)
+threeD_boxes[1, :, :] = np.multiply(tdbox_transform, od2)
+threeD_boxes[2, :, :] = np.multiply(tdbox_transform, od3)
+threeD_boxes[3, :, :] = np.multiply(tdbox_transform, od4)
+threeD_boxes[4, :, :] = np.multiply(tdbox_transform, od5)
+threeD_boxes[5, :, :] = np.multiply(tdbox_transform, od6)
+threeD_boxes[6, :, :] = np.multiply(tdbox_transform, od7)
+threeD_boxes[7, :, :] = np.multiply(tdbox_transform, od8)
+threeD_boxes[8, :, :] = np.multiply(tdbox_transform, od9)
+threeD_boxes[9, :, :] = np.multiply(tdbox_transform, od10)
+threeD_boxes[10, :, :] = np.multiply(tdbox_transform, od11)
+threeD_boxes[11, :, :] = np.multiply(tdbox_transform, od12)
+threeD_boxes[12, :, :] = np.multiply(tdbox_transform, od13)
+threeD_boxes[13, :, :] = np.multiply(tdbox_transform, od14)
+threeD_boxes[14, :, :] = np.multiply(tdbox_transform, od15)
+threeD_boxes[15, :, :] = np.multiply(tdbox_transform, od16)
+threeD_boxes[16, :, :] = np.multiply(tdbox_transform, od17)
+threeD_boxes[17, :, :] = np.multiply(tdbox_transform, od18)
+threeD_boxes[18, :, :] = np.multiply(tdbox_transform, od19)
+threeD_boxes[19, :, :] = np.multiply(tdbox_transform, od20)
+threeD_boxes[20, :, :] = np.multiply(tdbox_transform, od21)
+threeD_boxes[21, :, :] = np.multiply(tdbox_transform, od22)
+threeD_boxes[22, :, :] = np.multiply(tdbox_transform, od23)
+threeD_boxes[23, :, :] = np.multiply(tdbox_transform, od24)
+threeD_boxes[24, :, :] = np.multiply(tdbox_transform, od25)
+threeD_boxes[25, :, :] = np.multiply(tdbox_transform, od26)
+threeD_boxes[26, :, :] = np.multiply(tdbox_transform, od27)
+threeD_boxes[27, :, :] = np.multiply(tdbox_transform, od28)
+threeD_boxes[28, :, :] = np.multiply(tdbox_transform, od29)
+threeD_boxes[29, :, :] = np.multiply(tdbox_transform, od30)
 
-#model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.0853, 0.0445, 0.0543, 0.048, 0.05, 0.0862, 0.0888, 0.071])
-#model_radii = np.array([0.0515, 0.143454, 0.0675, 0.0865, 0.101, 0.0775, 0.0508, 0.131, 0.545, 0.88182, 0.088, 0.081, 0.1515765, 0.1425775, 0.1065])
-model_dia = np.array([0.10209865663, 0.24750624233, 0.16735486092, 0.17249224865, 0.20140358597, 0.15454551808, 0.12426430816, 0.26147178102, 0.10899920102, 0.16462758848, 0.17588933422, 0.14554287471, 0.27807811733, 0.28260129399, 0.21235825148])
+model_dia = np.zeros((31), dtype=np.float32)
+model_dia[1] = 61.89772419
+model_dia[2] = 64.00441357
+model_dia[3] = 64.24149720
+model_dia[4] = 73.88552247
+model_dia[5] = 107.59623180
+model_dia[6] = 105.92343010
+model_dia[7] = 174.00959296
+model_dia[8] = 210.76447827
+model_dia[9] = 144.85062984
+model_dia[10] = 88.22758063
+model_dia[11] = 72.65396586
+model_dia[12] = 85.31950536
+model_dia[13] = 56.08260521
+model_dia[14] = 70.84192362
+model_dia[15] = 66.83963400
+model_dia[16] = 67.21061424
+model_dia[17] = 111.71267541
+model_dia[18] = 108.06029554
+model_dia[19] = 82.46072237
+model_dia[20] = 96.99745919
+model_dia[21] = 89.01847469
+model_dia[22] = 88.78916620
+model_dia[23] = 139.94245084
+model_dia[24] = 80.74585692
+model_dia[25] = 104.03292493
+model_dia[26] = 104.19310861
+model_dia[27] = 147.25266749
+model_dia[28] = 122.33857034
+model_dia[29] = 132.75528511
+model_dia[30] = 86.60152802
 
 
 def get_evaluation(pcd_temp_, pcd_scene_, inlier_thres, tf, final_th=0, n_iter=5):#queue
@@ -217,7 +177,7 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    mesh_path = "/home/sthalham/data/Meshes/tless_30/"
     #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
@@ -278,7 +238,7 @@ def boxoverlap(a, b):
     return ovlap
 
 
-def evaluate_occlusion(generator, model, threshold=0.05):
+def evaluate_tless(generator, model, threshold=0.05):
     threshold = 0.5
     """ Use the pycocotools to evaluate a COCO model on a dataset.
     Args
@@ -292,98 +252,120 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     image_indices = []
     idx = 0
 
-    tp = np.zeros((16), dtype=np.uint32)
-    fp = np.zeros((16), dtype=np.uint32)
-    fn = np.zeros((16), dtype=np.uint32)
+    tp = np.zeros((31), dtype=np.uint32)
+    fp = np.zeros((31), dtype=np.uint32)
+    fn = np.zeros((31), dtype=np.uint32)
 
     # interlude
-    tp55 = np.zeros((16), dtype=np.uint32)
-    fp55 = np.zeros((16), dtype=np.uint32)
-    fn55 = np.zeros((16), dtype=np.uint32)
+    tp55 = np.zeros((31), dtype=np.uint32)
+    fp55 = np.zeros((31), dtype=np.uint32)
+    fn55 = np.zeros((31), dtype=np.uint32)
 
-    tp6 = np.zeros((16), dtype=np.uint32)
-    fp6 = np.zeros((16), dtype=np.uint32)
-    fn6 = np.zeros((16), dtype=np.uint32)
+    tp6 = np.zeros((31), dtype=np.uint32)
+    fp6 = np.zeros((31), dtype=np.uint32)
+    fn6 = np.zeros((31), dtype=np.uint32)
 
-    tp65 = np.zeros((16), dtype=np.uint32)
-    fp65 = np.zeros((16), dtype=np.uint32)
-    fn65 = np.zeros((16), dtype=np.uint32)
+    tp65 = np.zeros((31), dtype=np.uint32)
+    fp65 = np.zeros((31), dtype=np.uint32)
+    fn65 = np.zeros((31), dtype=np.uint32)
 
-    tp7 = np.zeros((16), dtype=np.uint32)
-    fp7 = np.zeros((16), dtype=np.uint32)
-    fn7 = np.zeros((16), dtype=np.uint32)
+    tp7 = np.zeros((31), dtype=np.uint32)
+    fp7 = np.zeros((31), dtype=np.uint32)
+    fn7 = np.zeros((31), dtype=np.uint32)
 
-    tp75 = np.zeros((16), dtype=np.uint32)
-    fp75 = np.zeros((16), dtype=np.uint32)
-    fn75 = np.zeros((16), dtype=np.uint32)
+    tp75 = np.zeros((31), dtype=np.uint32)
+    fp75 = np.zeros((31), dtype=np.uint32)
+    fn75 = np.zeros((31), dtype=np.uint32)
 
-    tp8 = np.zeros((16), dtype=np.uint32)
-    fp8 = np.zeros((16), dtype=np.uint32)
-    fn8 = np.zeros((16), dtype=np.uint32)
+    tp8 = np.zeros((31), dtype=np.uint32)
+    fp8 = np.zeros((31), dtype=np.uint32)
+    fn8 = np.zeros((31), dtype=np.uint32)
 
-    tp85 = np.zeros((16), dtype=np.uint32)
-    fp85 = np.zeros((16), dtype=np.uint32)
-    fn85 = np.zeros((16), dtype=np.uint32)
+    tp85 = np.zeros((31), dtype=np.uint32)
+    fp85 = np.zeros((31), dtype=np.uint32)
+    fn85 = np.zeros((31), dtype=np.uint32)
 
-    tp9 = np.zeros((16), dtype=np.uint32)
-    fp9 = np.zeros((16), dtype=np.uint32)
-    fn9 = np.zeros((16), dtype=np.uint32)
+    tp9 = np.zeros((31), dtype=np.uint32)
+    fp9 = np.zeros((31), dtype=np.uint32)
+    fn9 = np.zeros((31), dtype=np.uint32)
 
-    tp925 = np.zeros((16), dtype=np.uint32)
-    fp925 = np.zeros((16), dtype=np.uint32)
-    fn925 = np.zeros((16), dtype=np.uint32)
+    tp925 = np.zeros((31), dtype=np.uint32)
+    fp925 = np.zeros((31), dtype=np.uint32)
+    fn925 = np.zeros((31), dtype=np.uint32)
 
-    tp95 = np.zeros((16), dtype=np.uint32)
-    fp95 = np.zeros((16), dtype=np.uint32)
-    fn95 = np.zeros((16), dtype=np.uint32)
+    tp95 = np.zeros((31), dtype=np.uint32)
+    fp95 = np.zeros((31), dtype=np.uint32)
+    fn95 = np.zeros((31), dtype=np.uint32)
 
-    tp975 = np.zeros((16), dtype=np.uint32)
-    fp975 = np.zeros((16), dtype=np.uint32)
-    fn975 = np.zeros((16), dtype=np.uint32)
+    tp975 = np.zeros((31), dtype=np.uint32)
+    fp975 = np.zeros((31), dtype=np.uint32)
+    fn975 = np.zeros((31), dtype=np.uint32)
     # interlude end
 
-    tp_add = np.zeros((16), dtype=np.uint32)
-    fp_add = np.zeros((16), dtype=np.uint32)
-    fn_add = np.zeros((16), dtype=np.uint32)
+    tp_add = np.zeros((31), dtype=np.uint32)
+    fp_add = np.zeros((31), dtype=np.uint32)
+    fn_add = np.zeros((31), dtype=np.uint32)
 
-    rotD = np.zeros((16), dtype=np.uint32)
-    less5 = np.zeros((16), dtype=np.uint32)
-    rep_e = np.zeros((16), dtype=np.uint32)
-    rep_less5 = np.zeros((16), dtype=np.uint32)
-    add_e = np.zeros((16), dtype=np.uint32)
-    add_less_d = np.zeros((16), dtype=np.uint32)
-    vsd_e = np.zeros((16), dtype=np.uint32)
-    vsd_less_t = np.zeros((16), dtype=np.uint32)
+    rotD = np.zeros((31), dtype=np.uint32)
+    less5 = np.zeros((31), dtype=np.uint32)
+    rep_e = np.zeros((31), dtype=np.uint32)
+    rep_less5 = np.zeros((31), dtype=np.uint32)
+    add_e = np.zeros((31), dtype=np.uint32)
+    add_less_d = np.zeros((31), dtype=np.uint32)
+    vsd_e = np.zeros((31), dtype=np.uint32)
+    vsd_less_t = np.zeros((31), dtype=np.uint32)
 
-    add_less_d005 = np.zeros((16), dtype=np.uint32)
-    add_less_d015 = np.zeros((16), dtype=np.uint32)
-    add_less_d02 = np.zeros((16), dtype=np.uint32)
-    add_less_d025 = np.zeros((16), dtype=np.uint32)
-    add_less_d03 = np.zeros((16), dtype=np.uint32)
-    add_less_d035 = np.zeros((16), dtype=np.uint32)
-    add_less_d04 = np.zeros((16), dtype=np.uint32)
-    add_less_d045 = np.zeros((16), dtype=np.uint32)
-    add_less_d05 = np.zeros((16), dtype=np.uint32)
-    add_less_d055 = np.zeros((16), dtype=np.uint32)
-    add_less_d06 = np.zeros((16), dtype=np.uint32)
-    add_less_d065 = np.zeros((16), dtype=np.uint32)
-    add_less_d07 = np.zeros((16), dtype=np.uint32)
-    add_less_d075 = np.zeros((16), dtype=np.uint32)
-    add_less_d08 = np.zeros((16), dtype=np.uint32)
-    add_less_d085 = np.zeros((16), dtype=np.uint32)
-    add_less_d09 = np.zeros((16), dtype=np.uint32)
-    add_less_d095 = np.zeros((16), dtype=np.uint32)
-    add_less_d1 = np.zeros((16), dtype=np.uint32)
+    add_less_d005 = np.zeros((31), dtype=np.uint32)
+    add_less_d015 = np.zeros((31), dtype=np.uint32)
+    add_less_d02 = np.zeros((31), dtype=np.uint32)
+    add_less_d025 = np.zeros((31), dtype=np.uint32)
+    add_less_d03 = np.zeros((31), dtype=np.uint32)
+    add_less_d035 = np.zeros((31), dtype=np.uint32)
+    add_less_d04 = np.zeros((31), dtype=np.uint32)
+    add_less_d045 = np.zeros((31), dtype=np.uint32)
+    add_less_d05 = np.zeros((31), dtype=np.uint32)
+    add_less_d055 = np.zeros((31), dtype=np.uint32)
+    add_less_d06 = np.zeros((31), dtype=np.uint32)
+    add_less_d065 = np.zeros((31), dtype=np.uint32)
+    add_less_d07 = np.zeros((31), dtype=np.uint32)
+    add_less_d075 = np.zeros((31), dtype=np.uint32)
+    add_less_d08 = np.zeros((31), dtype=np.uint32)
+    add_less_d085 = np.zeros((31), dtype=np.uint32)
+    add_less_d09 = np.zeros((31), dtype=np.uint32)
+    add_less_d095 = np.zeros((31), dtype=np.uint32)
+    add_less_d1 = np.zeros((31), dtype=np.uint32)
 
     # target annotation
     pc1, mv1, mv1_mm = load_pcd('01')
+    pc2, mv2, mv2_mm = load_pcd('02')
+    pc3, mv3, mv3_mm = load_pcd('03')
+    pc4, mv4, mv4_mm = load_pcd('04')
     pc5, mv5, mv5_mm = load_pcd('05')
     pc6, mv6, mv6_mm = load_pcd('06')
+    pc7, mv7, mv7_mm = load_pcd('07')
     pc8, mv8, mv8_mm = load_pcd('08')
     pc9, mv9, mv9_mm = load_pcd('09')
     pc10, mv10, mv10_mm = load_pcd('10')
     pc11, mv11, mv11_mm = load_pcd('11')
     pc12, mv12, mv12_mm = load_pcd('12')
+    pc13, mv13, mv13_mm = load_pcd('13')
+    pc14, mv14, mv14_mm = load_pcd('14')
+    pc15, mv15, mv15_mm = load_pcd('15')
+    pc16, mv16, mv16_mm = load_pcd('16')
+    pc17, mv17, mv17_mm = load_pcd('17')
+    pc18, mv18, mv18_mm = load_pcd('18')
+    pc19, mv19, mv19_mm = load_pcd('19')
+    pc20, mv20, mv20_mm = load_pcd('20')
+    pc21, mv21, mv21_mm = load_pcd('21')
+    pc22, mv22, mv22_mm = load_pcd('22')
+    pc23, mv23, mv23_mm = load_pcd('23')
+    pc24, mv24, mv24_mm = load_pcd('24')
+    pc25, mv25, mv25_mm = load_pcd('25')
+    pc26, mv26, mv26_mm = load_pcd('26')
+    pc27, mv27, mv27_mm = load_pcd('27')
+    pc28, mv28, mv28_mm = load_pcd('28')
+    pc29, mv29, mv29_mm = load_pcd('29')
+    pc30, mv30, mv30_mm = load_pcd('30')
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
@@ -435,7 +417,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
         # end interlude
         fn_add[t_cat] += 1
-        fnit = np.ones((16), dtype=np.bool)
+        fnit = np.ones((31), dtype=np.bool)
 
         # compute predicted labels and scores
         for box, box3D, score, label in zip(boxes[0], boxes3D[0], scores[0], labels[0]):
@@ -446,12 +428,8 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             if label < 0:
                 continue
 
-            if label == 1:
-                continue
-
             cls = generator.label_to_inv_label(label)
-            #cls = 1
-            control_points = box3D[(cls - 1), :]
+            control_points = box3D
             #control_points = box3D[0, :]
 
             # append detection for each positively labeled class
@@ -543,6 +521,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
 
                         K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+                        print(K)
 
                         #retval, orvec, otvec = cv2.solvePnP(obj_points, est_points, K, None, None, None, False, cv2.SOLVEPNP_ITERATIVE)
                         retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
@@ -697,10 +676,18 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         '''
                         if cls == 1:
                             model_vsd = mv1
+                        elif cls == 2:
+                            model_vsd = mv2
+                        elif cls == 3:
+                            model_vsd = mv3
+                        elif cls == 4:
+                            model_vsd = mv4
                         elif cls == 5:
                             model_vsd = mv5
                         elif cls == 6:
                             model_vsd = mv6
+                        elif cls == 7:
+                            model_vsd = mv7
                         elif cls == 8:
                             model_vsd = mv8
                         elif cls == 9:
@@ -711,6 +698,42 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                             model_vsd = mv11
                         elif cls == 12:
                             model_vsd = mv12
+                        elif cls == 13:
+                            model_vsd = mv13
+                        elif cls == 14:
+                            model_vsd = mv14
+                        elif cls == 15:
+                            model_vsd = mv15
+                        elif cls == 16:
+                            model_vsd = mv16
+                        elif cls == 17:
+                            model_vsd = mv17
+                        elif cls == 18:
+                            model_vsd = mv18
+                        elif cls == 19:
+                            model_vsd = mv19
+                        elif cls == 20:
+                            model_vsd = mv20
+                        elif cls == 21:
+                            model_vsd = mv21
+                        elif cls == 22:
+                            model_vsd = mv22
+                        elif cls == 23:
+                            model_vsd = mv23
+                        elif cls == 24:
+                            model_vsd = mv24
+                        elif cls == 25:
+                            model_vsd = mv25
+                        elif cls == 26:
+                            model_vsd = mv26
+                        elif cls == 27:
+                            model_vsd = mv27
+                        elif cls == 28:
+                            model_vsd = mv28
+                        elif cls == 29:
+                            model_vsd = mv29
+                        elif cls == 30:
+                            model_vsd = mv30
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
@@ -836,51 +859,42 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     json.dump(results, open('{}_bbox_results.json'.format(generator.set_name), 'w'), indent=4)
     #json.dump(image_ids, open('{}_processed_image_ids.json'.format(generator.set_name), 'w'), indent=4)
 
-    detPre = [0.0] * 16
-    detRec = [0.0] * 16
-    detPre_add = [0.0] * 16
-    detRec_add = [0.0] * 16
-    F1_add = [0.0] * 16
-    less_55 = [0.0] * 16
-    less_repr_5 = [0.0] * 16
-    less_add_d = [0.0] * 16
-    less_vsd_t = [0.0] * 16
+    detPre = [0.0] * 31
+    detRec = [0.0] * 31
+    detPre_add = [0.0] * 31
+    detRec_add = [0.0] * 31
+    F1_add = [0.0] * 31
+    less_55 = [0.0] * 31
+    less_repr_5 = [0.0] * 31
+    less_add_d = [0.0] * 31
+    less_vsd_t = [0.0] * 31
 
-    less_add_d005 = [0.0] * 16
-    less_add_d015 = [0.0] * 16
-    less_add_d02 = [0.0] * 16
-    less_add_d025 = [0.0] * 16
-    less_add_d03 = [0.0] * 16
-    less_add_d035 = [0.0] * 16
-    less_add_d04 = [0.0] * 16
-    less_add_d045 = [0.0] * 16
-    less_add_d05 = [0.0] * 16
-    less_add_d055 = [0.0] * 16
-    less_add_d06 = [0.0] * 16
-    less_add_d065 = [0.0] * 16
-    less_add_d07 = [0.0] * 16
-    less_add_d075 = [0.0] * 16
-    less_add_d08 = [0.0] * 16
-    less_add_d085 = [0.0] * 16
-    less_add_d09 = [0.0] * 16
-    less_add_d095 = [0.0] * 16
-    less_add_d1 = [0.0] * 16
+    less_add_d005 = [0.0] * 31
+    less_add_d015 = [0.0] * 31
+    less_add_d02 = [0.0] * 31
+    less_add_d025 = [0.0] * 31
+    less_add_d03 = [0.0] * 31
+    less_add_d035 = [0.0] * 31
+    less_add_d04 = [0.0] * 31
+    less_add_d045 = [0.0] * 31
+    less_add_d05 = [0.0] * 31
+    less_add_d055 = [0.0] * 31
+    less_add_d06 = [0.0] * 31
+    less_add_d065 = [0.0] * 31
+    less_add_d07 = [0.0] * 31
+    less_add_d075 = [0.0] * 31
+    less_add_d08 = [0.0] * 31
+    less_add_d085 = [0.0] * 31
+    less_add_d09 = [0.0] * 31
+    less_add_d095 = [0.0] * 31
+    less_add_d1 = [0.0] * 31
 
     np.set_printoptions(precision=2)
     print('')
-    for ind in range(1, 16):
+    for ind in range(1, 31):
         if ind == 0:
             continue
 
-        if ind == 2 or ind == 3 or ind == 4 or ind == 7 or ind == 13 or ind == 14 or ind == 15:
-            detPre[ind] = 0.0
-            detRec[ind] = 0.0
-            detPre_add[ind] = 0.0
-            detRec_add[ind] = 0.0
-            less_55[ind] = 0.0
-            less_repr_5[ind] = 0.0
-            less_add_d[ind] = 0.0
-            less_vsd_t[ind] = 0.0
         else:
             detRec[ind] = tp[ind] / (tp[ind] + fn[ind]) * 100.0
             detPre[ind] = tp[ind] / (tp[ind] + fp[ind]) * 100.0

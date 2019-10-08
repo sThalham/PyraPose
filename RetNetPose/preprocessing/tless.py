@@ -26,7 +26,7 @@ def _isArrayLike(obj):
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
 
-class OcclusionGenerator(Generator):
+class TlessGenerator(Generator):
     """ Generate data from the LineMOD dataset.
     """
 
@@ -59,7 +59,7 @@ class OcclusionGenerator(Generator):
 
         self.load_classes()
 
-        super(OcclusionGenerator, self).__init__(**kwargs)
+        super(TlessGenerator, self).__init__(**kwargs)
 
     def load_classes(self):
         """ Loads the class to label mapping (and inverse) for COCO.
