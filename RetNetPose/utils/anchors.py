@@ -86,7 +86,7 @@ def anchor_targets_bbox(
         assert('bboxes' in annotations), "Annotations should contain bboxes."
         assert('labels' in annotations), "Annotations should contain labels."
         assert('poses' in annotations), "Annotations should contain labels."
-        #assert('segmentations' in annotations), "Annotations should contain poses"
+        assert('segmentations' in annotations), "Annotations should contain poses"
 
     batch_size = len(image_group)
 
@@ -124,7 +124,7 @@ def anchor_targets_bbox(
 
             labels_batch[index, indices, -1]     = -1
             regression_batch[index, indices, -1] = -1
-            regression_3D[index, indices, :, -1] = -1
+            regression_3D[index, indices, -1] = -1
 
     return regression_batch, regression_3D, labels_batch
 

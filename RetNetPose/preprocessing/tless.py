@@ -170,7 +170,7 @@ class TlessGenerator(Generator):
         lists = [self.imgToAnns[imgId] for imgId in ids if imgId in self.imgToAnns]
         anns = list(itertools.chain.from_iterable(lists))
 
-        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 6)), 'segmentations': np.empty((0, 16))}
+        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 6)), 'segmentations': np.empty((0, 16)), 'K': np.empty((0, 4))}
 
         for idx, a in enumerate(anns):
 
@@ -211,5 +211,11 @@ class TlessGenerator(Generator):
             #    a['segmentation'][14],
             #    a['segmentation'][15],
             #]]], axis=0)
+            annotations['K'] = np.concatenate([annotations['K'], [[
+                a['calib'][0],
+                a['calib'][1],
+                a['calib'][2],
+                a['calib'][3],
+            ]]], axis=0)
 
         return annotations

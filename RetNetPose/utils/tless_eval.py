@@ -239,7 +239,7 @@ def boxoverlap(a, b):
 
 
 def evaluate_tless(generator, model, threshold=0.05):
-    threshold = 0.5
+    threshold = 0.1
     """ Use the pycocotools to evaluate a COCO model on a dataset.
     Args
         generator : The generator for generating the evaluation data.
@@ -367,7 +367,7 @@ def evaluate_tless(generator, model, threshold=0.05):
     pc29, mv29, mv29_mm = load_pcd('29')
     pc30, mv30, mv30_mm = load_pcd('30')
 
-    for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
+    for index in progressbar.progressbar(range(generator.size()), prefix='Tless evaluation: '):
         image_raw = generator.load_image(index)
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
@@ -377,7 +377,6 @@ def evaluate_tless(generator, model, threshold=0.05):
 
         anno = generator.load_annotations(index)
 
-        print(anno['labels'])
         t_cat = anno['labels'].astype(np.int8) + 1
         obj_name = []
         for idx, obj_temp in enumerate(t_cat):
@@ -387,6 +386,7 @@ def evaluate_tless(generator, model, threshold=0.05):
                 obj_name.append(str(obj_temp))
         t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)
         gt_poses = anno['poses']
+        gt_calib = anno['K']
 
         # run network
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
@@ -430,7 +430,8 @@ def evaluate_tless(generator, model, threshold=0.05):
 
             cls = generator.label_to_inv_label(label)
             control_points = box3D
-            #control_points = box3D[0, :]
+            #print(cls)
+            #print(control_points)
 
             # append detection for each positively labeled class
             image_result = {
@@ -520,8 +521,9 @@ def evaluate_tless(generator, model, threshold=0.05):
                         obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :], dtype=np.float32) #.reshape((8, 1, 3))
                         est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
 
-                        K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
-                        print(K)
+                        calib = gt_calib[odx][0]
+                        #print(calib)
+                        K = np.float32([calib[0], 0., calib[2], 0., calib[1], calib[3], 0., 0., 1.]).reshape(3, 3)
 
                         #retval, orvec, otvec = cv2.solvePnP(obj_points, est_points, K, None, None, None, False, cv2.SOLVEPNP_ITERATIVE)
                         retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
@@ -533,7 +535,6 @@ def evaluate_tless(generator, model, threshold=0.05):
 
                         R_est, _ = cv2.Rodrigues(orvec)
                         t_est = otvec
-
 
                         cur_pose = gt_poses[odx[0]]
                         t_rot = cur_pose[0][3:]
@@ -745,7 +746,7 @@ def evaluate_tless(generator, model, threshold=0.05):
                             if err_repr < 5.0:
                                 rep_less5[cls - 1] += 1
 
-                        err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                        err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
                         if not math.isnan(err_add):
                             if err_add < (model_dia[cls - 1] * 0.05):
@@ -843,7 +844,7 @@ def evaluate_tless(generator, model, threshold=0.05):
                     fp95[cls] += 1
                     fp975[cls] += 1
 
-                print('Stop')
+                #print('Stop')
 
         # append image to list of processed images
         image_ids.append(generator.image_ids[index])
