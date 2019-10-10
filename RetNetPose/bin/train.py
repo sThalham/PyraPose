@@ -122,12 +122,12 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     training_model.compile(
         loss={
             'bbox'         : losses.smooth_l1(),
-            #'3Dbox': losses.smooth_l1_xy(),
+            #'3Dbox': losses.smooth_l1(),
             '3Dbox'        : losses.orthogonal_l1(),
             #'3Dbox'        : losses.weighted_mse(),
             #'3Dbox': losses.weighted_l1(),
             #'3Dbox': losses.weighted_msle(),
-            #'cls'          : losses.focal()
+            'cls'          : losses.focal()
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
     )
@@ -292,7 +292,7 @@ def create_generators(args, preprocess_image):
         from ..preprocessing.tless import TlessGenerator
 
         train_generator = TlessGenerator(
-            args.Tless_path,
+            args.tless_path,
             'train',
             transform_generator=transform_generator,
             **common_args
@@ -349,7 +349,7 @@ def parse_args(args):
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
+    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=6400)
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file.')
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 

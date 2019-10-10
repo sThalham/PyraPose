@@ -197,23 +197,23 @@ class LinemodGenerator(Generator):
                 a['pose'][4],
                 a['pose'][5],
             ]]], axis=0)
-            #annotations['segmentations'] = np.concatenate([annotations['segmentations'], [[
-            #    a['segmentation'][0],
-            #    a['segmentation'][1],
-            #    a['segmentation'][2],
-            #    a['segmentation'][3],
-            #    a['segmentation'][4],
-            #    a['segmentation'][5],
-            #    a['segmentation'][6],
-            #    a['segmentation'][7],
-            #    a['segmentation'][8],
-            #    a['segmentation'][9],
-            #    a['segmentation'][10],
-            #    a['segmentation'][11],
-            #    a['segmentation'][12],
-            #    a['segmentation'][13],
-            #    a['segmentation'][14],
-            #    a['segmentation'][15],
-            #]]], axis=0)
+            annotations['segmentations'] = np.concatenate([annotations['segmentations'], [[
+                a['segmentation'][0],
+                a['segmentation'][1],
+                a['segmentation'][2],
+                a['segmentation'][3],
+                a['segmentation'][4],
+                a['segmentation'][5],
+                a['segmentation'][6],
+                a['segmentation'][7],
+                a['segmentation'][8],
+                a['segmentation'][9],
+                a['segmentation'][10],
+                a['segmentation'][11],
+                a['segmentation'][12],
+                a['segmentation'][13],
+                a['segmentation'][14],
+                a['segmentation'][15],
+            ]]], axis=0)
 
         return annotations
