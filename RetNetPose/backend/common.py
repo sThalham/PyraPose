@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import keras.backend
+import tensorflow as tf
 from .dynamic import meshgrid
 
 

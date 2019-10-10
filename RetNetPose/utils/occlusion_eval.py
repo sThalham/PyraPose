@@ -1,9 +1,19 @@
 """
 Copyright 2017-2018 Fizyr (https://fizyr.com)
+<<<<<<< HEAD
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
     http://www.apache.org/licenses/LICENSE-2.0
+=======
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+>>>>>>> 8c2e681694dc6139bce99b0f06bc9455d70215b3
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -281,6 +291,10 @@ def boxoverlap(a, b):
 def evaluate_occlusion(generator, model, threshold=0.05):
     threshold = 0.5
     """ Use the pycocotools to evaluate a COCO model on a dataset.
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8c2e681694dc6139bce99b0f06bc9455d70215b3
     Args
         generator : The generator for generating the evaluation data.
         model     : The model to evaluate.
@@ -374,7 +388,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     add_less_d09 = np.zeros((16), dtype=np.uint32)
     add_less_d095 = np.zeros((16), dtype=np.uint32)
     add_less_d1 = np.zeros((16), dtype=np.uint32)
-
+    
     # target annotation
     pc1, mv1, mv1_mm = load_pcd('01')
     pc5, mv5, mv5_mm = load_pcd('05')
@@ -469,7 +483,6 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             if cls in t_cat:
                 b1 = np.array([box[0], box[1], box[0] + box[2], box[1] + box[3]])
                 odx = np.where(t_cat==cls)
-
                 b2 = np.array([t_bbox[odx[0]][0][0], t_bbox[odx[0]][0][1], t_bbox[odx[0]][0][2], t_bbox[odx[0]][0][3]])
 
                 IoU = boxoverlap(b1, b2)
@@ -537,6 +550,65 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
                         tp[cls] += 1
                         fn[cls] -= 1
+                            tp55[t_cat[odx[0]]] += 1
+                            fn55[t_cat[odx[0]]] -= 1
+                        else:
+                            fp55[t_cat[odx[0]]] += 1
+                        if IoU > 0.6:
+                            tp6[t_cat[odx[0]]] += 1
+                            fn6[t_cat[odx[0]]] -= 1
+                        else:
+                            fp6[t_cat[odx[0]]] += 1
+                        if IoU > 0.65:
+                            tp65[t_cat[odx[0]]] += 1
+                            fn65[t_cat[odx[0]]] -= 1
+                        else:
+                            fp65[t_cat[odx[0]]] += 1
+                        if IoU > 0.7:
+                            tp7[t_cat[odx[0]]] += 1
+                            fn7[t_cat[odx[0]]] -= 1
+                        else:
+                            fp7[t_cat[odx[0]]] += 1
+                        if IoU > 0.75:
+                            tp75[t_cat[odx[0]]] += 1
+                            fn75[t_cat[odx[0]]] -= 1
+                        else:
+                            fp75[t_cat[odx[0]]] += 1
+                        if IoU > 0.8:
+                            tp8[t_cat[odx[0]]] += 1
+                            fn8[t_cat[odx[0]]] -= 1
+                        else:
+                            fp8[t_cat[odx[0]]] += 1
+                        if IoU > 0.85:
+                            tp85[t_cat[odx[0]]] += 1
+                            fn85[t_cat[odx[0]]] -= 1
+                        else:
+                            fp85[t_cat[odx[0]]] += 1
+                        if IoU > 0.9:
+                            tp9[t_cat[odx[0]]] += 1
+                            fn9[t_cat[odx[0]]] -= 1
+                        else:
+                            fp9[t_cat[odx[0]]] += 1
+                        if IoU > 0.925:
+                            tp925[t_cat[odx[0]]] += 1
+                            fn925[t_cat[odx[0]]] -= 1
+                        else:
+                            fp925[t_cat[odx[0]]] += 1
+                        if IoU > 0.95:
+                            tp95[t_cat[odx[0]]] += 1
+                            fn95[t_cat[odx[0]]] -= 1
+                        else:
+                            fp95[t_cat[odx[0]]] += 1
+                        if IoU > 0.975:
+                            tp975[t_cat[odx[0]]] += 1
+                            fn975[t_cat[odx[0]]] -= 1
+                        else:
+                            fp975[t_cat[odx[0]]] += 1
+
+                        # interlude end
+
+                        tp[t_cat[odx[0]]] += 1
+                        fn[t_cat[odx[0]]] -= 1
                         fnit[cls] = False
 
                         obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :], dtype=np.float32) #.reshape((8, 1, 3))
@@ -593,6 +665,26 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         colR5 = 65
                         colG5 = 102
                         colB5 = 245
+                        colR1 = 242
+                        colG1 = 119
+                        colB1 = 25
+
+                        colR2 = 242
+                        colG2 = 119
+                        colB2 = 25
+
+                        colR3 = 65
+                        colG3 = 102
+                        colB3 = 245
+
+                        colR4 = 65
+                        colG4 = 102
+                        colB4 = 245
+
+                        colR5 = 65
+                        colG5 = 102
+                        colB5 = 245
+
                         img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (255, 255, 255), 5)
                         img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (255, 255, 255), 5)
                         img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (255, 255, 255),
@@ -619,6 +711,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
                            (255, 255, 255),
                            5)
+
                         img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (colR, colG, colB), 4)
                         img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (colR, colG, colB), 4)
                         img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (colR1, colG1, colB1), 4)
@@ -635,6 +728,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                            4)
                         img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), (colR4, colG4, colB4),
                            4)
+
                         font = cv2.FONT_HERSHEY_COMPLEX
                         bottomLeftCornerOfText = (int(bb[0]) + 5, int(bb[1]) + int(bb[3]) - 5)
                         fontScale = 0.5
@@ -789,6 +883,34 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                             if err_add < (model_dia[cls - 1] * 0.15):
                                 tp_add[cls] += 1
                                 fn_add[cls] -= 1
+                        print(err_add)
+
+                        if not math.isnan(err_add):
+                            if err_add < (model_dia[cls - 1] * 0.05):
+                                add_less_d005[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.1):
+                                add_less_d[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.15):
+                                add_less_d015[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.2):
+                                add_less_d02[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.25):
+                                add_less_d025[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.3):
+                                add_less_d03[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.35):
+                                add_less_d035[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.4):
+                                add_less_d04[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.45):
+                                add_less_d045[cls - 1] += 1
+                            if err_add < (model_dia[cls - 1] * 0.5):
+                                add_less_d05[cls - 1] += 1
+
+                        if not math.isnan(err_add):
+                            if err_add < (model_dia[cls - 1] * 0.15):
+                                tp_add[cls - 1] += 1
+                                fn_add[cls - 1] -= 1
                     else:
                         fp[cls] += 1
                         fp_add[cls] += 1
@@ -865,7 +987,6 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     less_add_d09 = [0.0] * 16
     less_add_d095 = [0.0] * 16
     less_add_d1 = [0.0] * 16
-
     np.set_printoptions(precision=2)
     print('')
     for ind in range(1, 16):
@@ -873,6 +994,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             continue
 
         if ind == 2 or ind == 3 or ind == 4 or ind == 7 or ind == 13 or ind == 14 or ind == 15:
+        if tp[ind] == 0:
             detPre[ind] = 0.0
             detRec[ind] = 0.0
             detPre_add[ind] = 0.0
@@ -933,6 +1055,18 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             print('add < 0.9: ', less_add_d09[ind])
             print('add < 0.95: ', less_add_d095[ind])
             print('add < 1: ', less_add_d1[ind])
+
+        print('cat', ind)
+        print('add < 0.05: ', less_add_d005[ind])
+        print('add < 0.1: ', less_add_d[ind])
+        print('add < 0.15: ', less_add_d015[ind])
+        print('add < 0.2: ', less_add_d02[ind])
+        print('add < 0.25: ', less_add_d025[ind])
+        print('add < 0.3: ', less_add_d03[ind])
+        print('add < 0.35: ', less_add_d035[ind])
+        print('add < 0.4: ', less_add_d04[ind])
+        print('add < 0.45: ', less_add_d045[ind])
+        print('add < 0.5: ', less_add_d05[ind])
 
         print('cat ', ind, ' rec ', detPre[ind], ' pre ', detRec[ind], ' less5 ', less_55[ind], ' repr ',
                   less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind], ' F1 add 0.15d ', F1_add[ind])
