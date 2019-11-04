@@ -220,7 +220,7 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    mesh_path = "/home/sthalham/data/LINEMOD/models/"
+    mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
     #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
@@ -446,8 +446,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             cls = generator.label_to_inv_label(label)
             #cls = 1
-            control_points = box3D[(cls - 1), :]
-            #control_points = box3D[0, :]
+            #control_points = box3D[(cls - 1), :]
+            control_points = box3D
 
             # append detection for each positively labeled class
             image_result = {
@@ -567,145 +567,37 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #print(tDbox)
 
                         '''
-                        colR = 242
-                        colG = 119
-                        colB = 25
+                        pose = est_points.reshape((16)).astype(np.int16)
+                        bb = b1
 
-                        colR1 = 242
-                        colG1 = 119
-                        colB1 = 25
+                        colGT = (0, 128, 0)
+                        colEst = (255, 0, 0)
 
-                        colR2 = 242
-                        colG2 = 119
-                        colB2 = 25
+                        cv2.rectangle(image, (int(bb[1]), int(bb[0])), (int(bb[3]), int(bb[2])),
+                                      (255, 255, 255), 2)
 
-                        colR3 = 65
-                        colG3 = 102
-                        colB3 = 245
+                        image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 5)
+                        image = cv2.line(image, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                                         5)
+                        image = cv2.line(image, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                                         5)
+                        image = cv2.line(image, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                                         5)
+                        image = cv2.line(image, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+                                         5)
 
-                        colR4 = 65
-                        colG4 = 102
-                        colB4 = 245
+                        name = '/home/sthalham/visTests/detection_LM.jpg'
+                        cv2.imwrite(name, image)
 
-                        colR5 = 65
-                        colG5 = 102
-                        colB5 = 245
-
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (255, 255, 255), 5)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (255, 255, 255), 5)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
-                           (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
-                           (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
-                           (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
-                           (255, 255, 255),
-                           5)
-
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (colR, colG, colB), 4)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (colR, colG, colB), 4)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (colR1, colG1, colB1), 4)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (colR1, colG1, colB1), 4)
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR2, colG2, colB2), 4)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), (colR2, colG2, colB2), 4)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), (colR5, colG5, colB5), 4)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), (colR5, colG5, colB5), 4)
-                        img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), (colR3, colG3, colB3),
-                           4)
-                        img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), (colR3, colG3, colB3),
-                           4)
-                        img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), (colR4, colG4, colB4),
-                           4)
-                        img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), (colR4, colG4, colB4),
-                           4)
-
-                        font = cv2.FONT_HERSHEY_COMPLEX
-                        bottomLeftCornerOfText = (int(bb[0]) + 5, int(bb[1]) + int(bb[3]) - 5)
-                        fontScale = 0.5
-                        fontColor = (25, 215, 250)
-                        fontthickness = 2
-                        lineType = 2
-
-                        if detCats[i] == 1:
-                            cate = 'Ape'
-                        elif detCats[i] == 2:
-                            cate = 'Benchvise'
-                        elif detCats[i] == 3:
-                            cate = 'Bowl'
-                        elif detCats[i] == 4:
-                            cate = 'Camera'
-                        elif detCats[i] == 5:
-                            cate = 'Can'
-                        elif detCats[i] == 6:
-                            cate = 'Cat'
-                        elif detCats[i] == 7:
-                            cate = 'Cup'
-                        elif detCats[i] == 8:
-                            cate = 'Driller'
-                        elif detCats[i] == 9:
-                            cate = 'Duck'
-                        elif detCats[i] == 10:
-                            cate = 'Eggbox'
-                        elif detCats[i] == 11:
-                            cate = 'Glue'
-                        elif detCats[i] == 12:
-                            cate = 'Holepuncher'
-                        elif detCats[i] == 13:
-                            cate = 'Iron'
-                        elif detCats[i] == 14:
-                            cate = 'Lamp'
-                        elif detCats[i] == 15:
-                            cate = 'Phone'
-                        gtText = cate
-                        # gtText = cate + " / " + str(detSco[i])
-
-                        fontColor2 = (0, 0, 0)
-                        fontthickness2 = 4
-                        cv2.putText(img, gtText,
-                            bottomLeftCornerOfText,
-                            font,
-                            fontScale,
-                            fontColor2,
-                            fontthickness2,
-                            lineType)
-
-                        cv2.putText(img, gtText,
-                            bottomLeftCornerOfText,
-                            font,
-                            fontScale,
-                            fontColor,
-                            fontthickness,
-                            lineType)
-
-                        name = '/home/sthalham/visTests/detected.jpg'
-                        img_con = np.concatenate((img, img_gt), axis=1)
-                        cv2.imwrite(name, img_con)
-                        name_est = '/home/sthalham/visTests/detected_est.jpg'
-                        cv2.imwrite(name_est, img_con)
-
+                        print('break')
                         '''
-
-                        #for i in range(0,8):
-                        #    cv2.circle(image, (control_points[2*i], control_points[2*i+1]), 1, (0, 255, 0), thickness=3)
-                        #    cv2.circle(image, (tDbox[2 * i], tDbox[2 * i + 1]), 1, (255, 0, 0), thickness=3)
-
-                        #cv2.imwrite('/home/sthalham/inRetNetPose.jpg', image)
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
@@ -722,13 +614,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             if err_repr < 5.0:
                                 rep_less5[t_cat] += 1
 
-                        #if cls == 3 or cls == 7 or cls == 10 or cls == 11:
-                        #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                        if cls == 3 or cls == 7 or cls == 10 or cls == 11:
+                            err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                        else:
+                            err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-                        #else:
-                        err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-
-                        print(err_add)
+                        print(' ')
+                        print('error: ', err_add, 'threshold', model_dia[cls - 1] * 0.1)
 
                         if not math.isnan(err_add):
                             if err_add < (model_dia[cls - 1] * 0.1):
