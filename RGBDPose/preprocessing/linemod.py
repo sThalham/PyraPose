@@ -34,12 +34,7 @@ class LinemodGenerator(Generator):
     """
 
     def __init__(self, data_dir, set_name, **kwargs):
-        """ Initialize a LineMOD data generator.
 
-        Args
-            data_dir: Path to where the LineMOD dataset is stored.
-            set_name: Name of the set to parse.
-        """
         self.data_dir  = data_dir
         self.set_name  = set_name
         self.path      = os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json')
@@ -161,7 +156,7 @@ class LinemodGenerator(Generator):
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
 
-        return path[:-4] + '_dep.png'
+        return path[:-4] + '_dep.jpg'
 
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.

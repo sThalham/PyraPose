@@ -57,21 +57,12 @@ def makedirs(path):
 
 
 def get_session():
-    """ Construct a modified tf session.
-    """
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     return tf.Session(config=config)
 
 
 def model_with_weights(model, weights, skip_mismatch):
-    """ Load weights for model.
-
-    Args
-        model         : The model to load weights for.
-        weights       : The weights to load.
-        skip_mismatch : If True, skips layers whose shape of weights doesn't match with the model.
-    """
     if weights is not None:
         model.load_weights(weights, by_name=True, skip_mismatch=skip_mismatch)
     return model
@@ -79,21 +70,6 @@ def model_with_weights(model, weights, skip_mismatch):
 
 def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
                   freeze_backbone=False, lr=1e-5, config=None):
-    """ Creates three models (model, training_model, prediction_model).
-
-    Args
-        backbone_retinanet : A function to call to create a retinanet model with a given backbone.
-        num_classes        : The number of classes to train.
-        weights            : The weights to load into the model.
-        multi_gpu          : The number of GPUs to use for training.
-        freeze_backbone    : If True, disables learning for the backbone.
-        config             : Config parameters, None indicates the default configuration.
-
-    Returns
-        model            : The base model. This is also the model that is saved in snapshots.
-        training_model   : The training model. If multi_gpu=0, this is identical to model.
-        prediction_model : The model wrapped with utility functions to perform object detection (applies regression values and performs NMS).
-    """
 
     modifier = freeze_model if freeze_backbone else None
 
@@ -122,11 +98,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     training_model.compile(
         loss={
             'bbox'         : losses.smooth_l1(),
-            #'3Dbox': losses.smooth_l1(),
             '3Dbox'        : losses.orthogonal_l1(),
-            #'3Dbox'        : losses.weighted_mse(),
-            #'3Dbox': losses.weighted_l1(),
-            #'3Dbox': losses.weighted_msle(),
             'cls'          : losses.focal()
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
@@ -136,18 +108,6 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
 
 
 def create_callbacks(model, training_model, prediction_model, validation_generator, args):
-    """ Creates the callbacks to use during training.
-
-    Args
-        model: The base model.
-        training_model: The model that is used for training.
-        prediction_model: The model that should be used for validation.
-        validation_generator: The generator for creating validation data.
-        args: parseargs args object.
-
-    Returns:
-        A list of callbacks used for training.
-    """
     callbacks = []
 
     tensorboard_callback = None
@@ -319,9 +279,6 @@ def parse_args(args):
     subparsers = parser.add_subparsers(help='Arguments for specific dataset types.', dest='dataset_type')
     subparsers.required = True
 
-    coco_parser = subparsers.add_parser('coco')
-    coco_parser.add_argument('coco_path', help='Path to dataset directory (ie. /tmp/COCO).')
-
     linemod_parser = subparsers.add_parser('linemod')
     linemod_parser.add_argument('linemod_path', help='Path to dataset directory (ie. /tmp/linemod).')
 
@@ -341,7 +298,6 @@ def parse_args(args):
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
-    #parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=10000)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
@@ -349,8 +305,7 @@ def parse_args(args):
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=6400)
-    parser.add_argument('--config',           help='Path to a configuration parameters .ini file.')
+    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Fit generator arguments
@@ -366,20 +321,15 @@ def main(args=None):
         args = sys.argv[1:]
     args = parse_args(args)
 
-    # create object that stores backbone information
     backbone = models.backbone(args.backbone)
+    # should be 2 times resnet50
 
-    # make sure keras is the minimum required version
     check_keras_version()
 
     # optionally choose specific GPU
     if args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     keras.backend.tensorflow_backend.set_session(get_session())
-
-    # optionally load config parameters
-    if args.config:
-        args.config = read_config_file(args.config)
 
     # create the generators
     train_generator, validation_generator, train_iterations = create_generators(args, backbone.preprocess_image)
@@ -413,12 +363,6 @@ def main(args=None):
     # print model summary
     print(model.summary())
 
-    # this lets the generator compute backbone layer shapes using the actual backbone model
-    if 'vgg' in args.backbone or 'densenet' in args.backbone:
-        train_generator.compute_shapes = make_shapes_callback(model)
-        if validation_generator:
-            validation_generator.compute_shapes = train_generator.compute_shapes
-
     # create the callbacks
     callbacks = create_callbacks(
         model,
@@ -437,10 +381,7 @@ def main(args=None):
     # start training
     training_model.fit_generator(
         generator=train_generator,
-        #validation_data=validation_generator,
-        #validation_steps=50,
         steps_per_epoch=train_iterations,
-        #steps_per_epoch=100,
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,

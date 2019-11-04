@@ -5,6 +5,7 @@ from .. import layers
 from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
+
 def max_norm(w):
     norms = K.sqrt(K.sum(K.square(w), keepdims=True))
     desired = K.clip(norms, 0, self.max_value)
@@ -148,6 +149,30 @@ def __create_pyramid_features(C3, C4, C5, feature_size=256):
     return [P3, P4, P5, P6, P7]
 
 
+def projection_block(inputs, feature_size=256, BN=True):
+
+    outputs = keras.layers.Conv2D(feature_size, kernel_size=7, strides=1, padding='same', name='projection_conv1')(inputs)
+    outputs = keras.layers.BatchNormalization(axis=2)(outputs)
+    outputs = keras.Activations.relu(axis=2)(outputs)
+
+    outputs = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same', name='projection_conv2')(outputs)
+    outputs = keras.layers.BatchNormalization(axis=2)(outputs)
+    outputs = keras.Activations.relu(axis=2)(outputs)
+
+    outputs = keras.layers.GlobalMaxPooling2D(keras.backend.image_data_format())(outputs)
+
+    return outputs
+
+
+def __create_projection_features(C3, C4, C5, feature_size=256):
+
+    F3 = projection_block(C5)
+    F2 = projection_block(C4)
+    F1 = projection_block(C3)
+
+    return [F1, F2, F3]
+
+
 def default_submodels(num_classes, num_anchors):
     return [
         ('bbox', default_regression_model(4, num_anchors)),
@@ -197,7 +222,8 @@ def retinanet(
     C3, C4, C5 = backbone_layers
 
     # compute pyramid features as per https://arxiv.org/abs/1708.02002
-    features = create_pyramid_features(C3, C4, C5)
+    #features = create_pyramid_features(C3, C4, C5)
+    features = __create_projection_features(C3, C4, C5)
 
     # for all pyramid levels, run available submodels
     pyramids = __build_pyramid(submodels, features)
