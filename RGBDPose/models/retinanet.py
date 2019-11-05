@@ -205,7 +205,8 @@ def __build_anchors(anchor_parameters, features):
 
 def retinanet(
     inputs,
-    backbone_layers,
+    backbone_layers_1,
+    backbone_layers_2,
     num_classes,
     num_anchors             = None,
     create_pyramid_features = __create_pyramid_features,
@@ -219,11 +220,15 @@ def retinanet(
     if submodels is None:
         submodels = default_submodels(num_classes, num_anchors)
 
-    C3, C4, C5 = backbone_layers
+    B0_C3, B0_C4, B0_C5 = backbone_layers_1
+    B1_C3, B1_C4, B1_C5 = backbone_layers_2
 
     # compute pyramid features as per https://arxiv.org/abs/1708.02002
     #features = create_pyramid_features(C3, C4, C5)
-    features = __create_projection_features(C3, C4, C5)
+    features1 = __create_projection_features(B0_C3, B0_C4, B0_C5)
+    features2 = __create_projection_features(B1_C3, B1_C4, B1_C5)
+
+    features = keras.layers.Concatenate(axis=1)([features1, features2])
 
     # for all pyramid levels, run available submodels
     pyramids = __build_pyramid(submodels, features)

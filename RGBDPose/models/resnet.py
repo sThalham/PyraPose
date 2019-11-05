@@ -56,18 +56,22 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
 
     if inputs is None:
         if keras.backend.image_data_format() == 'channels_first':
-            inputs = keras.layers.Input(shape=(3, None, None))
+            inputs[0] = keras.layers.Input(shape=(3, None, None))
+            inputs[1] = keras.layers.Input(shape=(3, None, None))
         else:
-            inputs = keras.layers.Input(shape=(None, None, 3))
+            inputs[0] = keras.layers.Input(shape=(None, None, 3))
+            inputs[1] = keras.layers.Input(shape=(None, None, 3))
 
-    resnet = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs, pooling=None, classes=num_classes)
+    resnet_rgb = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs[0], pooling=None, classes=num_classes)
+    resnet_dep = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs[1], pooling=None, classes=num_classes)
     #resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)
 
     # invoke modifier if given
     if modifier:
-        resnet = modifier(resnet)
+        resnet_rgb = modifier(resnet_rgb)
+        resnet_dep = modifier(resnet_dep)
 
-    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=resnet.outputs[1:], **kwargs)
+    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers_1=resnet_rgb.outputs[1:], backbone_layers_2=resnet_dep.outputs[1:], **kwargs)
 
 
 def resnet50_retinanet(num_classes, inputs=None, **kwargs):
