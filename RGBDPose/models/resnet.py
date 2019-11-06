@@ -52,28 +52,35 @@ class ResNetBackbone(Backbone):
         return preprocess_image(inputs, mode='caffe')
 
 
-def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
+def resnet_retinanet(num_classes, inputs=[None, None], modifier=None, **kwargs):
 
     if inputs is None:
         if keras.backend.image_data_format() == 'channels_first':
+            #inputs = keras.layers.Input(shape=(3, None, None))
             inputs[0] = keras.layers.Input(shape=(3, None, None))
             inputs[1] = keras.layers.Input(shape=(3, None, None))
         else:
+            #inputs = keras.layers.Input(shape=(None, None, 3))
             inputs[0] = keras.layers.Input(shape=(None, None, 3))
             inputs[1] = keras.layers.Input(shape=(None, None, 3))
 
     resnet_rgb = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs[0], pooling=None, classes=num_classes)
     resnet_dep = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs[1], pooling=None, classes=num_classes)
-    #resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)
+
+    #[<tf.Tensor 'res3d_relu/Relu:0' shape=(?, ?, ?, 512) dtype=float32>, <tf.Tensor 'res4f_relu/Relu:0' shape=(?, ?, ?, 1024) dtype=float32>, <tf.Tensor 'res5c_relu/Relu:0' shape=(?, ?, ?, 2048) dtype=float32>]
 
     # invoke modifier if given
     if modifier:
         resnet_rgb = modifier(resnet_rgb)
         resnet_dep = modifier(resnet_dep)
 
-    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers_1=resnet_rgb.outputs[1:], backbone_layers_2=resnet_dep.outputs[1:], **kwargs)
+    outputs_rgb = [resnet_rgb.layers[80].output, resnet_rgb.layers[142].output, resnet_rgb.layers[174].output]
+    outputs_dep = [resnet_dep.layers[80].output, resnet_dep.layers[142].output, resnet_dep.layers[174].output]
+
+    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers_1=outputs_rgb, backbone_layers_2=outputs_dep, **kwargs)
+    #return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers_1=outputs_rgb, **kwargs)
 
 
-def resnet50_retinanet(num_classes, inputs=None, **kwargs):
+def resnet50_retinanet(num_classes, inputs=[None, None], **kwargs):
     return resnet_retinanet(num_classes=num_classes, backbone='resnet50', inputs=inputs, **kwargs)
 

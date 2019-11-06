@@ -15,7 +15,6 @@ class Backbone(object):
             'UpsampleLike'     : layers.UpsampleLike,
             'PriorProbability' : initializers.PriorProbability,
             'RegressBoxes'     : layers.RegressBoxes,
-            'RegressPoses'     : layers.RegressRotation,
             'FilterDetections' : layers.FilterDetections,
             'Anchors'          : layers.Anchors,
             'ClipBoxes'        : layers.ClipBoxes,
@@ -26,8 +25,6 @@ class Backbone(object):
             '_wl1'            : losses.weighted_l1(),
             '_msle'           : losses.weighted_msle(),
             '_smooth_l1_xy'    : losses.smooth_l1_xy(),
-            'l2_norm'          : retinanet.l2_norm(),
-            'batch_norm'       : retinanet.batch_norm(),
             '_orth_l1'        : losses.orthogonal_l1(),
         }
 
@@ -39,10 +36,6 @@ class Backbone(object):
         """
         raise NotImplementedError('retinanet method not implemented.')
 
-    def download_imagenet(self):
-        """ Downloads ImageNet weights and returns path to weights file.
-        """
-        raise NotImplementedError('download_imagenet method not implemented.')
 
     def validate(self):
         """ Checks whether the backbone string is correct.
@@ -59,12 +52,6 @@ class Backbone(object):
 def backbone(backbone_name):
     if 'resnet' in backbone_name:
         from .resnet import ResNetBackbone as b
-    elif 'mobilenet' in backbone_name:
-        from .mobilenet import MobileNetBackbone as b
-    elif 'vgg' in backbone_name:
-        from .vgg import VGGBackbone as b
-    elif 'densenet' in backbone_name:
-        from .densenet import DenseNetBackbone as b
     else:
         raise NotImplementedError('Backbone class for  \'{}\' not implemented.'.format(backbone))
 

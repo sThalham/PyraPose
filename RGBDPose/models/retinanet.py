@@ -152,25 +152,28 @@ def __create_pyramid_features(C3, C4, C5, feature_size=256):
 def projection_block(inputs, feature_size=256, BN=True):
 
     outputs = keras.layers.Conv2D(feature_size, kernel_size=7, strides=1, padding='same', name='projection_conv1')(inputs)
-    outputs = keras.layers.BatchNormalization(axis=2)(outputs)
-    outputs = keras.Activations.relu(axis=2)(outputs)
+    outputs = keras.layers.BatchNormalization(axis=3)(outputs)
+    outputs = keras.activations.relu(outputs)
 
     outputs = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same', name='projection_conv2')(outputs)
-    outputs = keras.layers.BatchNormalization(axis=2)(outputs)
-    outputs = keras.Activations.relu(axis=2)(outputs)
+    outputs = keras.layers.BatchNormalization(axis=3)(outputs)
+    outputs = keras.activations.relu(outputs)
 
-    outputs = keras.layers.GlobalMaxPooling2D(keras.backend.image_data_format())(outputs)
+    #outputs = keras.layers.GlobalMaxPooling2D(keras.backend.image_data_format())(outputs)
 
     return outputs
 
 
-def __create_projection_features(C3, C4, C5, feature_size=256):
+def __create_projection_features(C3, C4, C5, D3, D4, D5, feature_size=256):
 
     F3 = projection_block(C5)
     F2 = projection_block(C4)
     F1 = projection_block(C3)
+    G3 = projection_block(D5)
+    G2 = projection_block(D4)
+    G1 = projection_block(D3)
 
-    return [F1, F2, F3]
+    return [F1, F2, F3, G1, G2, G3]
 
 
 def default_submodels(num_classes, num_anchors):
@@ -224,13 +227,14 @@ def retinanet(
     B1_C3, B1_C4, B1_C5 = backbone_layers_2
 
     # compute pyramid features as per https://arxiv.org/abs/1708.02002
-    #features = create_pyramid_features(C3, C4, C5)
-    features1 = __create_projection_features(B0_C3, B0_C4, B0_C5)
-    features2 = __create_projection_features(B1_C3, B1_C4, B1_C5)
+    #features = create_pyramid_features(B0_C3, B0_C4, B0_C5)
 
-    features = keras.layers.Concatenate(axis=1)([features1, features2])
+    #features1 = __create_projection_features(B0_C3, B0_C4, B0_C5)
+    #features2 = __create_projection_features(B1_C3, B1_C4, B1_C5)
+    features = __create_projection_features(B0_C3, B0_C4, B0_C5, B1_C3, B1_C4, B1_C5)
 
     # for all pyramid levels, run available submodels
+    #pyramids = __build_pyramid(submodels, features)
     pyramids = __build_pyramid(submodels, features)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)

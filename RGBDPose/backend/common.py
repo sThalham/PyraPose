@@ -1,6 +1,6 @@
 import keras.backend
 import tensorflow as tf
-from .dynamic import meshgrid
+from tensorflow import meshgrid
 
 
 def bbox_transform_inv(boxes, deltas, mean=None, std=None):

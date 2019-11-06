@@ -28,8 +28,8 @@ import tensorflow as tf
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-    import RetNetPose.bin  # noqa: F401
-    __package__ = "RetNetPose.bin"
+    import RGBDPose.bin  # noqa: F401
+    __package__ = "RGBDPose.bin"
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
 from .. import layers  # noqa: F401
@@ -69,16 +69,13 @@ def model_with_weights(model, weights, skip_mismatch):
 
 
 def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
-                  freeze_backbone=False, lr=1e-5, config=None):
+                  freeze_backbone=False, lr=1e-5):
 
     modifier = freeze_model if freeze_backbone else None
 
     # load anchor parameters, or pass None (so that defaults will be used)
     anchor_params = None
     num_anchors   = None
-    if config and 'anchor_parameters' in config:
-        anchor_params = parse_anchor_parameters(config)
-        num_anchors   = anchor_params.num_anchors()
 
     # Keras recommends initialising a multi-gpu model on the CPU to ease weight sharing, and to prevent OOM errors.
     # optionally wrap in a parallel model
@@ -181,7 +178,6 @@ def create_generators(args, preprocess_image):
     """
     common_args = {
         'batch_size'       : args.batch_size,
-        'config'           : args.config,
         'image_min_side'   : args.image_min_side,
         'image_max_side'   : args.image_max_side,
         'preprocess_image' : preprocess_image,
@@ -347,7 +343,7 @@ def main(args=None):
         weights = args.weights
         # default to imagenet if nothing else is specified
         if weights is None and args.imagenet_weights:
-            weights = backbone.download_imagenet()
+            weights = None
 
         print('Creating model, this may take a second...')
         model, training_model, prediction_model = create_models(
@@ -357,11 +353,10 @@ def main(args=None):
             multi_gpu=0,
             freeze_backbone=args.freeze_backbone,
             lr=args.lr,
-            config=args.config
         )
 
     # print model summary
-    print(model.summary())
+    #print(model.summary())
 
     # create the callbacks
     callbacks = create_callbacks(
