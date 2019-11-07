@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import keras
-from .. import backend
+from ..backend import resize_images, transpose, shift, bbox_transform_inv, clip_by_value, box3D_transform_inv
 from ..utils import anchors as utils_anchors
 
 import numpy as np
@@ -63,9 +63,9 @@ class Anchors(keras.layers.Layer):
 
         # generate proposals from bbox deltas and shifted anchors
         if keras.backend.image_data_format() == 'channels_first':
-            anchors = backend.shift(features_shape[2:4], self.stride, self.anchors)
+            anchors = shift(features_shape[2:4], self.stride, self.anchors)
         else:
-            anchors = backend.shift(features_shape[1:3], self.stride, self.anchors)
+            anchors = shift(features_shape[1:3], self.stride, self.anchors)
         anchors = keras.backend.tile(keras.backend.expand_dims(anchors, axis=0), (features_shape[0], 1, 1))
 
         return anchors
@@ -101,12 +101,12 @@ class UpsampleLike(keras.layers.Layer):
         source, target = inputs
         target_shape = keras.backend.shape(target)
         if keras.backend.image_data_format() == 'channels_first':
-            source = backend.transpose(source, (0, 2, 3, 1))
-            output = backend.resize_images(source, (target_shape[2], target_shape[3]), method='nearest')
-            output = backend.transpose(output, (0, 3, 1, 2))
+            source = transpose(source, (0, 2, 3, 1))
+            output = resize_images(source, (target_shape[2], target_shape[3]), method='nearest')
+            output = transpose(output, (0, 3, 1, 2))
             return output
         else:
-            return backend.resize_images(source, (target_shape[1], target_shape[2]), method='nearest')
+            return resize_images(source, (target_shape[1], target_shape[2]), method='nearest')
 
     def compute_output_shape(self, input_shape):
         if keras.backend.image_data_format() == 'channels_first':
@@ -147,7 +147,7 @@ class RegressBoxes(keras.layers.Layer):
 
     def call(self, inputs, **kwargs):
         anchors, regression = inputs
-        return backend.bbox_transform_inv(anchors, regression, mean=self.mean, std=self.std)
+        return bbox_transform_inv(anchors, regression, mean=self.mean, std=self.std)
 
     def compute_output_shape(self, input_shape):
         return input_shape[0]
@@ -194,7 +194,7 @@ class RegressBoxes3D(keras.layers.Layer):
 
     def call(self, inputs, **kwargs):
         anchors, regression = inputs
-        return backend.box3D_transform_inv(anchors, regression, mean=self.mean, std=self.std)
+        return box3D_transform_inv(anchors, regression, mean=self.mean, std=self.std)
 
     def compute_output_shape(self, input_shape):
         return input_shape[0]
@@ -222,10 +222,10 @@ class ClipBoxes(keras.layers.Layer):
         else:
             height = shape[1]
             width  = shape[2]
-        x1 = backend.clip_by_value(boxes[:, :, 0], 0, width)
-        y1 = backend.clip_by_value(boxes[:, :, 1], 0, height)
-        x2 = backend.clip_by_value(boxes[:, :, 2], 0, width)
-        y2 = backend.clip_by_value(boxes[:, :, 3], 0, height)
+        x1 = clip_by_value(boxes[:, :, 0], 0, width)
+        y1 = clip_by_value(boxes[:, :, 1], 0, height)
+        x2 = clip_by_value(boxes[:, :, 2], 0, width)
+        y2 = clip_by_value(boxes[:, :, 3], 0, height)
 
         return keras.backend.stack([x1, y1, x2, y2], axis=2)
 

@@ -165,12 +165,6 @@ if __name__ == "__main__":
 
                     bbvis.append(bbox.astype(int))
                     objID = np.asscalar(bbox[0]) + 1
-                    if objID > 5:
-                        objID += 2
-                    elif objID > 2:
-                        objID += 1
-                    else:
-                        pass
                     cats.append(objID)
 
                     bbox = (bbox).astype(int)

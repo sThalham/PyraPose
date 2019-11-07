@@ -155,8 +155,9 @@ class LinemodGenerator(Generator):
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = path[:-8] + '_dep' + path[-4:]
 
-        return path[:-4] + '_dep.jpg'
+        return read_image_bgr(path)
 
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.

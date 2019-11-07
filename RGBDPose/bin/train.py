@@ -356,7 +356,7 @@ def main(args=None):
         )
 
     # print model summary
-    #print(model.summary())
+    print(model.summary())
 
     # create the callbacks
     callbacks = create_callbacks(

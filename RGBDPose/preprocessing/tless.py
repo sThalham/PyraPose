@@ -156,8 +156,9 @@ class TlessGenerator(Generator):
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = path[:-4] + '_dep' + path[-4:]
 
-        return path[:-4] + '_dep.png'
+        return read_image_bgr(path)
 
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.
@@ -211,11 +212,11 @@ class TlessGenerator(Generator):
                 a['segmentation'][14],
                 a['segmentation'][15],
             ]]], axis=0)
-            annotations['K'] = np.concatenate([annotations['K'], [[
-                a['calib'][0],
-                a['calib'][1],
-                a['calib'][2],
-                a['calib'][3],
-            ]]], axis=0)
+            #annotations['K'] = np.concatenate([annotations['K'], [[
+            #    a['calib'][0],
+            #    a['calib'][1],
+            #    a['calib'][2],
+            #    a['calib'][3],
+            #]]], axis=0)
 
         return annotations

@@ -162,40 +162,40 @@ class Generator(keras.utils.Sequence):
                 (annotations['bboxes'][:, 3] <= annotations['bboxes'][:, 1]) |
                 (annotations['bboxes'][:, 0] < 0) |
                 (annotations['bboxes'][:, 1] < 0) |
-                (annotations['bboxes'][:, 2] > image.shape[1]) |
-                (annotations['bboxes'][:, 3] > image.shape[0]) |
+                (annotations['bboxes'][:, 2] > image[0].shape[1]) |
+                (annotations['bboxes'][:, 3] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 0] < 0) |
-                (annotations['segmentations'][:, 0] > image.shape[1]) |
+                (annotations['segmentations'][:, 0] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 1] < 0) |
-                (annotations['segmentations'][:, 1] > image.shape[0]) |
+                (annotations['segmentations'][:, 1] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 2] < 0) |
-                (annotations['segmentations'][:, 2] > image.shape[1]) |
+                (annotations['segmentations'][:, 2] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 3] < 0) |
-                (annotations['segmentations'][:, 3] > image.shape[0]) |
+                (annotations['segmentations'][:, 3] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 4] < 0) |
-                (annotations['segmentations'][:, 4] > image.shape[1]) |
+                (annotations['segmentations'][:, 4] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 5] < 0) |
-                (annotations['segmentations'][:, 5] > image.shape[0]) |
+                (annotations['segmentations'][:, 5] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 6] < 0) |
-                (annotations['segmentations'][:, 6] > image.shape[1]) |
+                (annotations['segmentations'][:, 6] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 7] < 0) |
-                (annotations['segmentations'][:, 7] > image.shape[0]) |
+                (annotations['segmentations'][:, 7] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 8] < 0) |
-                (annotations['segmentations'][:, 8] > image.shape[1]) |
+                (annotations['segmentations'][:, 8] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 9] < 0) |
-                (annotations['segmentations'][:, 9] > image.shape[0]) |
+                (annotations['segmentations'][:, 9] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 10] < 0) |
-                (annotations['segmentations'][:, 10] > image.shape[1]) |
+                (annotations['segmentations'][:, 10] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 11] < 0) |
-                (annotations['segmentations'][:, 11] > image.shape[0]) |
+                (annotations['segmentations'][:, 11] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 12] < 0) |
-                (annotations['segmentations'][:, 12] > image.shape[1]) |
+                (annotations['segmentations'][:, 12] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 13] < 0) |
-                (annotations['segmentations'][:, 13] > image.shape[0]) |
+                (annotations['segmentations'][:, 13] > image[0].shape[0]) |
                 (annotations['segmentations'][:, 14] < 0) |
-                (annotations['segmentations'][:, 14] > image.shape[1]) |
+                (annotations['segmentations'][:, 14] > image[0].shape[1]) |
                 (annotations['segmentations'][:, 15] < 0) |
-                (annotations['segmentations'][:, 15] > image.shape[0])
+                (annotations['segmentations'][:, 15] > image[0].shape[0])
             )[0]
 
             # delete invalid indices
@@ -214,7 +214,15 @@ class Generator(keras.utils.Sequence):
     def load_image_group(self, group):
         """ Load images for all images in a group.
         """
-        return [self.load_image(image_index) for image_index in group]
+        return [[self.load_image(image_index), self.load_image_dep(image_index)] for image_index in group]
+        #image_group = []
+        #for image_index in group:
+        #    img_rgb = self.load_image(image_index)
+        #    img_dep = self.load_image_dep(image_index)
+        #    imgs = [img_rgb, img_dep]
+        #    image_group.append(imgs)
+
+        #return image_group
 
     def random_transform_group_entry(self, image, annotations, transform=None):
         """ Randomly transforms image and annotation.
@@ -269,17 +277,20 @@ class Generator(keras.utils.Sequence):
         """ Preprocess image and its annotations.
         """
         # preprocess the image
-        image = self.preprocess_image(image)
+        image[0] = self.preprocess_image(image[0])
+        image[1] = self.preprocess_image(image[1])
 
         # resize image
-        image, image_scale = self.resize_image(image)
+        image[0], image_scale0 = self.resize_image(image[0])
+        image[1], image_scale1 = self.resize_image(image[1])
 
         # apply resizing to annotations too
-        annotations['bboxes'] *= image_scale
-        annotations['segmentations'] *= image_scale
+        annotations['bboxes'] *= image_scale0
+        annotations['segmentations'] *= image_scale0
 
         # convert to the wanted keras floatx
-        image = keras.backend.cast_to_floatx(image)
+        image[0] = keras.backend.cast_to_floatx(image[0])
+        image[1] = keras.backend.cast_to_floatx(image[1])
 
         return image, annotations
 
@@ -311,19 +322,22 @@ class Generator(keras.utils.Sequence):
         """ Compute inputs for the network using an image_group.
         """
         # get the max image shape
-        max_shape = tuple(max(image.shape[x] for image in image_group) for x in range(3))
+        max_shape = tuple(max(image[0].shape[x] for image in image_group) for x in range(3))
 
         # construct an image batch object
-        image_batch = np.zeros((self.batch_size,) + max_shape, dtype=keras.backend.floatx())
+        image_batch1 = np.zeros((self.batch_size,) + max_shape, dtype=keras.backend.floatx())
+        image_batch2 = np.zeros((self.batch_size,) + max_shape, dtype=keras.backend.floatx())
 
         # copy all images to the upper left part of the image batch object
         for image_index, image in enumerate(image_group):
-            image_batch[image_index, :image.shape[0], :image.shape[1], :image.shape[2]] = image
+            image_batch1[image_index, :image[0].shape[0], :image[0].shape[1], :image[0].shape[2]] = image[0]
+            image_batch2[image_index, :image[1].shape[0], :image[1].shape[1], :image[1].shape[2]] = image[1]
 
         if keras.backend.image_data_format() == 'channels_first':
-            image_batch = image_batch.transpose((0, 3, 1, 2))
+            image_batch1 = image_batch1.transpose((0, 3, 1, 2))
+            image_batch2 = image_batch2.transpose((0, 3, 1, 2))
 
-        return image_batch
+        return [image_batch1, image_batch2]
 
     def generate_anchors(self, image_shape):
         anchor_params = None
@@ -335,7 +349,7 @@ class Generator(keras.utils.Sequence):
         """ Compute target outputs for the network using images and their annotations.
         """
         # get the max image shape
-        max_shape = tuple(max(image.shape[x] for image in image_group) for x in range(3))
+        max_shape = tuple(max(image[0].shape[x] for image in image_group) for x in range(3))
         anchors   = self.generate_anchors(max_shape)
 
         batches = self.compute_anchor_targets(
@@ -351,7 +365,7 @@ class Generator(keras.utils.Sequence):
         """ Compute inputs and target outputs for the network.
         """
         # load images and annotations
-        image_group       = self.load_image_group(group)
+        image_group       = self.load_image_group(group) # image group is now [image_rgb, image_dep]
         annotations_group = self.load_annotations_group(group)
 
         # check validity of annotations
