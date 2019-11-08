@@ -306,14 +306,8 @@ def create_BB(rgb):
 if __name__ == "__main__":
 
     dataset = 'linemod'
-    if dataset == 'linemod':
-        root = "/home/sthalham/data/LINEMOD/test/"  # path to train samples, depth + rgb
-    elif dataset == 'tless':
-        root = "/home/sthalham/data/t-less_v2/test_kinect/"
-    else:
-        raise ValueError('Specify the dataset correctly')
-
-    target = '/home/sthalham/data/prepro/val_linemod_dep_lognorm/'
+    root = "/home/stefan/data/LINEMOD_test/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/val_linemod_RGBD/'
     # print(root)
     visu = False
 
@@ -420,18 +414,6 @@ if __name__ == "__main__":
             imgNam = tempSS + imgNum + '.jpg'
             iname = str(imgNam)
 
-            #cv2.imwrite('/home/sthalham/visTests/disp.jpg', imgI[:,:,0])
-            #cv2.imwrite('/home/sthalham/visTests/area.jpg', imgI[:, :, 1])
-            #cv2.imwrite('/home/sthalham/visTests/grav.jpg', imgI[:, :, 2])
-            #cv2.imwrite('/home/sthalham/visTests/HAA.jpg', imgI)
-
-            # THIS for Training
-            # cnt, bb, area, mask = create_BB(rgbImg)
-
-            # THAT for Testing
-            # print(s)
-            # print(ss)
-            # print(gtYML[int(ss)])
             gtImg = gtYML[int(ss)]
 
             drawN = [1, 2, 2, 2, 2, 2, 2]
@@ -450,29 +432,25 @@ if __name__ == "__main__":
             #print(rnd)
             #if rnd == True:
 
-                fileName = target + 'images/val/' + imgNam
-                print(fileName)
+                fileName = target + 'images/val/' + imgNam[:-4] + '_dep.jpg'
+
                 myFile = Path(fileName)
                 if myFile.exists():
                     print('File exists, skip encoding, ', fileName)
                 else:
                     # imgI = encodeImage(depImg)
                     #imgI, depth_refine, depth_inp = get_normal(depImg, fx=fxca, fy=fyca, cx=cxca, cy=cyca, for_vis=False)
-                    depName = target + 'images/val/' + tempSS + imgNum + '_dep.png'
+                    #depName = target + 'images/val/' + tempSS + imgNum + '_dep.png'
                     #copyfile(depImgPath, depName)
 
                     depImg[depImg > depthCut] = 0
-                    depth_drs = np.log(depImg) + 2.0
-                    scaCro = 255.0 / (np.log(depthCut) + 2.0)
-                    cross = np.multiply(depth_drs, scaCro)
-                    imgI = cross.astype(np.uint8)
-                    imgI = np.repeat(imgI[:, :, np.newaxis], 3, 2)
-                    #depImg[depImg > depthCut] = 0
-                    #scaCro = 255/2000.0
-                    #cross = np.multiply(depImg, scaCro)
-                    #dep_sca = cross.astype(np.uint8)
-                    #imgI = np.repeat(dep_sca[:, :, np.newaxis], 3, 2)
+                    scaCro = 255/depthCut
+                    cross = np.multiply(depImg, scaCro)
+                    dep_sca = cross.astype(np.uint8)
+                    imgI = np.repeat(dep_sca[:, :, np.newaxis], 3, 2)
 
+                    rgb_name = fileName[:-8] + '_rgb.jpg'
+                    cv2.imwrite(rgb_name, rgbImg)
                     cv2.imwrite(fileName, imgI)
                     print("storing image in : ", fileName)
 
