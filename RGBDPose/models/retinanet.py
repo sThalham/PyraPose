@@ -16,7 +16,7 @@ def max_norm(w):
 def default_classification_model(
     num_classes,
     num_anchors,
-    pyramid_feature_size=512,
+    pyramid_feature_size=256,
     prior_probability=0.01,
     classification_feature_size=256,
     name='classification_submodel'
@@ -60,7 +60,7 @@ def default_classification_model(
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
-def default_regression_model(num_values, num_anchors, pyramid_feature_size=512, regression_feature_size=256, name='regression_submodel'):
+def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256, name='regression_submodel'):
     options = {
         'kernel_size'        : 3,
         'strides'            : 1,
@@ -91,7 +91,7 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=512, 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
-def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=512, regression_feature_size=256, name='3Dregression_submodel'):
+def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256, name='3Dregression_submodel'):
     options = {
         'kernel_size'        : 3,
         'strides'            : 1,
@@ -235,14 +235,38 @@ def retinanet(
 
         submodels = default_submodels(num_classes, num_anchors)
 
-    # compute pyramid features as per https://arxiv.org/abs/1708.02002
+    # FPN, feature concatenation to 512 feature maps
+    #features1 = create_pyramid_features(b1, b2, b3)
+    #features2 = create_pyramid_features(b4, b5, b6)
+    #P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0]])
+    #P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1]])
+    #P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2]])
+    #P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3]])
+    #P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4]])
+    #features = [P3_con, P4_con, P5_con, P6_con, P7_con]
+    #pyramids = __build_pyramid(submodels, features)
+
+    # FPN, feature convolution to 256 feature maps
+    options = {
+        'kernel_size': 3,
+        'strides': 1,
+        'padding': 'same',
+        'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer': 'zeros',
+        'kernel_regularizer': keras.regularizers.l2(0.001),
+    }
     features1 = create_pyramid_features(b1, b2, b3)
     features2 = create_pyramid_features(b4, b5, b6)
-    P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0]])
-    P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1]])
-    P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2]])
-    P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3]])
-    P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4]])
+    P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
+    P3_con = keras.layers.Conv2D(256, name='P3_con', **options)(P3_con)
+    P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
+    P4_con = keras.layers.Conv2D(256, name='P4_con', **options)(P4_con)
+    P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
+    P5_con = keras.layers.Conv2D(256, name='P5_con', **options)(P5_con)
+    P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
+    P6_con = keras.layers.Conv2D(256, name='P6_con', **options)(P6_con)
+    P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
+    P7_con = keras.layers.Conv2D(256, name='P7_con', **options)(P7_con)
     features = [P3_con, P4_con, P5_con, P6_con, P7_con]
     pyramids = __build_pyramid(submodels, features)
 
