@@ -147,7 +147,7 @@ if __name__ == "__main__":
                     #np.save(fileName, img_rgbd)
 
                 imgID = int(newredname)
-                imgName = newredname + '_rgb.jpg'
+                imgName = newredname + '.jpg'
                 # print(imgName)
 
                 # bb scaling because of image scaling
@@ -172,7 +172,13 @@ if __name__ == "__main__":
                     rot = tf3d.quaternions.quat2mat(poses[i, 3:])
                     rot = np.asarray(rot, dtype=np.float32)
 
-                    tDbox = rot[:3, :3].dot(threeD_boxes[objID, :, :].T).T
+                    if objID > 5:
+                        cls = objID + 2
+                    elif objID > 2:
+                        cls = objID + 1
+                    else:
+                        cls = objID
+                    tDbox = rot[:3, :3].dot(threeD_boxes[cls, :, :].T).T
                     tDbox = tDbox + np.repeat(poses[i, np.newaxis, 0:3], 8, axis=0)
 
                     # if objID == 10 or objID == 11:

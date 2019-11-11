@@ -283,14 +283,30 @@ def boxoverlap(a, b):
 
 def evaluate_linemod(generator, model, threshold=0.05):
     threshold = 0.5
-    """ Use the pycocotools to evaluate a COCO model on a dataset.
 
-    Args
-        generator : The generator for generating the evaluation data.
-        model     : The model to evaluate.
-        threshold : The score threshold to use.
-    """
-    # start collecting results
+    mesh_info = '/RGBDPose/linemod_13/models_info.json'
+    threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
+    model_dia = np.zeros((31), dtype=np.float32)
+
+    for key, value in yaml.load(open(mesh_info)).items():
+        fac = 0.001
+        x_minus = value['min_x'] * fac
+        y_minus = value['min_y'] * fac
+        z_minus = value['min_z'] * fac
+        x_plus = value['size_x'] * fac + x_minus
+        y_plus = value['size_y'] * fac + y_minus
+        z_plus = value['size_z'] * fac + z_minus
+        three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                  [x_plus, y_plus, z_minus],
+                                  [x_plus, y_minus, z_minus],
+                                  [x_plus, y_minus, z_plus],
+                                  [x_minus, y_plus, z_plus],
+                                  [x_minus, y_plus, z_minus],
+                                  [x_minus, y_minus, z_minus],
+                                  [x_minus, y_minus, z_plus]])
+        threeD_boxes[int(key), :, :] = three_box_solo
+        model_dia[int(key)] = value['diameter']
+
     results = []
     image_ids = []
     image_indices = []

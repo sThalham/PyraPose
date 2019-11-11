@@ -234,33 +234,32 @@ class Generator(keras.utils.Sequence):
             for index in range(annotations['bboxes'].shape[0]):
                 annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
                 annotations['segmentations'][index, :] = transform_box3d(transform, annotations['segmentations'][index, :])
-                image_rgb = image[0]
-                image_dep = image[1]
-                cv2.rectangle(image_rgb, (int(annotations['bboxes'][index, 0]), int(annotations['bboxes'][index, 1])), (int(annotations['bboxes'][index, 2]), int(annotations['bboxes'][index, 3])),(255, 255, 255), 2)
-                cv2.rectangle(image_rgb, (int(annotations['bboxes'][index, 0]), int(annotations['bboxes'][index, 1])), (int(annotations['bboxes'][index, 2]), int(annotations['bboxes'][index, 3])),(0, 0, 0), 1)
+                #image_rgb = image[0]
+                #image_dep = image[1]
+                #cv2.rectangle(image_dep, (int(annotations['bboxes'][index, 0]), int(annotations['bboxes'][index, 1])), (int(annotations['bboxes'][index, 2]), int(annotations['bboxes'][index, 3])),(255, 255, 255), 2)
+                #cv2.rectangle(image_dep, (int(annotations['bboxes'][index, 0]), int(annotations['bboxes'][index, 1])), (int(annotations['bboxes'][index, 2]), int(annotations['bboxes'][index, 3])),(0, 0, 0), 1)
 
-                print(annotations['segmentations'][index, :])
-                colR = random.randint(0, 255)
-                colG = random.randint(0, 255)
-                colB = random.randint(0, 255)
-                annotations['segmentations'] = annotations['segmentations'].astype(np.int8)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,0:2].ravel()), tuple(annotations['segmentations'][index,2:4].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,2:4].ravel()), tuple(annotations['segmentations'][index,4:6].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,4:6].ravel()), tuple(annotations['segmentations'][index,6:8].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,6:8].ravel()), tuple(annotations['segmentations'][index,0:2].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,0:2].ravel()), tuple(annotations['segmentations'][index,8:10].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,2:4].ravel()), tuple(annotations['segmentations'][index,10:12].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,4:6].ravel()), tuple(annotations['segmentations'][index,12:14].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,6:8].ravel()), tuple(annotations['segmentations'][index,14:16].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,8:10].ravel()), tuple(annotations['segmentations'][index,10:12].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,10:12].ravel()), tuple(annotations['segmentations'][index,12:14].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,12:14].ravel()), tuple(annotations['segmentations'][index,14:16].ravel()), (colR, colG, colB), 2)
-                image_rgb = cv2.line(image_rgb, tuple(annotations['segmentations'][index,14:16].ravel()), tuple(annotations['segmentations'][index,8:10].ravel()), (colR, colG, colB), 2)
+                #print(annotations['segmentations'][index, :])
+                ##colR = random.randint(0, 255)
+                #colG = random.randint(0, 255)
+                #colB = random.randint(0, 255)
+                #annotations['segmentations'] = annotations['segmentations'].astype(np.uint16)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,0:2].ravel()), tuple(annotations['segmentations'][index,2:4].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,2:4].ravel()), tuple(annotations['segmentations'][index,4:6].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,4:6].ravel()), tuple(annotations['segmentations'][index,6:8].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,6:8].ravel()), tuple(annotations['segmentations'][index,0:2].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,0:2].ravel()), tuple(annotations['segmentations'][index,8:10].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,2:4].ravel()), tuple(annotations['segmentations'][index,10:12].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,4:6].ravel()), tuple(annotations['segmentations'][index,12:14].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,6:8].ravel()), tuple(annotations['segmentations'][index,14:16].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,8:10].ravel()), tuple(annotations['segmentations'][index,10:12].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,10:12].ravel()), tuple(annotations['segmentations'][index,12:14].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,12:14].ravel()), tuple(annotations['segmentations'][index,14:16].ravel()), (colR, colG, colB), 2)
+                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,14:16].ravel()), tuple(annotations['segmentations'][index,8:10].ravel()), (colR, colG, colB), 2)
 
-            print('image storing')
-            time_now = time.time()
-            cv2.imwrite('/home/sthalham/RGBD_inprocess/rgb_after_transform' + str(time_now) + '.jpg', image_rgb)
-
+            #print('image storing')
+            #time_now = time.time()
+            #cv2.imwrite('/home/stefan/RGBD_inprocess/rgb_after_transform' + str(time_now) + '.jpg', image_dep)
 
         return image, annotations
 
