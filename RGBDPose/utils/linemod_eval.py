@@ -366,6 +366,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
+        image_raw_dep = generator.load_image_dep(index)
+        image_dep = generator.preprocess_image(image_raw_dep)
+        image_dep, scale = generator.resize_image(image_dep)
+
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
 
@@ -395,7 +399,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             continue
 
         # run network
-        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        images = []
+        images.append(image)
+        images.append(image_dep)
+        boxes, boxes3D, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         # correct boxes for image scale
         boxes /= scale
@@ -445,6 +452,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
 
             cls = generator.label_to_inv_label(label)
+            if cls > 5:
+                cls += 2
+            elif cls > 2:
+                cls += 1
+            else: pass
             #cls = 1
             #control_points = box3D[(cls - 1), :]
             control_points = box3D
@@ -546,6 +558,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         R_est, _ = cv2.Rodrigues(orvec)
                         t_est = otvec
+                        print(t_est)
 
                         rot = tf3d.quaternions.mat2quat(R_est)
                         #pose = np.concatenate(

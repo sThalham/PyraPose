@@ -36,7 +36,6 @@ class Backbone(object):
         """
         raise NotImplementedError('retinanet method not implemented.')
 
-
     def validate(self):
         """ Checks whether the backbone string is correct.
         """
@@ -60,6 +59,9 @@ def backbone(backbone_name):
 
 def load_model(filepath, backbone_name='resnet50'):
     import keras.models
+    #return keras.models.load_model(filepath, custom_objects=backbone(backbone_name).custom_objects)
+    print(backbone(backbone_name).custom_objects)
+    print(backbone(backbone_name))
     return keras.models.load_model(filepath, custom_objects=backbone(backbone_name).custom_objects)
 
 

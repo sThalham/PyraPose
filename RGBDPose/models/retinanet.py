@@ -16,7 +16,7 @@ def max_norm(w):
 def default_classification_model(
     num_classes,
     num_anchors,
-    pyramid_feature_size=256,
+    pyramid_feature_size=512,
     prior_probability=0.01,
     classification_feature_size=256,
     name='classification_submodel'
@@ -31,9 +31,7 @@ def default_classification_model(
         inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
         inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
-    #    inputs  = keras.layers.Input(shape=(pyramid_feature_size, None))
-    #else:
-    #    inputs  = keras.layers.Input(shape=(None, pyramid_feature_size))
+
     outputs = inputs
     for i in range(4):
         outputs = keras.layers.Conv2D(
@@ -62,7 +60,7 @@ def default_classification_model(
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
-def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256, name='regression_submodel'):
+def default_regression_model(num_values, num_anchors, pyramid_feature_size=512, regression_feature_size=256, name='regression_submodel'):
     options = {
         'kernel_size'        : 3,
         'strides'            : 1,
@@ -75,9 +73,7 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
         inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
         inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
-    #    inputs = keras.layers.Input(shape=(pyramid_feature_size, None))
-    #else:
-    #    inputs = keras.layers.Input(shape=(None, pyramid_feature_size))
+
     outputs = inputs
     for i in range(4):
         outputs = keras.layers.Conv2D(
@@ -95,7 +91,7 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
-def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256, name='3Dregression_submodel'):
+def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=512, regression_feature_size=256, name='3Dregression_submodel'):
     options = {
         'kernel_size'        : 3,
         'strides'            : 1,
@@ -109,9 +105,7 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
         inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
         inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
-    #    inputs = keras.layers.Input(shape=(pyramid_feature_size, None))
-    #else:
-    #    inputs = keras.layers.Input(shape=(None, pyramid_feature_size))
+
     outputs = inputs
     for i in range(4):
         outputs = keras.layers.Conv2D(
@@ -158,16 +152,24 @@ def __create_pyramid_features(C3, C4, C5, feature_size=256):
 
 
 def projection_block(inputs, feature_size=256, BN=True):
+    options = {
+        'kernel_size': 3,
+        'strides': 1,
+        'padding': 'same',
+        'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer': 'zeros'
+    }
 
-    outputs = keras.layers.Conv2D(feature_size, activation='relu', kernel_size=7, strides=1, padding='same')(inputs)
+    #outputs = keras.layers.Conv2D(filters=feature_size, activation='relu', kernel_size=7, padding='valid')(inputs)
     #outputs = keras.layers.BatchNormalization(axis=3)(outputs)
     #outputs = keras.activations.relu(outputs)
 
-    outputs = keras.layers.Conv2D(feature_size, activation='relu', kernel_size=1, strides=1, padding='same')(outputs)
+    #outputs = keras.layers.Conv2D(filters=feature_size, activation='relu', kernel_size=3, padding='valid')(outputs)
     #outputs = keras.layers.BatchNormalization(axis=3)(outputs)
     #outputs = keras.activations.relu(outputs)
 
-    outputs = keras.layers.GlobalMaxPooling2D(keras.backend.image_data_format())(outputs)
+    outputs = keras.layers.Conv2D(filters=feature_size, activation='relu', **options)(inputs)
+    outputs = keras.layers.GlobalMaxPooling2D()(outputs)
 
     return outputs
 
@@ -230,36 +232,37 @@ def retinanet(
         num_anchors = AnchorParameters.default.num_anchors()
 
     if submodels is None:
-        print(num_anchors)
+
         submodels = default_submodels(num_classes, num_anchors)
 
     # compute pyramid features as per https://arxiv.org/abs/1708.02002
-    #features1 = create_pyramid_features(b1, b2, b3)
-    #features2 = create_pyramid_features(b4, b5, b6)
-    #P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0]])
-    #P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1]])
-    #P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2]])
-    #P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3]])
-    #P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4]])
-    #features = [P3_con, P4_con, P5_con, P6_con, P7_con]
-    #pyramids = __build_pyramid(submodels, features)
-
-    features1 = __create_projection_features(b1, b2, b3)
-    features2 = __create_projection_features(b3, b5, b6)
+    features1 = create_pyramid_features(b1, b2, b3)
+    features2 = create_pyramid_features(b4, b5, b6)
     P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0]])
     P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1]])
     P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2]])
-    P3_con = tensorflow.keras.backend.expand_dims(P3_con, axis=1)
-    P4_con = tensorflow.keras.backend.expand_dims(P4_con, axis=1)
-    P5_con = tensorflow.keras.backend.expand_dims(P5_con, axis=1)
-    P3_con = tensorflow.keras.backend.expand_dims(P3_con, axis=1)
-    P4_con = tensorflow.keras.backend.expand_dims(P4_con, axis=1)
-    P5_con = tensorflow.keras.backend.expand_dims(P5_con, axis=1)
-    features = [P3_con, P4_con, P5_con]
-    print(features)
+    P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3]])
+    P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4]])
+    features = [P3_con, P4_con, P5_con, P6_con, P7_con]
     pyramids = __build_pyramid(submodels, features)
-    print(features)
-    print(pyramids)
+
+    #features1 = __create_projection_features(b1, b2, b3)
+    #features2 = __create_projection_features(b4, b5, b6)
+    #P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0]])
+    #P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1]])
+    #P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2]])
+
+    #if keras.backend.image_data_format() == 'channels_first':
+    #    P3_con = keras.layers.Permute((2, 3, 1))(P3_con)
+    #    P4_con = keras.layers.Permute((2, 3, 1))(P4_con)
+    #    P5_con = keras.layers.Permute((2, 3, 1))(P5_con)
+    #P3_con = keras.layers.Reshape((-1, 512))(P3_con)
+    #P4_con = keras.layers.Reshape((-1, 512))(P4_con)
+    #P5_con = keras.layers.Reshape((-1, 512))(P5_con)
+    #features = [P3_con, P4_con, P5_con]
+    #print(features)
+    #pyramids = __build_pyramid(submodels, features)
+    #print(pyramids)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -284,8 +287,8 @@ def retinanet_bbox(
         assert_training_model(model)
 
     # compute the anchors
-    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
-    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
+    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
     anchors  = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output

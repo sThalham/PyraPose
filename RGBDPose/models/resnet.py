@@ -31,7 +31,7 @@ class ResNetBackbone(Backbone):
 
     def __init__(self, backbone):
         super(ResNetBackbone, self).__init__(backbone)
-        self.custom_objects.update(keras_resnet.custom_objects)
+        #self.custom_objects.update(keras.models)
 
     def retinanet(self, *args, **kwargs):
         """ Returns a retinanet model using the correct backbone.
