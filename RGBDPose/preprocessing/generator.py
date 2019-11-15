@@ -261,7 +261,6 @@ class Generator(keras.utils.Sequence):
             time_now = time.time()
             cv2.imwrite('/home/sthalham/RGBD_inprocess/rgb_after_transform' + str(time_now) + '.jpg', image_rgb)
 
-
         return image, annotations
 
     def random_transform_group(self, image_group, annotations_group):
