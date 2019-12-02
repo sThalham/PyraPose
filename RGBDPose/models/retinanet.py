@@ -128,25 +128,25 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
     P5_upsampled = layers.UpsampleLike()([P5, C4])
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P5')(P5)
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P5_con')(P5)
 
     # add P5 elementwise to C4
     P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
     P4 = keras.layers.Add()([P5_upsampled, P4])
     P4_upsampled = layers.UpsampleLike()([P4, C3])
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P4')(P4)
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P4_con')(P4)
 
     # add P4 elementwise to C3
     P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
     P3 = keras.layers.Add()([P4_upsampled, P3])
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3')(P3)
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3_con')(P3)
 
     # "P6 is obtained via a 3x3 stride-2 conv on C5"
-    P6 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P6')(C5)
+    P6 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P6_con')(C5)
 
     # "P7 is computed by applying ReLU followed by a 3x3 stride-2 conv on P6"
     P7 = keras.layers.Activation('relu')(P6)
-    P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7')(P7)
+    P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7_con')(P7)
 
     return [P3, P4, P5, P6, P7]
 
@@ -165,14 +165,14 @@ def __create_pyramid_features_2(C3, C4, C5, feature_size=256):
     # add P4 elementwise to C3
     P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
     P3 = keras.layers.Add()([P4_upsampled, P3])
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3')(P3)
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3_2')(P3)
 
     # "P6 is obtained via a 3x3 stride-2 conv on C5"
-    P6 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P6')(C5)
+    P6 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P6_2')(C5)
 
     # "P7 is computed by applying ReLU followed by a 3x3 stride-2 conv on P6"
     P7 = keras.layers.Activation('relu')(P6)
-    P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7')(P7)
+    P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7_2')(P7)
 
     return [P3, P4, P5, P6, P7]
 
@@ -217,12 +217,33 @@ def default_submodels(num_classes, num_anchors):
     ]
 
 
+def default_submodels_2(num_classes, num_anchors):
+    return [
+        ('bbox', default_regression_model(4, num_anchors)),
+        ('3Dbox', default_3Dregression_model(16, num_anchors)),
+        ('cls', default_classification_model(num_classes, num_anchors)),
+        ('bbox_2', default_regression_model(4, num_anchors)),
+        ('3Dbox_2', default_3Dregression_model(16, num_anchors)),
+        ('cls_2', default_classification_model(num_classes, num_anchors))
+    ]
+
+
 def __build_model_pyramid(name, model, features):
     return keras.layers.Concatenate(axis=1, name=name)([model(f) for f in features])
 
 
 def __build_pyramid(models, features):
     return [__build_model_pyramid(n, m, features) for n, m in models]
+
+
+def __build_pyramid_duo(models, features1, features2):
+    outs = []
+    for n, m in models[:3]:
+        outs.append(__build_model_pyramid(n, m, features1))
+    for n, m in models[3:]:
+        outs.append(__build_model_pyramid(n, m, features2))
+
+    return outs
 
 
 def __build_anchors(anchor_parameters, features):
@@ -239,14 +260,34 @@ def __build_anchors(anchor_parameters, features):
     return keras.layers.Concatenate(axis=1, name='anchors')(anchors)
 
 
-def fuse_rgb_and_d(anchors1, anchors2):
+def __fuse_rgbd_outputs(pyramids1, pyramids2, num_anchors):
 
-    anchors = []
-    for i, an in enumerate(anchors):
+    pyramids_outputs = []
 
-        bb = keras.layers.Concatenate(axis=1)([anchors1[i][0], anchors2[i][0]])
-        bb = keras.layers.Dense()
+    for po, model_out_1 in enumerate(pyramids1):
+        model_out_2 = pyramids2[po]
+        num_values = keras.backend.int_shape(model_out_2)[-1]
 
+        outputs_models = keras.layers.Concatenate()([model_out_1, model_out_2])
+        #print(outputs_models)
+        #outputs_models = keras.layers.Flatten()(outputs_models)
+        print(outputs_models)
+        outputs_models = keras.layers.Dense(num_anchors * num_values)(outputs_models)
+        re_name = 'out_reshape_' + str(po)
+        outputs_models = keras.layers.Reshape((-1, num_values), name=re_name)(outputs_models)
+
+        #features_con = keras.layers.Concatenate()([f for f in features])
+        #features_con = keras.layers.Flatten()(features_con)
+        #print(features_con)
+        #fused_outputs = keras.layers.Concatenate()([outputs_models, features_con])
+        #outputs_models = keras.layers.Dense(num_anchors * num_values)(fused_outputs, outputs_models)
+        #if keras.backend.image_data_format() == 'channels_first':
+        #    outputs_models = keras.layers.Permute((2, 3, 1))(outputs_models)  # , name='pyramid_regression3D_permute'
+        #outputs_models = keras.layers.Reshape((-1, num_values))(outputs_models)
+
+        pyramids_outputs.append(outputs_models)
+
+    return pyramids_outputs
 
 
 def retinanet(
@@ -260,6 +301,7 @@ def retinanet(
     num_classes,
     num_anchors             = None,
     create_pyramid_features = __create_pyramid_features,
+    create_pyramid_features_2 = __create_pyramid_features_2,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -278,7 +320,8 @@ def retinanet(
 
     if submodels is None:
 
-        submodels = default_submodels(num_classes, num_anchors)
+        #submodels = default_submodels(num_classes, num_anchors)
+        submodels_2 = default_submodels_2(num_classes, num_anchors)
 
     # FPN, feature concatenation to 512 feature maps
     #features1 = create_pyramid_features(b1, b2, b3)
@@ -329,13 +372,25 @@ def retinanet(
     #features = [P3_con, P4_con, P5_con]
     #pyramids = __build_pyramid(submodels, features)
 
-    # learn fusion
+    # correlated features
+    # features1 = create_pyramid_features(b1, b2, b3)
+    # features2 = create_pyramid_features(b4, b5, b6)
+    #b14_con = keras.layers.Concatenate()([b1, b4])
+    #b25_con = keras.layers.Concatenate()([b2, b5])
+    #b36_con = keras.layers.Concatenate()([b3, b6])
+    #features_corr = create_pyramid_features(b14_con, b25_con, b36_con)
+    # P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0], features_corr[0]])
+    # P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1], features_corr[1]])
+    # P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2], features_corr[2]])
+    # P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3], features_corr[3]])
+    # P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4], features_corr[4]])
+
+    # output fusion
     features1 = create_pyramid_features(b1, b2, b3)
     features2 = create_pyramid_features_2(b4, b5, b6)
-    pyramids1 = __build_pyramid(submodels, features1)
-    pyramids2 = __build_pyramid(submodels, features2)
+    pyramids = __build_pyramid_duo(submodels_2, features1, features2)
 
-    return keras.models.Model(inputs=inputs, outputs=[pyramids1, pyramids2], name=name)
+    return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
 
 def retinanet_bbox(
@@ -358,14 +413,9 @@ def retinanet_bbox(
         assert_training_model(model)
 
     # compute the anchors
-    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
-    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
-    features1 = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5', 'P6', 'P7']]
-    features2 = [model.get_layer(p_name).output for p_name in ['P3_2', 'P4_2', 'P5_2', 'P6_2', 'P7_2']]
-    anchors1  = __build_anchors(anchor_params, features1)
-    anchors2 = __build_anchors(anchor_params, features2)
-
-    fused_outputs = fuse_rgb_and_d(anchors1, anchors2)
+    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    # features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
+    anchors = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output
     #regression = model.outputs[0]
@@ -373,16 +423,18 @@ def retinanet_bbox(
     #classification = model.outputs[2]
     #other = model.outputs[3:]
 
-    regression = fused_outputs.outputs[0]
-    regression3D = fused_outputs.outputs[1]
-    classification = fused_outputs.outputs[2]
-    other = fused_outputs.outputs[3:]
+    num_anchors = AnchorParameters.default.num_anchors()
+    fused_outputs = __fuse_rgbd_outputs(model.outputs[0:3], model.outputs[3:], num_anchors)
+    regression = fused_outputs[0]
+    regression3D = fused_outputs[1]
+    classification = fused_outputs[2]
+    other = fused_outputs[3:]
 
     # apply predicted regression to anchors
-    boxes = layers.RegressBoxes(name='boxes')([anchors1, regression])
+    boxes = layers.RegressBoxes(name='boxes')([anchors, regression])
     boxes = layers.ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
 
-    boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors1, regression3D])
+    boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
     # filter detections (apply NMS / score threshold / select top-k)
     detections = layers.FilterDetections(

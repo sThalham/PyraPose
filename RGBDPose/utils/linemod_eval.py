@@ -29,6 +29,7 @@ import cv2
 import open3d
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
+import yaml
 import time
 
 import progressbar
@@ -284,7 +285,8 @@ def boxoverlap(a, b):
 def evaluate_linemod(generator, model, threshold=0.05):
     threshold = 0.5
 
-    mesh_info = '/RGBDPose/linemod_13/models_info.json'
+    #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
+    mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
 
@@ -305,7 +307,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                   [x_minus, y_minus, z_minus],
                                   [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
-        model_dia[int(key)] = value['diameter']
+        model_dia[int(key)] = value['diameter'] * fac
 
     results = []
     image_ids = []
@@ -559,7 +561,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         fn[t_cat] -= 1
                         fnit = False
 
-                        obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :], dtype=np.float32) #.reshape((8, 1, 3))
+                        obj_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32) #.reshape((8, 1, 3))
                         est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
 
                         K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
@@ -574,12 +576,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         R_est, _ = cv2.Rodrigues(orvec)
                         t_est = otvec
-                        print(t_est)
 
                         rot = tf3d.quaternions.mat2quat(R_est)
                         #pose = np.concatenate(
                         #            (np.array(t_est[:, 0], dtype=np.float32), np.array(rot, dtype=np.float32)), axis=0)
-
 
                         t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
                         R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
@@ -587,23 +587,49 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         rd = re(R_gt, R_est)
                         xyz = te(t_gt, t_est.T)
-                        #print(control_points)
-
-                        #tDbox = R_gt.dot(obj_points.T).T
-                        #tDbox = tDbox + np.repeat(t_gt[np.newaxis, :], 8, axis=0)
-                        #box3D = toPix_array(tDbox)
-                        #tDbox = np.reshape(box3D, (16))
-                        #print(tDbox)
 
                         '''
                         pose = est_points.reshape((16)).astype(np.int16)
                         bb = b1
 
+                        tDbox = R_gt.dot(obj_points.T).T
+                        tDbox = tDbox + np.repeat(t_gt[np.newaxis, :], 8, axis=0)
+                        box3D = toPix_array(tDbox)
+                        tDbox = np.reshape(box3D, (16))
+                        tDbox = tDbox.astype(np.uint16)
+
                         colGT = (0, 128, 0)
                         colEst = (255, 0, 0)
 
-                        cv2.rectangle(image, (int(bb[1]), int(bb[0])), (int(bb[3]), int(bb[2])),
+                        cv2.rectangle(image, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
                                       (255, 255, 255), 2)
+
+                        image = cv2.line(image, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 3)
+                        image = cv2.line(image, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 3)
+                        image = cv2.line(image, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
+                                         colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
+                                         colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
+                                         colGT,
+                                         3)
+                        image = cv2.line(image, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
+                                         colGT,
+                                         3)
 
                         image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 5)
                         image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 5)
@@ -649,14 +675,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
                             err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
                         print(' ')
-                        print('error: ', err_add, 'threshold', model_dia[cls - 1] * 0.1)
+                        print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
                         if not math.isnan(err_add):
-                            if err_add < (model_dia[cls - 1] * 0.1):
+                            if err_add < (model_dia[cls] * 0.1):
                                 add_less_d[t_cat] += 1
 
                         if not math.isnan(err_add):
-                            if err_add < (model_dia[cls - 1] * 0.15):
+                            if err_add < (model_dia[cls] * 0.15):
                                 tp_add[t_cat] += 1
                                 fn_add[t_cat] -= 1
 
