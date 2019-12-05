@@ -196,13 +196,55 @@ def default_submodels(num_classes, num_anchors):
 
 def default_submodels_2(num_classes, num_anchors):
     return [
-        ('bbox_rgb', default_regression_model(4, num_anchors)),
-        ('3Dbox_rgb', default_3Dregression_model(16, num_anchors)),
-        ('cls_rgb', default_classification_model(num_classes, num_anchors)),
+        ('bbox', default_regression_model(4, num_anchors)),
+        ('3Dbox', default_3Dregression_model(16, num_anchors)),
+        ('cls', default_classification_model(num_classes, num_anchors)),
         ('bbox_dep', default_regression_model(4, num_anchors)),
         ('3Dbox_dep', default_3Dregression_model(16, num_anchors)),
         ('cls_dep', default_classification_model(num_classes, num_anchors))
     ]
+
+
+def __build_fusion_pyramid(name_rgb, model_rgb, name_dep, model_dep, features_rgb, features_dep, num_anchors):
+    options = {
+        'kernel_size': 3,
+        'strides': 1,
+        'padding': 'same',
+        'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer': 'zeros',
+    }
+
+    outputs = []
+
+    for idx, feat1 in enumerate(features_rgb):
+        feat2 = features_dep[idx]
+        out_rgb = model_rgb(feat1)
+        out_dep = model_dep(feat2)
+        features = keras.layers.Concatenate()([feat1, feat2])
+        num_features = keras.backend.int_shape(features)[-1]
+        features = keras.layers.Dense(num_anchors * num_features)(features)
+        features = keras.layers.Reshape((-1, num_features))(features)
+        outputs_head = keras.layers.Concatenate(axis=-1)([out_rgb, out_dep, features])
+
+        num_values = keras.backend.int_shape(out_rgb)[-1]
+        outputs_head = keras.layers.Dense(num_anchors * num_values)(outputs_head)
+        if keras.backend.image_data_format() == 'channels_first':
+            outputs_head = keras.layers.Permute((2, 3, 1))(outputs_head)
+        outputs_head = keras.layers.Reshape((-1, num_values))(outputs_head)
+        outputs.append(outputs_head)
+
+    return keras.layers.Concatenate(axis=1, name=name_rgb)(outputs)
+
+
+def __fuse_pyramid(models, features1, features2, num_anchors):
+    outputs = []
+
+    for idx, m_rgb in enumerate(models[:3]):
+        m_dep = models[3:][idx]
+        fused_models = __build_fusion_pyramid(m_rgb[0], m_rgb[1], m_dep[0], m_dep[1], features1, features2, num_anchors)
+        outputs.append(fused_models)
+
+    return outputs
 
 
 def __build_model_pyramid(name, model, features):
@@ -396,13 +438,14 @@ def retinanet(
     # naive output fusion
     features1 = create_pyramid_features(b1, b2, b3)
     features2 = create_pyramid_features_2(b4, b5, b6)
-    pyramids = __build_pyramid_duo(submodels_2, features1, features2)
-    fused_pyramids = output_fusion_model(pyramids, num_anchors)
+    #pyramids = __build_pyramid_duo(submodels_2, features1, features2)
+    #fused_pyramids = output_fusion_model(pyramids, num_anchors)
+    pyramids = __fuse_pyramid(submodels_2, features1, features2, num_anchors)
 
     #fused_pyramids = default_fusion_model(pyramids, features, num_anchors)
 
 
-    return keras.models.Model(inputs=inputs, outputs=fused_pyramids, name=name)
+    return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
 
 def retinanet_bbox(
