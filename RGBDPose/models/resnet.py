@@ -63,8 +63,8 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
             inputs_1 = keras.layers.Input(shape=(3, None, None))
         else:
             #inputs = keras.layers.Input(shape=(None, None, 3))
-            inputs_0 = keras.layers.Input(shape=(None, None, 3))
-            inputs_1 = keras.layers.Input(shape=(None, None, 3))
+            inputs_0 = keras.layers.Input(shape=(480, 640, 3))
+            inputs_1 = keras.layers.Input(shape=(480, 640, 3))
         #inputs = keras.layers.Concatenate()([inputs_0, inputs_1])
 
     #effnet_rgb = EfficientNetB2(input_tensor=inputs_0, weights='imagenet', include_top=False, pooling=None, classes=num_classes)
