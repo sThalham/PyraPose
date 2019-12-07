@@ -19,11 +19,11 @@ import tensorflow as tf
 from . import backend
 
 
-def focal(alpha=0.25, gamma=2.0):
+def focal(alpha=1.0, gamma=2.0):
     """ Create a functor for computing the focal loss.
 
     Args
-        alpha: Scale the focal weight with alpha. vanilla 0.25
+        alpha: Scale the focal weight with alpha. vanilla 0.25 2.0
         gamma: Take the power of the focal weight with gamma.
 
     Returns
