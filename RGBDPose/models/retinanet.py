@@ -225,38 +225,30 @@ def __build_fusion_pyramid(name_rgb, model_rgb, name_dep, model_dep, features_rg
         if name_rgb == 'cls':
             num_values = 13
 
+        # fuse before output calculation
+        #features = keras.layers.Concatenate()([feat1, feat2])
+        #num_features = 256
+        #features = keras.layers.Conv2D(num_features, **options)(features)
+        #outputs_head = keras.layers.Concatenate(axis=-1)([out_rgb, out_dep, features])
+        #outputs_head = keras.layers.Conv2D(num_anchors * num_values, **options)(outputs_head)
+
+        # fuse outputs directly
         features = keras.layers.Concatenate()([feat1, feat2])
         num_features = keras.backend.int_shape(features)[-1]
-        num_features = 256
-        num_all = keras.backend.int_shape(out_rgb)[-1]
-        features = keras.layers.Conv2D(num_features, **options)(features)
-        print(features)
-        #features = keras.layers.Conv2D(num_anchors * num_features, **options)(features)
-        #features = keras.layers.Reshape((-1, num_features))(features)
-        #features = keras.layers.Dense(num_features)(features)
-        #features = keras.layers.BatchNormalization(axis=-1)(features)
-
-        #out_rgb = keras.layers.Dense(num_anchors * num_values)(out_rgb)
-        #out_dep = keras.layers.Dense(num_anchors * num_values)(out_dep)
-        #out_rgb = keras.layers.Reshape((-1, num_all))(out_rgb)
-        #out_dep = keras.layers.Reshape((-1, num_all))(out_dep)
-        #outputs_head = keras.layers.Concatenate(axis=-1)([out_rgb, out_dep])
-        #out_rgb = keras.layers.BatchNormalization(axis=-1)(out_rgb)
-        #out_dep = keras.layers.BatchNormalization(axis=-1)(out_dep)
+        num_all = keras.backend.int_shape(out_rgb)[-1]#
+        features = keras.layers.Reshape((-1, num_features))(features)
+        out_rgb = keras.layers.Reshape((-1, num_all))(out_rgb)
+        out_dep = keras.layers.Reshape((-1, num_all))(out_dep)
         outputs_head = keras.layers.Concatenate(axis=-1)([out_rgb, out_dep, features])
-        #outputs_head = keras.layers.BatchNormalization(axis=-1)(outputs_head)
-        #print(outputs_head)
+        outputs_head = keras.layers.Dense(256)(outputs_head)
+        outputs_head = keras.layers.Dense(num_anchors * num_values)(outputs_head)
 
-        #num_values = keras.backend.int_shape(out_rgb)[-1]
-        #outputs_head = keras.layers.Conv2D(num_anchors * num_values, **options)(outputs_head)
-        #outputs_head = keras.layers.Dense(num_anchors * num_values)(outputs_head)
-        outputs_head = keras.layers.Conv2D(num_anchors * num_values, **options)(outputs_head)
         if keras.backend.image_data_format() == 'channels_first':
             outputs_head = keras.layers.Permute((2, 3, 1))(outputs_head)
         outputs_head = keras.layers.Reshape((-1, num_values), name='submodel' + name_rgb + str(idx))(outputs_head)
         if name_rgb == 'cls':
-            #outputs_head = keras.layers.Activation('sigmoid')(outputs_head)  # , name='pyramid_classification_sigmoid'
-            outputs_head = keras.layers.Activation('softmax')(outputs_head)
+            outputs_head = keras.layers.Activation('sigmoid')(outputs_head)  # , name='pyramid_classification_sigmoid'
+            #outputs_head = keras.layers.Activation('softmax')(outputs_head)
 
         outputs.append(outputs_head)
 
