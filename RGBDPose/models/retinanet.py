@@ -48,8 +48,8 @@ def default_classification_model(
 
     outputs = inputs
     for i in range(4):
-        #outputs = keras.layers.Conv2D(
-        outputs = keras.layers.SeparableConv2D(
+        outputs = keras.layers.Conv2D(
+        #outputs = keras.layers.SeparableConv2D(
             filters=classification_feature_size,
             activation='relu',
             #name='pyramid_classification_{}'.format(i),
@@ -91,8 +91,8 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
 
     outputs = inputs
     for i in range(4):
-        #outputs = keras.layers.Conv2D(
-        outputs = keras.layers.SeparableConv2D(
+        outputs = keras.layers.Conv2D(
+        #outputs = keras.layers.SeparableConv2D(
             filters=regression_feature_size,
             activation='relu',
             #name='pyramid_regression_{}'.format(i),
@@ -124,8 +124,8 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
 
     outputs = inputs
     for i in range(4):
-        #outputs = keras.layers.Conv2D(
-        outputs = keras.layers.SeparableConv2D(
+        outputs = keras.layers.Conv2D(
+        #outputs = keras.layers.SeparableConv2D(
             filters=regression_feature_size,
             activation='relu',
             #name='pyramid_regression3D_{}'.format(i),
@@ -164,6 +164,25 @@ def __create_pyramid_features(C3, C4, C5, feature_size=256):
     P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7_con')(P7)
 
     return [P3, P4, P5, P6, P7]
+
+
+def __reduced_pyramid_features(C3, C4, C5, feature_size=256):
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
+    P5_upsampled = layers.UpsampleLike()([P5, C4])
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P5)
+
+    # add P5 elementwise to C4
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
+    P4 = keras.layers.Add()([P5_upsampled, P4])
+    P4_upsampled = layers.UpsampleLike()([P4, C3])
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4)
+
+    # add P4 elementwise to C3
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
+    P3 = keras.layers.Add()([P4_upsampled, P3])
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P3)
+
+    return [P3, P4, P5]
 
 
 def __create_pyramid_features_2(C3, C4, C5, feature_size=256):
@@ -387,7 +406,8 @@ def retinanet(
     num_classes,
     num_anchors             = None,
     #create_pyramid_features = __create_pyramid_features,
-    create_pyramid_features_2 = __create_pyramid_features_2,
+    #create_pyramid_features_2 = __create_pyramid_features_2,
+    reduced_pyramid_features_2 = __reduced_pyramid_features,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -433,8 +453,8 @@ def retinanet(
     #print(pyramids)
 
     # FPN, feature convolution to 256 feature maps
-    features1 = create_pyramid_features_2(b1, b2, b3)
-    features2 = create_pyramid_features_2(b4, b5, b6)
+    features1 = reduced_pyramid_features_2(b1, b2, b3)
+    features2 = reduced_pyramid_features_2(b4, b5, b6)
     P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
     #P3_con = keras.layers.Conv2D(256, **options)(P3_con)
     P3_con = keras.layers.Conv2D(256, name='P3_con', **options2)(P3_con)
@@ -444,13 +464,13 @@ def retinanet(
     P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
     #P5_con = keras.layers.Conv2D(256, **options)(P5_con)
     P5_con = keras.layers.Conv2D(256, name='P5_con', **options2)(P5_con)
-    P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
+    #P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
     #P6_con = keras.layers.Conv2D(256, **options)(P6_con)
-    P6_con = keras.layers.Conv2D(256, name='P6_con', **options2)(P6_con)
-    P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
+    #P6_con = keras.layers.Conv2D(256, name='P6_con', **options2)(P6_con)
+    #P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
     #P7_con = keras.layers.Conv2D(256, **options)(P7_con)
-    P7_con = keras.layers.Conv2D(256, name='P7_con', **options2)(P7_con)
-    features = [P3_con, P4_con, P5_con, P6_con, P7_con]
+    #P7_con = keras.layers.Conv2D(256, name='P7_con', **options2)(P7_con)
+    features = [P3_con, P4_con, P5_con]#, P6_con, P7_con]
     pyramids = __build_pyramid(submodels, features)
 
     # projection module
@@ -522,7 +542,8 @@ def retinanet_bbox(
         assert_training_model(model)
 
     # compute the anchors
-    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
     anchors = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output
