@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+import keras
 
 
 class Backbone(object):
@@ -25,6 +26,7 @@ class Backbone(object):
             '_wl1'            : losses.weighted_l1(),
             '_msle'           : losses.weighted_msle(),
             '_smooth_l1_xy'    : losses.smooth_l1_xy(),
+            'swish'            : keras.layers.Activation(retinanet.swish),
         }
 
         self.backbone = backbone

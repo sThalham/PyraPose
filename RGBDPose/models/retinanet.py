@@ -6,6 +6,20 @@ from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
 
+def swish(x, beta=1.0):
+    return x * keras.activations.sigmoid(beta*x)
+
+
+#class batch_norm(keras.layers.layers):
+
+#    def call(self, inputs, **kwargs):
+
+#        return keras.layers.BatchNormalization(axis=-1)(inputs)
+
+#    def compute_output_shape(self, input_shape):
+#        return input_shape
+
+
 def max_norm(w):
     norms = K.sqrt(K.sum(K.square(w), keepdims=True))
     desired = K.clip(norms, 0, self.max_value)
@@ -54,8 +68,8 @@ def default_classification_model(
     # reshape output and apply sigmoid
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) #, name='pyramid_classification_permute'
-    #outputs = keras.layers.Reshape((-1, num_classes))(outputs) # , name='pyramid_classification_reshape'
-    #outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
+    outputs = keras.layers.Reshape((-1, num_classes))(outputs) # , name='pyramid_classification_reshape'
+    outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
 
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
@@ -86,7 +100,7 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
     outputs = keras.layers.Conv2D(num_anchors * num_values, **options)(outputs) #, name='pyramid_regression'
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression_permute'
-    #outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression_reshape'
+    outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression_reshape'
 
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
@@ -118,7 +132,7 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     outputs = keras.layers.Conv2D(num_anchors * num_values, **options)(outputs) #, name='pyramid_regression3D'
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression3D_permute'
-    #outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
+    outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
 
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
@@ -369,19 +383,30 @@ def retinanet(
     b6,
     num_classes,
     num_anchors             = None,
-    create_pyramid_features = __create_pyramid_features,
+    #create_pyramid_features = __create_pyramid_features,
     create_pyramid_features_2 = __create_pyramid_features_2,
     submodels               = None,
     name                    = 'retinanet'
 ):
 
     options = {
+        'kernel_size': 1,
+        'strides': 1,
+        'padding': 'same',
+        'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer': 'zeros',
+        'activation'   : swish,
+        #'kernel_regularizer': keras.regularizers.l2(0.001),
+    }
+
+    options2 = {
         'kernel_size': 3,
         'strides': 1,
         'padding': 'same',
         'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
         'bias_initializer': 'zeros',
-        'kernel_regularizer': keras.regularizers.l2(0.001),
+        'activation': swish,
+        # 'kernel_regularizer': keras.regularizers.l2(0.001),
     }
 
     if num_anchors is None:
@@ -389,8 +414,8 @@ def retinanet(
 
     if submodels is None:
 
-        #submodels = default_submodels(num_classes, num_anchors)
-        submodels_2 = default_submodels_2(num_classes, num_anchors)
+        submodels = default_submodels(num_classes, num_anchors)
+        #submodels_2 = default_submodels_2(num_classes, num_anchors)
 
     # FPN, feature concatenation to 512 feature maps
     #features1 = create_pyramid_features_2(b1, b2, b3)
@@ -405,20 +430,25 @@ def retinanet(
     #print(pyramids)
 
     # FPN, feature convolution to 256 feature maps
-    #features1 = create_pyramid_features(b1, b2, b3)
-    #features2 = create_pyramid_features(b4, b5, b6)
-    #P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
-    #P3_con = keras.layers.Conv2D(256, name='P3_con', **options)(P3_con)
-    #P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
-    #P4_con = keras.layers.Conv2D(256, name='P4_con', **options)(P4_con)
-    #P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
-    #P5_con = keras.layers.Conv2D(256, name='P5_con', **options)(P5_con)
-    #P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
-    #P6_con = keras.layers.Conv2D(256, name='P6_con', **options)(P6_con)
-    #P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
-    #P7_con = keras.layers.Conv2D(256, name='P7_con', **options)(P7_con)
-    #features = [P3_con, P4_con, P5_con, P6_con, P7_con]
-    #pyramids = __build_pyramid(submodels, features)
+    features1 = create_pyramid_features_2(b1, b2, b3)
+    features2 = create_pyramid_features_2(b4, b5, b6)
+    P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
+    P3_con = keras.layers.Conv2D(256, **options)(P3_con)
+    P3_con = keras.layers.Conv2D(256, name='P3_con', **options2)(P3_con)
+    P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
+    P4_con = keras.layers.Conv2D(256, **options)(P4_con)
+    P4_con = keras.layers.Conv2D(256, name='P4_con', **options2)(P4_con)
+    P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
+    P5_con = keras.layers.Conv2D(256, **options)(P5_con)
+    P5_con = keras.layers.Conv2D(256, name='P5_con', **options2)(P5_con)
+    P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
+    P6_con = keras.layers.Conv2D(256, **options)(P6_con)
+    P6_con = keras.layers.Conv2D(256, name='P6_con', **options2)(P6_con)
+    P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
+    P7_con = keras.layers.Conv2D(256, **options)(P7_con)
+    P7_con = keras.layers.Conv2D(256, name='P7_con', **options2)(P7_con)
+    features = [P3_con, P4_con, P5_con, P6_con, P7_con]
+    pyramids = __build_pyramid(submodels, features)
 
     # projection module
     #features1 = __create_projection_features(b1, b2, b3)
@@ -455,12 +485,12 @@ def retinanet(
     # P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3], features_corr[3]])
     # P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4], features_corr[4]])
 
-    # naive output fusion
-    features1 = create_pyramid_features(b1, b2, b3)
-    features2 = create_pyramid_features_2(b4, b5, b6)
+    # naive output and output with feature fusion
+    #features1 = create_pyramid_features(b1, b2, b3)
+    #features2 = create_pyramid_features_2(b4, b5, b6)
     #pyramids = __build_pyramid_duo(submodels_2, features1, features2)
     #fused_pyramids = output_fusion_model(pyramids, num_anchors)
-    pyramids = __fuse_pyramid(submodels_2, features1, features2, num_anchors)
+    #pyramids = __fuse_pyramid(submodels_2, features1, features2, num_anchors)
 
 
 
