@@ -48,7 +48,8 @@ def default_classification_model(
 
     outputs = inputs
     for i in range(4):
-        outputs = keras.layers.Conv2D(
+        #outputs = keras.layers.Conv2D(
+        outputs = keras.layers.SeparableConv2D(
             filters=classification_feature_size,
             activation='relu',
             #name='pyramid_classification_{}'.format(i),
@@ -90,7 +91,8 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
 
     outputs = inputs
     for i in range(4):
-        outputs = keras.layers.Conv2D(
+        #outputs = keras.layers.Conv2D(
+        outputs = keras.layers.SeparableConv2D(
             filters=regression_feature_size,
             activation='relu',
             #name='pyramid_regression_{}'.format(i),
@@ -122,7 +124,8 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
 
     outputs = inputs
     for i in range(4):
-        outputs = keras.layers.Conv2D(
+        #outputs = keras.layers.Conv2D(
+        outputs = keras.layers.SeparableConv2D(
             filters=regression_feature_size,
             activation='relu',
             #name='pyramid_regression3D_{}'.format(i),
@@ -405,7 +408,7 @@ def retinanet(
         'padding': 'same',
         'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
         'bias_initializer': 'zeros',
-        'activation': swish,
+        #'activation': swish,
         # 'kernel_regularizer': keras.regularizers.l2(0.001),
     }
 
@@ -433,19 +436,19 @@ def retinanet(
     features1 = create_pyramid_features_2(b1, b2, b3)
     features2 = create_pyramid_features_2(b4, b5, b6)
     P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
-    P3_con = keras.layers.Conv2D(256, **options)(P3_con)
+    #P3_con = keras.layers.Conv2D(256, **options)(P3_con)
     P3_con = keras.layers.Conv2D(256, name='P3_con', **options2)(P3_con)
     P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
-    P4_con = keras.layers.Conv2D(256, **options)(P4_con)
+    #P4_con = keras.layers.Conv2D(256, **options)(P4_con)
     P4_con = keras.layers.Conv2D(256, name='P4_con', **options2)(P4_con)
     P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
-    P5_con = keras.layers.Conv2D(256, **options)(P5_con)
+    #P5_con = keras.layers.Conv2D(256, **options)(P5_con)
     P5_con = keras.layers.Conv2D(256, name='P5_con', **options2)(P5_con)
     P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
-    P6_con = keras.layers.Conv2D(256, **options)(P6_con)
+    #P6_con = keras.layers.Conv2D(256, **options)(P6_con)
     P6_con = keras.layers.Conv2D(256, name='P6_con', **options2)(P6_con)
     P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
-    P7_con = keras.layers.Conv2D(256, **options)(P7_con)
+    #P7_con = keras.layers.Conv2D(256, **options)(P7_con)
     P7_con = keras.layers.Conv2D(256, name='P7_con', **options2)(P7_con)
     features = [P3_con, P4_con, P5_con, P6_con, P7_con]
     pyramids = __build_pyramid(submodels, features)
