@@ -166,6 +166,40 @@ def __create_pyramid_features(C3, C4, C5, feature_size=256):
     return [P3, P4, P5, P6, P7]
 
 
+def __fused_pyramid_features(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+    P5_R = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_R)
+    P5_D = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
+    P5 = keras.layers.Add()([P5_R, P5_D])
+    P5_upsampled = layers.UpsampleLike()([P5, C4_R])
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P5_con')(P5)
+
+    # add P5 elementwise to C4
+    P4_R = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_R)
+    P4_D = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
+    P4 = keras.layers.Add()([P4_R, P4_D])
+    P4 = keras.layers.Add()([P5_upsampled, P4])
+    P4_upsampled = layers.UpsampleLike()([P4, C3_R])
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P4_con')(P4)
+
+    # add P4 elementwise to C3
+    P3_R = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_R)
+    P3_D = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
+    P3 = keras.layers.Add()([P3_R, P3_D])
+    P3 = keras.layers.Add()([P4_upsampled, P3])
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3_con')(P3)
+
+    # "P6 is obtained via a 3x3 stride-2 conv on C5"
+    P6_R = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(C5_R)
+    P6_D = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(C5_D)
+    P6 = keras.layers.Add(name='P6_con')([P6_R, P6_D])
+
+    # "P7 is computed by applying ReLU followed by a 3x3 stride-2 conv on P6"
+    P7 = keras.layers.Activation('relu')(P6)
+    P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7_con')(P7)
+
+    return [P3, P4, P5, P6, P7]
+
+
 def __reduced_pyramid_features(C3, C4, C5, feature_size=256):
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
     P5_upsampled = layers.UpsampleLike()([P5, C4])
@@ -407,7 +441,8 @@ def retinanet(
     num_anchors             = None,
     #create_pyramid_features = __create_pyramid_features,
     #create_pyramid_features_2 = __create_pyramid_features_2,
-    reduced_pyramid_features_2 = __reduced_pyramid_features,
+    #reduced_pyramid_features = __reduced_pyramid_features,
+    fused_pyramid_features = __fused_pyramid_features,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -453,28 +488,28 @@ def retinanet(
     #print(pyramids)
 
     # FPN, feature convolution to 256 feature maps
-    features1 = reduced_pyramid_features_2(b1, b2, b3)
-    features2 = reduced_pyramid_features_2(b4, b5, b6)
-    P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
+    #features1 = reduced_pyramid_features_2(b1, b2, b3)
+    #features2 = reduced_pyramid_features_2(b4, b5, b6)
+    #P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
     #P3_con = keras.layers.Conv2D(256, **options)(P3_con)
-    P3_con = keras.layers.Conv2D(256, name='P3_con', **options2)(P3_con)
-    P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
+    #P3_con = keras.layers.Conv2D(256, name='P3_con', **options2)(P3_con)
+    #P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
     #P4_con = keras.layers.Conv2D(256, **options)(P4_con)
-    P4_con = keras.layers.Conv2D(256, name='P4_con', **options2)(P4_con)
-    P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
+    #P4_con = keras.layers.Conv2D(256, name='P4_con', **options2)(P4_con)
+    #P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
     #P5_con = keras.layers.Conv2D(256, **options)(P5_con)
-    P5_con = keras.layers.Conv2D(256, name='P5_con', **options2)(P5_con)
+    #P5_con = keras.layers.Conv2D(256, name='P5_con', **options2)(P5_con)
     #P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
     #P6_con = keras.layers.Conv2D(256, **options)(P6_con)
     #P6_con = keras.layers.Conv2D(256, name='P6_con', **options2)(P6_con)
     #P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
     #P7_con = keras.layers.Conv2D(256, **options)(P7_con)
     #P7_con = keras.layers.Conv2D(256, name='P7_con', **options2)(P7_con)
-    features = [P3_con, P4_con, P5_con]#, P6_con, P7_con]
-    pyramids = __build_pyramid(submodels, features)
+    #features = [P3_con, P4_con, P5_con]#, P6_con, P7_con]
+    #pyramids = __build_pyramid(submodels, features)
 
-    # projection module
-    #features1 = __create_projection_features(b1, b2, b3)
+    # FPN fusion
+    features = fused_pyramid_features(b1, b2, b3, b4, b5, b6)
     #features2 = __create_projection_features(b4, b5, b6)
     #P3_con = keras.layers.Concatenate(axis=3, name='P3_con')([features1[0], features2[0]])
     #P4_con = keras.layers.Concatenate(axis=3, name='P4_con')([features1[1], features2[1]])
@@ -493,7 +528,7 @@ def retinanet(
     #P4_con = keras.layers.Reshape((-1, 512))(P4_con)
     #P5_con = keras.layers.Reshape((-1, 512))(P5_con)
     #features = [P3_con, P4_con, P5_con]
-    #pyramids = __build_pyramid(submodels, features)
+    pyramids = __build_pyramid(submodels, features)
 
     # correlated features
     # features1 = create_pyramid_features(b1, b2, b3)
@@ -542,8 +577,8 @@ def retinanet_bbox(
         assert_training_model(model)
 
     # compute the anchors
-    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
-    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
+    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
     anchors = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output
