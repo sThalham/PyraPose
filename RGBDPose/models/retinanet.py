@@ -439,10 +439,10 @@ def retinanet(
     b6,
     num_classes,
     num_anchors             = None,
-    #create_pyramid_features = __create_pyramid_features,
+    create_pyramid_features = __create_pyramid_features,
     #create_pyramid_features_2 = __create_pyramid_features_2,
     #reduced_pyramid_features = __reduced_pyramid_features,
-    fused_pyramid_features = __fused_pyramid_features,
+    #fused_pyramid_features = __fused_pyramid_features,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -475,41 +475,23 @@ def retinanet(
         submodels = default_submodels(num_classes, num_anchors)
         #submodels_2 = default_submodels_2(num_classes, num_anchors)
 
-    # FPN, feature concatenation to 512 feature maps
-    #features1 = create_pyramid_features_2(b1, b2, b3)
-    #features2 = create_pyramid_features_2(b4, b5, b6)
-    #P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0]])
-    #P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1]])
-    #P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2]])
-    #P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3]])
-    #P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4]])
-    #features = [P3_con, P4_con, P5_con, P6_con, P7_con]
-    #pyramids = __build_pyramid(submodels, features)
-    #print(pyramids)
+    ############################
+    ####   pre FPN fusion    ###
+    ############################
+    C3 = keras.layers.Concatenate()([b1, b4])
+    C3 = keras.layers.Conv2D(256, **options)(C3)
+    C4 = keras.layers.Concatenate()([b2, b5])
+    C4 = keras.layers.Conv2D(256, **options)(C4)
+    C5 = keras.layers.Concatenate()([b3, b6])
+    C5 = keras.layers.Conv2D(256, **options)(C5)
+    features = create_pyramid_features(C3, C4, C5)
+    pyramids = __build_pyramid(submodels, features)
 
-    # FPN, feature convolution to 256 feature maps
-    #features1 = reduced_pyramid_features_2(b1, b2, b3)
-    #features2 = reduced_pyramid_features_2(b4, b5, b6)
-    #P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
-    #P3_con = keras.layers.Conv2D(256, **options)(P3_con)
-    #P3_con = keras.layers.Conv2D(256, name='P3_con', **options2)(P3_con)
-    #P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
-    #P4_con = keras.layers.Conv2D(256, **options)(P4_con)
-    #P4_con = keras.layers.Conv2D(256, name='P4_con', **options2)(P4_con)
-    #P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
-    #P5_con = keras.layers.Conv2D(256, **options)(P5_con)
-    #P5_con = keras.layers.Conv2D(256, name='P5_con', **options2)(P5_con)
-    #P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
-    #P6_con = keras.layers.Conv2D(256, **options)(P6_con)
-    #P6_con = keras.layers.Conv2D(256, name='P6_con', **options2)(P6_con)
-    #P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
-    #P7_con = keras.layers.Conv2D(256, **options)(P7_con)
-    #P7_con = keras.layers.Conv2D(256, name='P7_con', **options2)(P7_con)
-    #features = [P3_con, P4_con, P5_con]#, P6_con, P7_con]
-    #pyramids = __build_pyramid(submodels, features)
-
+    ############################
+    ####      FPN fusion     ###
+    ############################
     # FPN fusion
-    features = fused_pyramid_features(b1, b2, b3, b4, b5, b6)
+    #features = fused_pyramid_features(b1, b2, b3, b4, b5, b6)
     #features2 = __create_projection_features(b4, b5, b6)
     #P3_con = keras.layers.Concatenate(axis=3, name='P3_con')([features1[0], features2[0]])
     #P4_con = keras.layers.Concatenate(axis=3, name='P4_con')([features1[1], features2[1]])
@@ -528,7 +510,43 @@ def retinanet(
     #P4_con = keras.layers.Reshape((-1, 512))(P4_con)
     #P5_con = keras.layers.Reshape((-1, 512))(P5_con)
     #features = [P3_con, P4_con, P5_con]
-    pyramids = __build_pyramid(submodels, features)
+    #pyramids = __build_pyramid(submodels, features)
+
+    ############################
+    ####   post FPN fusion   ###
+    ############################
+    # FPN, feature concatenation to 512 feature maps
+    # features1 = create_pyramid_features_2(b1, b2, b3)
+    # features2 = create_pyramid_features_2(b4, b5, b6)
+    # P3_con = keras.layers.Concatenate(name='P3_con')([features1[0], features2[0]])
+    # P4_con = keras.layers.Concatenate(name='P4_con')([features1[1], features2[1]])
+    # P5_con = keras.layers.Concatenate(name='P5_con')([features1[2], features2[2]])
+    # P6_con = keras.layers.Concatenate(name='P6_con')([features1[3], features2[3]])
+    # P7_con = keras.layers.Concatenate(name='P7_con')([features1[4], features2[4]])
+    # features = [P3_con, P4_con, P5_con, P6_con, P7_con]
+    # pyramids = __build_pyramid(submodels, features)
+    # print(pyramids)
+
+    # FPN, feature convolution to 256 feature maps
+    # features1 = reduced_pyramid_features_2(b1, b2, b3)
+    # features2 = reduced_pyramid_features_2(b4, b5, b6)
+    # P3_con = keras.layers.Concatenate()([features1[0], features2[0]])
+    # P3_con = keras.layers.Conv2D(256, **options)(P3_con)
+    # P3_con = keras.layers.Conv2D(256, name='P3_con', **options2)(P3_con)
+    # P4_con = keras.layers.Concatenate()([features1[1], features2[1]])
+    # P4_con = keras.layers.Conv2D(256, **options)(P4_con)
+    # P4_con = keras.layers.Conv2D(256, name='P4_con', **options2)(P4_con)
+    # P5_con = keras.layers.Concatenate()([features1[2], features2[2]])
+    # P5_con = keras.layers.Conv2D(256, **options)(P5_con)
+    # P5_con = keras.layers.Conv2D(256, name='P5_con', **options2)(P5_con)
+    # P6_con = keras.layers.Concatenate()([features1[3], features2[3]])
+    # P6_con = keras.layers.Conv2D(256, **options)(P6_con)
+    # P6_con = keras.layers.Conv2D(256, name='P6_con', **options2)(P6_con)
+    # P7_con = keras.layers.Concatenate()([features1[4], features2[4]])
+    # P7_con = keras.layers.Conv2D(256, **options)(P7_con)
+    # P7_con = keras.layers.Conv2D(256, name='P7_con', **options2)(P7_con)
+    # features = [P3_con, P4_con, P5_con]#, P6_con, P7_con]
+    # pyramids = __build_pyramid(submodels, features)
 
     # correlated features
     # features1 = create_pyramid_features(b1, b2, b3)
