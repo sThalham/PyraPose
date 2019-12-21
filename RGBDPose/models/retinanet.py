@@ -453,12 +453,8 @@ def default_fusion_model(pyramids, features, num_anchors, intermediate_feature_s
 
 def retinanet(
     inputs,
-    b1,
-    b2,
-    b3,
-    b4,
-    b5,
-    b6,
+    backbone_layers_rgb,
+    backbone_layers_dep,
     num_classes,
     num_anchors             = None,
     #create_pyramid_features = __create_pyramid_features,
@@ -496,6 +492,9 @@ def retinanet(
 
         submodels = default_submodels(num_classes, num_anchors)
         #submodels_2 = default_submodels_2(num_classes, num_anchors)
+
+    b1, b2, b3 = backbone_layers_rgb
+    b4, b5, b6 = backbone_layers_dep
 
     ############################
     ####   pre FPN fusion    ###

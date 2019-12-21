@@ -58,25 +58,32 @@ def effnet_retinanet(num_classes, backbone='efficientnetB0', inputs=None, modifi
     #num_classes = 1
     if inputs is None:
         if keras.backend.image_data_format() == 'channels_first':
-            inputs = keras.layers.Input(shape=(3, None, None))
+            #inputs = keras.layers.Input(shape=(3, None, None))
+            inputs_0 = keras.layers.Input(shape=(3, None, None))
+            inputs_1 = keras.layers.Input(shape=(3, None, None))
         else:
-            inputs = keras.layers.Input(shape=(None, None, 3))
-    num_classes = 1
+            #inputs = keras.layers.Input(shape=(None, None, 3))
+            inputs_0 = keras.layers.Input(shape=(480, 640, 3))
+            inputs_1 = keras.layers.Input(shape=(480, 640, 3))
 
-    effnet = keras_efficientnets.EfficientNetB0(include_top=False, weights='imagenet', input_tensor=inputs,
+    effnet_rgb = keras_efficientnets.EfficientNetB0(include_top=False, weights='imagenet', input_tensor=inputs,
                                                     pooling=None, classes=num_classes)
+    effnet_dep = keras_efficientnets.EfficientNetB0(include_top=False, weights='imagenet', input_tensor=inputs,
+                                                pooling=None, classes=num_classes)
 
     # invoke modifier if given
     if modifier:
-        effnet = modifier(effnet)
+        effnet_rgb = modifier(effnet_rgb)
+        effnet_dep = modifier(effnet_dep)
 
-    for i, layer in enumerate(effnet.layers):
+    #for i, layer in enumerate(effnet.layers):
         #print(i, layer.name)
-        layer.trainable = False
+    #    layer.trainable = False
 
-    # features: 672, 1152, 1280
-    #layer_names = ['swish_28', 'swish_37', 'swish_49']
-    #layer_outputs = [effnet.get_layer(name).output for name in layer_names]
+    layer_names = [117, 235, 338]  # EfficientnetsB1
+    layer_outputs_rgb = [effnet_rgb.layers[idx].output for idx in layer_names]
+    layer_outputs_dep = [effnet_dep.layers[idx].output for idx in layer_names]
 
-    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=effnet.layers[-1].output, **kwargs)
+    return retinanet.retinanet(inputs=[inputs_0, inputs_1], num_classes=num_classes,
+                               backbone_layers_rgb=layer_outputs_rgb, backbone_layers_dep=layer_outputs_dep, **kwargs)
 

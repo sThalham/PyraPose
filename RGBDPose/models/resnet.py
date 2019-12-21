@@ -91,26 +91,12 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
     if modifier:
         resnet_rgb = modifier(resnet_rgb)
         resnet_dep = modifier(resnet_dep)
-        #effnet_rgb = modifier(effnet_rgb)
-        #effnet_dep = modifier(effnet_dep)
 
-    #outputs_rgb = [resnet_rgb.layers[80].output, resnet_rgb.layers[142].output, resnet_rgb.layers[174].output]
-    #outputs_dep = [resnet_dep.layers[80].output, resnet_dep.layers[142].output, resnet_dep.layers[174].output]
-    #outputs_rgb = tf.convert_to_tensor(outputs_rgb)
-    #outputs_dep = tf.convert_to_tensor(outputs_dep)
-    #print(outputs_rgb)
-    #print(effnet_rgb.summary())
-
-    #return retinanet.retinanet(inputs=[inputs_0, inputs_1], num_classes=num_classes, b1=effnet_rgb.layers[80].output,
-    #                           b2=effnet_rgb.layers[142].output, b3=effnet_rgb.layers[174].output,
-    #                           b4=effnet_dep.layers[80].output, b5=effnet_dep.layers[142].output,
-    #                           b6=effnet_dep.layers[174].output, **kwargs)
-    #return retinanet.retinanet(inputs=[inputs_0, inputs_1], num_classes=num_classes, b1=effnet_rgb.layers[190].output,
-    #                           b2=effnet_rgb.layers[264].output, b3=effnet_rgb.layers[338].output,
-    #                           b4=effnet_dep.layers[190].output, b5=effnet_dep.layers[264].output,
-    #                           b6=effnet_dep.layers[338].output, **kwargs)
-    return retinanet.retinanet(inputs=[inputs_0, inputs_1], num_classes=num_classes, b1=resnet_rgb.layers[80].output, b2=resnet_rgb.layers[142].output, b3=resnet_rgb.layers[174].output,
-                               b4=resnet_dep.layers[80].output, b5=resnet_dep.layers[142].output, b6=resnet_dep.layers[174].output, **kwargs)
+    layer_names = [80, 142, 174]  # EfficientnetsB1
+    layer_outputs_rgb = [resnet_rgb.layers[idx].output for idx in layer_names]
+    layer_outputs_dep = [resnet_dep.layers[idx].output for idx in layer_names]
+    return retinanet.retinanet(inputs=[inputs_0, inputs_1], num_classes=num_classes,
+                               backbone_layers_rgb=layer_outputs_rgb, backbone_layers_dep=layer_outputs_dep, **kwargs)
 
 def resnet50_retinanet(num_classes, inputs=None, **kwargs):
     return resnet_retinanet(num_classes=num_classes, backbone='resnet50', inputs=inputs, **kwargs)
