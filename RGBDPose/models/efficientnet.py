@@ -29,12 +29,21 @@ class EffNetBackbone(Backbone):
 
     def __init__(self, backbone):
         super(EffNetBackbone, self).__init__(backbone)
-        #self.custom_objects.update(keras_efficientnets.custom_objects)
+        #self.custom_objects.update(keras_efficientnets.cus)
 
     def retinanet(self, *args, **kwargs):
         """ Returns a retinanet model using the correct backbone.
         """
-        return effnet_retinanet(*args, backbone=self.backbone, **kwargs)
+        return effnet_retinanet(*args, **kwargs)
+
+    def validate(self):
+        """ Checks whether the backbone string is correct.
+        """
+        allowed_backbones = ['efficientnetsB0', 'efficientnetsB1', 'efficientnetsB2', 'efficientnetsB3', 'efficientnetsB4']
+        backbone = self.backbone.split('_')[0]
+
+        if backbone not in allowed_backbones:
+            raise ValueError('Backbone (\'{}\') not in allowed backbones ({}).'.format(backbone, allowed_backbones))
 
     def preprocess_image(self, inputs):
         """ Takes as input an image and prepares it for being passed through the network.
@@ -42,7 +51,7 @@ class EffNetBackbone(Backbone):
         return preprocess_image(inputs, mode='caffe')
 
 
-def effnet_retinanet(num_classes, backbone='efficientnetB0', inputs=None, modifier=None, **kwargs):
+def effnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
     """ Constructs a retinanet model using a resnet backbone.
 
     Args
@@ -66,9 +75,9 @@ def effnet_retinanet(num_classes, backbone='efficientnetB0', inputs=None, modifi
             inputs_0 = keras.layers.Input(shape=(480, 640, 3))
             inputs_1 = keras.layers.Input(shape=(480, 640, 3))
 
-    effnet_rgb = keras_efficientnets.EfficientNetB0(include_top=False, weights='imagenet', input_tensor=inputs,
+    effnet_rgb = keras_efficientnets.EfficientNetB1(include_top=False, weights='imagenet', input_tensor=inputs_0,
                                                     pooling=None, classes=num_classes)
-    effnet_dep = keras_efficientnets.EfficientNetB0(include_top=False, weights='imagenet', input_tensor=inputs,
+    effnet_dep = keras_efficientnets.EfficientNetB1(include_top=False, weights='imagenet', input_tensor=inputs_1,
                                                 pooling=None, classes=num_classes)
 
     # invoke modifier if given

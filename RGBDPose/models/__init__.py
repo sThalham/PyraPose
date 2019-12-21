@@ -52,6 +52,8 @@ class Backbone(object):
 def backbone(backbone_name):
     if 'resnet' in backbone_name:
         from .resnet import ResNetBackbone as b
+    elif 'efficientnets' in backbone_name:
+        from .efficientnet import EffNetBackbone as b
     else:
         raise NotImplementedError('Backbone class for  \'{}\' not implemented.'.format(backbone))
 
