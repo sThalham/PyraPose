@@ -96,7 +96,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
         loss={
             'bbox'         : losses.smooth_l1(),
             '3Dbox'        : losses.orthogonal_l1(),
-            'cls'          : losses.focal()
+            'cls'          : losses.focal(),
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
     )
@@ -290,7 +290,8 @@ def parse_args(args):
     group.add_argument('--weights',           help='Initialize the model with weights from a file.')
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
 
-    parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='resnet50', type=str)
+    parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='efficientnetsB1', type=str)
+    #parser.add_argument('--backbone', help='Backbone model used by retinanet.', default='resnet50', type=str)
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)

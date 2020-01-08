@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+import keras
 
 
 class Backbone(object):
@@ -25,7 +26,7 @@ class Backbone(object):
             '_wl1'            : losses.weighted_l1(),
             '_msle'           : losses.weighted_msle(),
             '_smooth_l1_xy'    : losses.smooth_l1_xy(),
-            '_orth_l1'        : losses.orthogonal_l1(),
+            'swish'            : keras.layers.Activation(retinanet.swish),
         }
 
         self.backbone = backbone
@@ -51,6 +52,8 @@ class Backbone(object):
 def backbone(backbone_name):
     if 'resnet' in backbone_name:
         from .resnet import ResNetBackbone as b
+    elif 'efficientnets' in backbone_name:
+        from .efficientnet import EffNetBackbone as b
     else:
         raise NotImplementedError('Backbone class for  \'{}\' not implemented.'.format(backbone))
 
@@ -68,7 +71,8 @@ def convert_model(model, nms=True, class_specific_filter=True, anchor_params=Non
 
 
 def assert_training_model(model):
-    assert (all(output in model.output_names for output in ['bbox', '3Dbox', 'cls'])), "Input is not a training model (no 'regression' and 'classification' outputs were found, outputs are: {}).".format(model.output_names)
+    assert (all(output in model.output_names for output in ['bbox', '3Dbox', 'cls'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
+    #assert (all(output in model.output_names for output in ['out_reshape_0', 'out_reshape_1', 'out_reshape_2'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
 
 
 def check_training_model(model):

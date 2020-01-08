@@ -21,12 +21,6 @@ from .. import backend
 def filter_detections(
     boxes,
     boxes3D,
-    #translations,
-    #depths,
-    #rotations,
-    #roll,
-    #pitch,
-    #yaw,
     classification,
     other                 = [],
     class_specific_filter = True,

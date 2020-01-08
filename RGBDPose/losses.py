@@ -23,7 +23,7 @@ def focal(alpha=0.25, gamma=2.0):
     """ Create a functor for computing the focal loss.
 
     Args
-        alpha: Scale the focal weight with alpha.
+        alpha: Scale the focal weight with alpha. vanilla 0.25 2.0
         gamma: Take the power of the focal weight with gamma.
 
     Returns
@@ -68,11 +68,11 @@ def focal(alpha=0.25, gamma=2.0):
     return _focal
 
 
-def cross(weight=0.15):
+def cross(weight=50.0):
 
     def _cross(y_true, y_pred):
-        labels         = y_true[:, :, :, :-1]
-        anchor_state   = y_true[:, :, :, -1]  # -1 for ignore, 0 for background, 1 for object
+        labels         = y_true[:, :, :-1]
+        anchor_state   = y_true[:, :, -1]  # -1 for ignore, 0 for background, 1 for object
         classification = y_pred
 
         # filter out "ignore" anchors

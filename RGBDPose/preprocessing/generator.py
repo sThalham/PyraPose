@@ -234,6 +234,7 @@ class Generator(keras.utils.Sequence):
             for index in range(annotations['bboxes'].shape[0]):
                 annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
                 annotations['segmentations'][index, :] = transform_box3d(transform, annotations['segmentations'][index, :])
+
                 #image_rgb = image[0]
                 #image_dep = image[1]
                 #cv2.rectangle(image_dep, (int(annotations['bboxes'][index, 0]), int(annotations['bboxes'][index, 1])), (int(annotations['bboxes'][index, 2]), int(annotations['bboxes'][index, 3])),(255, 255, 255), 2)
