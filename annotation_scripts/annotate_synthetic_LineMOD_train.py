@@ -13,13 +13,13 @@ import OpenEXR, Imath
 from pathlib import Path
 
 from annotation_scripts.misc import manipulate_RGB, toPix_array, toPix
-from annotation_scripts.Augmentations import augmentDepth, augmentRGB, get_normal
+from annotation_scripts.Augmentations import augmentDepth, augmentRGB, augmentAAEext, get_normal
 
 
 if __name__ == "__main__":
 
     root = '/home/stefan/data/rendered_data/linemod_rgbd/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD/'
+    target = '/home/stefan/data/train_data/linemod_RGBD_aae/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
 
     visu = False
@@ -86,6 +86,7 @@ if __name__ == "__main__":
     excludedImgs = []
     boxWidths = []
     boxHeights = []
+    meanRGBD = np.zeros((6), np.float64)
 
     syns = os.listdir(root)
     all = len(syns)
@@ -129,7 +130,8 @@ if __name__ == "__main__":
 
                 else:
                     depthAug = augmentDepth(depth_refine, obj_mask, mask)
-                    rgbAug = augmentRGB(rgb_refine)
+                    #rgbAug = augmentRGB(rgb_refine)
+                    rgbAug = augmentAAEext(rgb_refine)
 
                     #aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
                     #                                                  for_vis=False)
@@ -139,6 +141,16 @@ if __name__ == "__main__":
                     cross = np.multiply(depthAug, scaCro)
                     aug_dep = cross.astype(np.uint8)
                     #aug_dep = np.repeat(aug_dep[:, :, np.newaxis], 3, 2)
+
+                    meanRGBD[0] += np.nanmean(rgbAug[:, :, 0])
+                    meanRGBD[1] += np.nanmean(rgbAug[:, :, 1])
+                    meanRGBD[2] += np.nanmean(rgbAug[:, :, 2])
+                    meanRGBD[3] += np.nanmean(aug_dep[:, :])
+                    meanRGBD[4] += np.nanmean(aug_dep[:, :])
+                    meanRGBD[5] += np.nanmean(aug_dep[:, :])
+                    # meanRGBD[3] = np.nanmean(depthAug[:, :, 0])
+                    # meanRGBD[4] = np.nanmean(depthAug[:, :, 1])
+                    # meanRGBD[5] = np.nanmean(depthAug[:, :, 2])
 
                     cv2.imwrite(fileName, rgbAug)
                     cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_dep)
@@ -162,9 +174,13 @@ if __name__ == "__main__":
                     if visibilities[i] < 0.5:
                         # print('visivility: ', visibilities[i], ' skip!')
                         continue
+                    #print(visibilities[i])
+                    #if (np.asscalar(bbox[0]) + 1) > 13:
+                    #    continue
 
                     bbvis.append(bbox.astype(int))
                     objID = np.asscalar(bbox[0]) + 1
+                    #objID = np.asscalar(bboxes[i+1][0]) + 1
                     cats.append(objID)
 
                     bbox = (bbox).astype(int)
@@ -178,6 +194,7 @@ if __name__ == "__main__":
                         cls = objID + 1
                     else:
                         cls = objID
+
                     tDbox = rot[:3, :3].dot(threeD_boxes[cls, :, :].T).T
                     tDbox = tDbox + np.repeat(poses[i, np.newaxis, 0:3], 8, axis=0)
 
@@ -355,5 +372,9 @@ if __name__ == "__main__":
     print('excluded images: ')
     for ex in excludedImgs:
         print(ex)
+
+    all_rendered = len(os.listdir(target + "images/train/")) * 0.5
+    means = meanRGBD / all_rendered
+    print('means: ', means)
 
     print('Chill for once in your life... everything\'s done')

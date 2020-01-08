@@ -101,8 +101,8 @@ def manipulate_depth(fn_gt, fn_depth, fn_part):
     depth = depth * np.cos(np.radians(fov / depth.shape[1] * np.abs(uv_table[:, :, 1]))) * np.cos(
         np.radians(fov / depth.shape[1] * uv_table[:, :, 0]))
 
-    #print('depth: ', np.nanmean(depth))
-    if np.nanmean(depth) < 0.5 or np.nanmean(depth) > 4.0:
+    fin_depth = np.where(np.isfinite(depth), depth, np.NAN)
+    if np.nanmean(fin_depth) < 0.5 or np.nanmean(fin_depth) > 4.0:
         print('invalid train image; range is wrong')
         return None, None, None, None, None, None
 
@@ -125,6 +125,14 @@ def manipulate_RGB(fn_gt, fn_depth, fn_part, fn_rgb):
         if query is None:
             print('Whatever is wrong there.... ¯\_(ツ)_/¯')
             return None, None, None, None, None, None, None
+
+        rot = np.asarray(query['camera_rot'])
+        rot = tf3d.euler.mat2euler(rot, 'sxyz')
+
+        if rot[0] > -1.508:
+            print('ANGLE ERROR.... ¯\_(ツ)_/¯')
+            return None, None, None, None, None, None, None
+
         bboxes = np.zeros((len(query), 5), np.int)
         poses = np.zeros((len(query), 7), np.float32)
         mask_ids = np.zeros((len(query)), np.int)
@@ -166,8 +174,9 @@ def manipulate_RGB(fn_gt, fn_depth, fn_part, fn_rgb):
     depth = depth * np.cos(np.radians(fov / depth.shape[1] * np.abs(uv_table[:, :, 1]))) * np.cos(
         np.radians(fov / depth.shape[1] * uv_table[:, :, 0]))
 
-    #print('depth: ', np.nanmean(depth))
-    if np.nanmean(depth) < 0.5 or np.nanmean(depth) > 4.0:
+    fin_depth = np.where(np.isfinite(depth), depth, np.NAN)
+    #print('depth: ', np.nanmean(fin_depth))
+    if np.nanmean(fin_depth) < 0.5 or np.nanmean(fin_depth) > 3.0:
         print('invalid train image; range is wrong')
         return None, None, None, None, None, None, None
 
