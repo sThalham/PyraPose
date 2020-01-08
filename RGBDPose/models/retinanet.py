@@ -166,114 +166,136 @@ def __create_pyramid_features(C3, C4, C5, feature_size=256):
     return [P3, P4, P5, P6, P7]
 
 
-def __fused_pyramid_features(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
-    P5_R = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_R)
-    P5_D = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
-    P5 = keras.layers.Add()([P5_R, P5_D])
-    P5_upsampled = layers.UpsampleLike()([P5, C4_R])
+def __create_FPN(C3, C4, C5, feature_size=256):
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
+    P5_upsampled = layers.UpsampleLike()([P5, C4])
     P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P5_con')(P5)
 
     # add P5 elementwise to C4
-    P4_R = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_R)
-    P4_D = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
-    P4 = keras.layers.Add()([P4_R, P4_D])
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
     P4 = keras.layers.Add()([P5_upsampled, P4])
-    P4_upsampled = layers.UpsampleLike()([P4, C3_R])
+    P4_upsampled = layers.UpsampleLike()([P4, C3])
     P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P4_con')(P4)
 
     # add P4 elementwise to C3
-    P3_R = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_R)
-    P3_D = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
-    P3 = keras.layers.Add()([P3_R, P3_D])
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
     P3 = keras.layers.Add()([P4_upsampled, P3])
     P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3_con')(P3)
 
-    # "P6 is obtained via a 3x3 stride-2 conv on C5"
-    P6_R = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(C5_R)
-    P6_D = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(C5_D)
-    P6 = keras.layers.Add(name='P6_con')([P6_R, P6_D])
-
-    # "P7 is computed by applying ReLU followed by a 3x3 stride-2 conv on P6"
-    P7 = keras.layers.Activation('relu')(P6)
-    P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7_con')(P7)
-
-    return [P3, P4, P5, P6, P7]
+    return [P3, P4, P5]
 
 
-def __reduced_pyramid_features(C3, C4, C5, feature_size=256):
+def __create_PANet(C3, C4, C5, feature_size=256):
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
     P5_upsampled = layers.UpsampleLike()([P5, C4])
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=(3,1), strides=1, padding='same')(P5)
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=(1,3), strides=1, padding='same')(P5)
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P5_con')(P5)
 
     # add P5 elementwise to C4
     P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
     P4 = keras.layers.Add()([P5_upsampled, P4])
     P4_upsampled = layers.UpsampleLike()([P4, C3])
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=(3, 1), strides=1, padding='same')(P4)
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=(1, 3), strides=1, padding='same')(P4)
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P4_con')(P4)
 
     # add P4 elementwise to C3
     P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
     P3 = keras.layers.Add()([P4_upsampled, P3])
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=(3, 1), strides=1, padding='same')(P3)
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=(1, 3), strides=1, padding='same')(P3)
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3_con')(P3)
+
+    # Top-down here (PANet-style)
+    P3_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P3)
+    P4 = keras.layers.Add()([P3_down, P4])
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4)
+
+    # Top-down here (PANet-style)
+    P4_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P4)
+    P5 = keras.layers.Add()([P4_down, P5])
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P5)
 
     return [P3, P4, P5]
 
 
-def __create_pyramid_features_2(C3, C4, C5, feature_size=256):
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
-    P5_upsampled = layers.UpsampleLike()([P5, C4])
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P5)
+def __create_BiFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+    P3_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_R)
+    P4_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_R)
+    P5_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_R)
 
-    # add P5 elementwise to C4
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
-    P4 = keras.layers.Add()([P5_upsampled, P4])
-    P4_upsampled = layers.UpsampleLike()([P4, C3])
+    P3_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
+    P4_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
+    P5_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
+
+    P3 = keras.layers.Add()([P3_r, P3_d])
+    P4 = keras.layers.Add()([P4_r, P4_d])
+    P5 = keras.layers.Add()([P5_r, P5_d])
+
+    P5_upsampled = layers.UpsampleLike()([P5, C4_R])
+    P4_mid = keras.layers.Add()([P5_upsampled, P4])
+    P4_mid = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4_mid)
+    P4_upsampled = layers.UpsampleLike()([P4_mid, C3_R])
+    P3 = keras.layers.Add()([P4_upsampled, P3])
+
+    P3_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P3)
+    P4 = keras.layers.Add()([P3_down, P4_mid, P4])
     P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4)
 
-    # add P4 elementwise to C3
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
-    P3 = keras.layers.Add()([P4_upsampled, P3])
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P3)
-
-    # "P6 is obtained via a 3x3 stride-2 conv on C5"
-    P6 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(C5)
-
-    # "P7 is computed by applying ReLU followed by a 3x3 stride-2 conv on P6"
-    P7 = keras.layers.Activation('relu')(P6)
-    P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P7)
-
-    return [P3, P4, P5, P6, P7]
-
-
-def __create_residual_pyramid_features(C3, C4, C5, feature_size=256):
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
-    P5_upsampled = layers.UpsampleLike()([P5, C4])
+    P4_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P4)
+    P5 = keras.layers.Add()([P4_down, P5])
     P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P5)
-
-    # add P5 elementwise to C4
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
-    P4 = keras.layers.Add()([P5_upsampled, P4])
-    P4_upsampled = layers.UpsampleLike()([P4, C3])
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4)
-
-    # add P4 elementwise to C3
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
-    P3 = keras.layers.Add()([P4_upsampled, P3])
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P3)
 
     return [P3, P4, P5]
 
 
-def __create_projection_features(C3, C4, C5, feature_size=256):
+def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+    # FPN-Fusion test 1
+    #P3_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_R)
+    #P4_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_R)
+    #P5_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_R)
 
-    F3 = projection_block(C5)
-    F2 = projection_block(C4)
-    F1 = projection_block(C3)
+    #P3_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
+    #P4_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
+    #P5_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
 
-    return [F1, F2, F3]
+    #P3 = keras.layers.Add()([P3_r, P3_d])
+    #P4 = keras.layers.Add()([P4_r, P4_d])
+    #P5 = keras.layers.Add()([P5_r, P5_d])
+
+    # uncomment for FPN-Fusion test 2
+    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P3)
+    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4)
+    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P5)
+
+    # only from here for FPN-fusion test 3
+    C3 = keras.layers.Add()([C3_R, C3_D])
+    C4 = keras.layers.Add()([C4_R, C4_D])
+    C5 = keras.layers.Add()([C5_R, C5_D])
+
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
+
+    # 3x3 conv for test 4
+    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
+    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
+    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
+
+    P5_upsampled = layers.UpsampleLike()([P5, C4_R])
+    P4_upsampled = layers.UpsampleLike()([P4, C3_R])
+    P4_mid = keras.layers.Add()([P5_upsampled, P4])
+    P4_mid = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4_mid)    # replace with depthwise and 3x1+1x3
+    P3_mid = keras.layers.Add()([P4_upsampled, P3])
+    P3_mid = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P3_mid)    # replace with depthwise and 3x1+1x3
+    P3_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P3_mid)
+    P3_fin = keras.layers.Add()([P3_mid, P3])  # skip connection
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3')(P3_fin) # replace with depthwise and 3x1+1x3
+
+    P4_fin = keras.layers.Add()([P3_down, P4_mid])
+    P4_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P4_mid)
+    P4_fin = keras.layers.Add()([P4_fin, P4])  # skip connection
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P4')(P4_fin) # replace with depthwise and 3x1+1x3
+
+    P5_fin = keras.layers.Add()([P4_down, P5])
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P5')(P5_fin) # replace with depthwise and 3x1+1x3
+
+    return [P3, P4, P5]
 
 
 def default_submodels(num_classes, num_anchors):
@@ -457,10 +479,7 @@ def retinanet(
     backbone_layers_dep,
     num_classes,
     num_anchors             = None,
-    create_pyramid_features = __create_pyramid_features,
-    #create_pyramid_features_2 = __create_pyramid_features_2,
-    #reduced_pyramid_features = __reduced_pyramid_features,
-    #fused_pyramid_features = __fused_pyramid_features,
+    create_pyramid_features = __create_sparceFPN,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -499,39 +518,21 @@ def retinanet(
     ############################
     ####   pre FPN fusion    ###
     ############################
-    C3 = keras.layers.Concatenate()([b1, b4])
-    C3 = keras.layers.Conv2D(256, **options)(C3)
-    C4 = keras.layers.Concatenate()([b2, b5])
-    C4 = keras.layers.Conv2D(256, **options)(C4)
-    C5 = keras.layers.Concatenate()([b3, b6])
-    C5 = keras.layers.Conv2D(256, **options)(C5)
-    features = create_pyramid_features(C3, C4, C5)
-    pyramids = __build_pyramid(submodels, features)
+    #C3 = keras.layers.Concatenate()([b1, b4])
+    #C3 = keras.layers.Conv2D(256, **options)(C3)
+    #C4 = keras.layers.Concatenate()([b2, b5])
+    #C4 = keras.layers.Conv2D(256, **options)(C4)
+    #C5 = keras.layers.Concatenate()([b3, b6])
+    #C5 = keras.layers.Conv2D(256, **options)(C5)
+    #features = create_pyramid_features(C3, C4, C5)
+    #pyramids = __build_pyramid(submodels, features)
 
     ############################
     ####      FPN fusion     ###
     ############################
     # FPN fusion
-    #features = fused_pyramid_features(b1, b2, b3, b4, b5, b6)
-    #features2 = __create_projection_features(b4, b5, b6)
-    #P3_con = keras.layers.Concatenate(axis=3, name='P3_con')([features1[0], features2[0]])
-    #P4_con = keras.layers.Concatenate(axis=3, name='P4_con')([features1[1], features2[1]])
-    #P5_con = keras.layers.Concatenate(axis=3, name='P5_con')([features1[2], features2[2]])
-    #if keras.backend.image_data_format() == 'channels_first':
-    #    P3_con = keras.layers.Permute((2, 3, 1))(P3_con)
-    #    P4_con = keras.layers.Permute((2, 3, 1))(P4_con)
-    #    P5_con = keras.layers.Permute((2, 3, 1))(P5_con)
-    #print(P3_con)
-    #print(P4_con)
-    #print(P5_con)
-    #P3_con = keras.backend.expand_dims(P3_con, axis=1)
-    #P4_con = keras.backend.expand_dims(P4_con, axis=1)
-    #P5_con = keras.backend.expand_dims(P5_con, axis=1)
-    #P3_con = keras.layers.Reshape((-1, 512))(P3_con)
-    #P4_con = keras.layers.Reshape((-1, 512))(P4_con)
-    #P5_con = keras.layers.Reshape((-1, 512))(P5_con)
-    #features = [P3_con, P4_con, P5_con]
-    #pyramids = __build_pyramid(submodels, features)
+    features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
+    pyramids = __build_pyramid(submodels, features)
 
     ############################
     ####   post FPN fusion   ###
@@ -616,8 +617,8 @@ def retinanet_bbox(
         assert_training_model(model)
 
     # compute the anchors
-    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
-    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con']]
+    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    features = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5']]
     anchors = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output
