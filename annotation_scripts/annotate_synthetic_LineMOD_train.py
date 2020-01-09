@@ -18,11 +18,11 @@ from annotation_scripts.Augmentations import augmentDepth, augmentRGB, augmentAA
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_aae/'
+    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
+    target = '/home/stefan/data/train_data/linemod_RGBD_V3/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
 
-    visu = False
+    visu = True
     resX = 640
     resY = 480
     fxkin = 579.68  # blender calculated

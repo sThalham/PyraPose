@@ -28,15 +28,18 @@ def augmentDepth(depth, obj_mask, mask_ori):
     #partmask = mask_ori
     #partmask = partmask.astype(np.float32)
     #mask = partmask > (np.median(partmask) * 0.4)
-    #partmask = np.where(mask, 255.0, 0.0)
+    partmask = np.where(mask_ori > 1, 255.0, 0.0)
+
+    #aug_dep = partmask.astype(np.uint8)
+    #cv2.imwrite('/home/stefan/mask.png', aug_dep)
 
     # apply shadow
-    #kernel = np.ones((shadowClK, shadowClK))
-    #partmask = cv2.morphologyEx(partmask, cv2.MORPH_OPEN, kernel)
-    #partmask = signal.medfilt2d(partmask, kernel_size=shadowMK)
-    #partmask = partmask.astype(np.uint8)
-    #mask = partmask > 20
-    #depth = np.where(mask, depth, 0.0)
+    kernel = np.ones((shadowClK, shadowClK))
+    partmask = cv2.morphologyEx(partmask, cv2.MORPH_OPEN, kernel)
+    partmask = signal.medfilt2d(partmask, kernel_size=shadowMK)
+    partmask = partmask.astype(np.uint8)
+    mask = partmask > 20
+    depth = np.where(mask, depth, 0.0)
 
     depthFinal = cv2.resize(depth, None, fx=1 / 2, fy=1 / 2)
     res = (((depthFinal / 1000.0) * 1.41421356) ** 2)
