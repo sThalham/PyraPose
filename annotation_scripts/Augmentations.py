@@ -28,15 +28,18 @@ def augmentDepth(depth, obj_mask, mask_ori):
     #partmask = mask_ori
     #partmask = partmask.astype(np.float32)
     #mask = partmask > (np.median(partmask) * 0.4)
-    #partmask = np.where(mask, 255.0, 0.0)
+    partmask = np.where(mask_ori > 1, 255.0, 0.0)
+
+    #aug_dep = partmask.astype(np.uint8)
+    #cv2.imwrite('/home/stefan/mask.png', aug_dep)
 
     # apply shadow
-    #kernel = np.ones((shadowClK, shadowClK))
-    #partmask = cv2.morphologyEx(partmask, cv2.MORPH_OPEN, kernel)
-    #partmask = signal.medfilt2d(partmask, kernel_size=shadowMK)
-    #partmask = partmask.astype(np.uint8)
-    #mask = partmask > 20
-    #depth = np.where(mask, depth, 0.0)
+    kernel = np.ones((shadowClK, shadowClK))
+    partmask = cv2.morphologyEx(partmask, cv2.MORPH_OPEN, kernel)
+    partmask = signal.medfilt2d(partmask, kernel_size=shadowMK)
+    partmask = partmask.astype(np.uint8)
+    mask = partmask > 20
+    depth = np.where(mask, depth, 0.0)
 
     depthFinal = cv2.resize(depth, None, fx=1 / 2, fy=1 / 2)
     res = (((depthFinal / 1000.0) * 1.41421356) ** 2)
@@ -231,6 +234,33 @@ def augmentRGB_DEPRECATED(rgb):
     #INVERSE MIP MAPPING
 
     return new_rgb
+
+
+def augmentAAEext(img):
+
+    seq = iaa.Sequential([
+        iaa.Sometimes(0.5, iaa.GaussianBlur(1.5)),
+        iaa.Sometimes(0.5, iaa.Add((-25, 25), per_channel=0.3)),
+        iaa.Sometimes(0.5, iaa.Multiply((0.6, 1.4), per_channel=0.5)),
+        iaa.Sometimes(0.5, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
+    ], random_order=True)
+
+    #seq = iaa.Sequential([
+    #    iaa.Sometimes(0.5, iaa.GaussianBlur(1.5)),
+    #    iaa.Sometimes(0.5, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
+    #    iaa.OneOf([
+    #        iaa.Sequential([
+    #            iaa.Sometimes(iaa.Add((-25, 25), per_channel=0.3)),
+    #            iaa.Sometimes(iaa.Multiply((0.75, 1.25), per_channel=0.3))
+    #        ], random_order=True),
+    #        iaa.FrequencyNoiseAlpha(
+    #            exponent=(-4, 0),
+    #            first=iaa.Multiply((0.6, 1.4), per_channel=0.3),
+    #            second=iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3))
+    #    ]),
+    #], random_order=True)
+
+    return seq.augment_image(img)
 
 
 def augmentRGB(img):
