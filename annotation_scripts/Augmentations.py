@@ -245,21 +245,6 @@ def augmentAAEext(img):
         iaa.Sometimes(0.5, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
     ], random_order=True)
 
-    #seq = iaa.Sequential([
-    #    iaa.Sometimes(0.5, iaa.GaussianBlur(1.5)),
-    #    iaa.Sometimes(0.5, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
-    #    iaa.OneOf([
-    #        iaa.Sequential([
-    #            iaa.Sometimes(iaa.Add((-25, 25), per_channel=0.3)),
-    #            iaa.Sometimes(iaa.Multiply((0.75, 1.25), per_channel=0.3))
-    #        ], random_order=True),
-    #        iaa.FrequencyNoiseAlpha(
-    #            exponent=(-4, 0),
-    #            first=iaa.Multiply((0.6, 1.4), per_channel=0.3),
-    #            second=iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3))
-    #    ]),
-    #], random_order=True)
-
     return seq.augment_image(img)
 
 
@@ -314,6 +299,34 @@ def augmentRGB(img):
         ]),
         #iaa.Sometimes(p=0.5, iaa.JpegCompression((0, 30)), None),
         ], random_order=True)
+    return seq.augment_image(img)
+
+
+def augmentRGB_V2(img):
+
+    seq = iaa.Sequential([
+        # blur
+        iaa.SomeOf((1, 2), [
+            iaa.Sometimes(0.5, iaa.GaussianBlur(1.5)),
+            iaa.Sometimes(0.25, iaa.AverageBlur(k=(3, 7))),
+            iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 7))),
+            iaa.Sometimes(0.25, iaa.BilateralBlur(d=(1, 7))),
+            iaa.Sometimes(0.25, iaa.MotionBlur(k=(3, 7))),
+        ]),
+
+        iaa.Sometimes(0.25, iaa.Add((-25, 25), per_channel=0.3)),
+        iaa.Sometimes(0.25, iaa.Multiply((0.6, 1.4), per_channel=0.5)),
+        iaa.Sometimes(0.25, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
+
+        #iaa.Sometimes(0.25, iaa.AddToHueAndSaturation((-15, 15))),
+        #iaa.Sometimes(0.25, iaa.Grayscale(alpha=(0.0, 0.2))),
+        iaa.Sometimes(0.25,
+            iaa.FrequencyNoiseAlpha(
+                exponent=(-4, 0),
+                first=iaa.Add((-25, 25), per_channel=0.3),
+                second=iaa.Multiply((0.6, 1.4), per_channel=0.3)
+            )
+        ), ], random_order=True)
     return seq.augment_image(img)
 
 

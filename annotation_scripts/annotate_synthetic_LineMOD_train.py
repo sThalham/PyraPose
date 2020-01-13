@@ -13,16 +13,17 @@ import OpenEXR, Imath
 from pathlib import Path
 
 from annotation_scripts.misc import manipulate_RGB, toPix_array, toPix
-from annotation_scripts.Augmentations import augmentDepth, augmentRGB, augmentAAEext, get_normal
+from annotation_scripts.Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2, get_normal
 
+import imgaug.augmenters as iaa
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_V3/'
+    root = '/home/stefan/data/rendered_data/linemod_rgbd/patches'
+    target = '/home/stefan/data/train_data/linemod_RGBD_aug_V2/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
 
-    visu = True
+    visu = False
     resX = 640
     resY = 480
     fxkin = 579.68  # blender calculated
@@ -124,14 +125,15 @@ if __name__ == "__main__":
 
                 fileName = target + "images/train/" + newredname + '_rgb.jpg'
                 myFile = Path(fileName)
+                print(myFile)
 
                 if myFile.exists():
                     print('File exists, skip encoding and safing.')
 
                 else:
                     depthAug = augmentDepth(depth_refine, obj_mask, mask)
-                    #rgbAug = augmentRGB(rgb_refine)
-                    rgbAug = augmentAAEext(rgb_refine)
+                    rgbAug = augmentRGB_V2(rgb_refine)
+                    #rgbAug = augmentAAEext(rgb_refine)
 
                     #aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
                     #                                                  for_vis=False)

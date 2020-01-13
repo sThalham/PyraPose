@@ -23,16 +23,28 @@ def main(argv):
         if mesh_name[-3:] == 'ply':
             path = root + '/' + mesh_name
             pts = load_pcd(path)
+            print(mesh_name)
 
             control_points = []
 
             # choose starting point
             norms = np.linalg.norm(pts, 2, 1)
             first_k = np.argmax(norms)
-            print(first_k)
+            control_points.append(pts[first_k, :])
 
-            #for k in range(samples-1):
+            for k in range(int(samples)-1):
 
+                distances = []
+                for q_p in pts:
+                    dist_poi = 0.0
+                    for p_p in control_points:
+                        dist_poi += np.linalg.norm((q_p - p_p), 2)
+                    distances.append(dist_poi)
+
+                point_k = np.argmax(norms)
+                control_points.append(pts[point_k, :])
+
+            print(control_points)
 
             #print(pts.shape)
 
