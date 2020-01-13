@@ -2,6 +2,7 @@ import sys
 import os
 from RGBDPose.utils import ply_loader
 import numpy as np
+import math
 import transforms3d as tf3d
 import OpenEXR, Imath
 
@@ -23,7 +24,17 @@ def main(argv):
             path = root + '/' + mesh_name
             pts = load_pcd(path)
 
-            print(pts.shape)
+            control_points = []
+
+            # choose starting point
+            norms = np.linalg.norm(pts, 2, 1)
+            first_k = np.argmax(norms)
+            print(first_k)
+
+            #for k in range(samples-1):
+
+
+            #print(pts.shape)
 
 
 
