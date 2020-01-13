@@ -2,7 +2,7 @@ import sys
 import os
 from RGBDPose.utils import ply_loader
 import numpy as np
-import math
+import json
 import transforms3d as tf3d
 import OpenEXR, Imath
 
@@ -18,6 +18,9 @@ def main(argv):
     root = argv[0]
     samples = argv[1]
     meshes = os.listdir(argv[0])
+    meshes = [k for k in meshes if k.endswith('.ply')]
+
+    mesh_dict = dict()
 
     for mesh_name in meshes:
         if mesh_name[-3:] == 'ply':
@@ -25,12 +28,12 @@ def main(argv):
             pts = load_pcd(path)
             print(mesh_name)
 
-            control_points = []
+            control_points = np.zeros((int(samples), 3), dtype=np.float32)
 
             # choose starting point
             norms = np.linalg.norm(pts, 2, 1)
             first_k = np.argmax(norms)
-            control_points.append(pts[first_k, :])
+            control_points[0, :] = pts[first_k, :]
 
             for k in range(int(samples)-1):
 
@@ -41,12 +44,14 @@ def main(argv):
                         dist_poi += np.linalg.norm((q_p - p_p), 2)
                     distances.append(dist_poi)
 
-                point_k = np.argmax(norms)
-                control_points.append(pts[point_k, :])
+                point_k = np.argmax(distances)
+                control_points[k+1, :] = pts[point_k, :]
+            mesh_dict.update({mesh_name[-6:-4]: control_points.tolist()})
 
-            print(control_points)
+    with open(root + '/features.json', 'w') as fp:
+        json.dump(mesh_dict, fp)
 
-            #print(pts.shape)
+
 
 
 
