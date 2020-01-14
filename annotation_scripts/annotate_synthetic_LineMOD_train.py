@@ -13,7 +13,7 @@ import OpenEXR, Imath
 from pathlib import Path
 
 from annotation_scripts.misc import manipulate_RGB, toPix_array, toPix
-from annotation_scripts.Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2, get_normal
+from annotation_scripts.Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2, augmentRGB_V3, get_normal
 
 import imgaug.augmenters as iaa
 
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
                 else:
                     depthAug = augmentDepth(depth_refine, obj_mask, mask)
-                    rgbAug = augmentRGB_V2(rgb_refine)
+                    rgbAug = augmentRGB_V3(rgb_refine)
                     #rgbAug = augmentAAEext(rgb_refine)
 
                     #aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,

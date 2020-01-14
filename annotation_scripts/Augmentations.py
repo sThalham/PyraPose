@@ -57,19 +57,20 @@ def augmentDepth(depth, obj_mask, mask_ori):
     N_threads = 4
     perlin = fns.Noise(seed=seed, numWorkers=N_threads)
     drawFreq = random.uniform(0.05, 0.2)  # 0.05 - 0.2
-    # drawFreq = 0.5
+    #drawFreq = 0.5
     perlin.frequency = drawFreq
     perlin.noiseType = fns.NoiseType.SimplexFractal
     perlin.fractal.fractalType = fns.FractalType.FBM
     drawOct = [4, 8]
     freqOct = np.bincount(drawOct)
     rndOct = np.random.choice(np.arange(len(freqOct)), 1, p=freqOct / len(drawOct), replace=False)
+    #rndOct = 8
     perlin.fractal.octaves = rndOct
     perlin.fractal.lacunarity = 2.1
     perlin.fractal.gain = 0.45
     perlin.perturb.perturbType = fns.PerturbType.NoPerturb
 
-    noiseX = np.random.uniform(0.001, 0.01, resX * resY) # 0.0001 - 0.1
+    noiseX = np.random.uniform(0.001, 0.01, resX * resY) # 0.001, 0.01
     noiseY = np.random.uniform(0.001, 0.01, resX * resY) # 0.0001 - 0.1
     noiseZ = np.random.uniform(0.01, 0.1, resX * resY) # 0.01 - 0.1
     Wxy = np.random.randint(1, 5) # 1 - 5
@@ -326,6 +327,40 @@ def augmentRGB_V2(img):
                 first=iaa.Add((-25, 25), per_channel=0.3),
                 second=iaa.Multiply((0.6, 1.4), per_channel=0.3)
             )
+        ), ], random_order=True)
+    return seq.augment_image(img)
+
+
+def augmentRGB_V3(img):
+
+    seq = iaa.Sequential([
+        # blur
+        iaa.SomeOf((1, 2), [
+            iaa.Sometimes(0.5, iaa.GaussianBlur(1.5)),
+            iaa.Sometimes(0.25, iaa.AverageBlur(k=(3, 7))),
+            iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 7))),
+            iaa.Sometimes(0.25, iaa.BilateralBlur(d=(1, 7))),
+            iaa.Sometimes(0.25, iaa.MotionBlur(k=(3, 7))),
+        ]),
+
+        iaa.Sometimes(0.25, iaa.Add((-25, 25), per_channel=0.3)),
+        iaa.Sometimes(0.25, iaa.Multiply((0.6, 1.4), per_channel=0.5)),
+        iaa.Sometimes(0.25, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
+
+        #iaa.Sometimes(0.25, iaa.AddToHueAndSaturation((-15, 15))),
+        #iaa.Sometimes(0.25, iaa.Grayscale(alpha=(0.0, 0.2))),
+        iaa.Sometimes(0.25,
+            iaa.FrequencyNoiseAlpha(
+                exponent=(-4, 0),
+                first=iaa.Add((-25, 25), per_channel=0.3),
+                second=iaa.Multiply((0.6, 1.4), per_channel=0.3)
+            ),
+        iaa.SomeOf((0, 1), [
+            iaa.GammaContrast((0.75, 1.25), per_channel=0.5),
+            iaa.SigmoidContrast(gain=(0, 10), cutoff=(0.25, 0.75), per_channel=0.5),
+            iaa.LogContrast(gain=(0.75, 1), per_channel=0.5),
+            iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
+        ]),
         ), ], random_order=True)
     return seq.augment_image(img)
 

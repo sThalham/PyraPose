@@ -129,18 +129,128 @@ class TransformParameters:
 
 def apply_transform(matrix, image, params):
 
+    # rgb
+    '''
+    # seq describes an object for rgb image augmentation using aleju/imgaug
+    seq = iaa.Sequential([
+        # blur
+        iaa.SomeOf((1, 2), [
+            iaa.Sometimes(0.5, iaa.GaussianBlur(1.5)),
+            iaa.Sometimes(0.25, iaa.AverageBlur(k=(3, 7))),
+            iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 7))),
+            iaa.Sometimes(0.25, iaa.BilateralBlur(d=(1, 7))),
+            iaa.Sometimes(0.25, iaa.MotionBlur(k=(3, 7))),
+        ]),
 
+        iaa.Sometimes(0.25, iaa.Add((-25, 25), per_channel=0.3)),
+        iaa.Sometimes(0.25, iaa.Multiply((0.6, 1.4), per_channel=0.5)),
+        iaa.Sometimes(0.25, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
 
+        # iaa.Sometimes(0.25, iaa.AddToHueAndSaturation((-15, 15))),
+        # iaa.Sometimes(0.25, iaa.Grayscale(alpha=(0.0, 0.2))),
+        iaa.Sometimes(0.25,
+                      iaa.FrequencyNoiseAlpha(
+                          exponent=(-4, 0),
+                          first=iaa.Add((-25, 25), per_channel=0.3),
+                          second=iaa.Multiply((0.6, 1.4), per_channel=0.3)
+                      )
+                      ), ], random_order=True)
+    image0 = seq.augment_image(image[0])
+    '''
     image0 = cv2.warpAffine(
-        image[0],
+        image0,
         matrix[:2, :],
         dsize       = (image[0].shape[1], image[0].shape[0]),
         flags       = params.cvInterpolation(),
         borderMode  = params.cvBorderMode(),
         borderValue = params.cval,
     )
+
+    # depth
+    image1 = image[1]
+    '''
+    blurK = np.random.choice([3, 5, 7], 1, replace=False).astype(int)
+    blurS = random.uniform(0.0, 1.5)
+
+    image1 = cv2.resize(image1, None, fx=1 / 2, fy=1 / 2)
+    res = (((image1 / 1000.0) * 1.41421356) ** 2)
+    image1 = cv2.GaussianBlur(image1, (blurK, blurK), blurS, blurS)
+    # quantify to depth resolution and apply gaussian
+    dNonVar = np.divide(image1, res, out=np.zeros_like(image1), where=res != 0)
+    dNonVar = np.round(dNonVar)
+    dNonVar = np.multiply(dNonVar, res)
+    noise = np.multiply(dNonVar, random.uniform(0.002, 0.004))  # empirically determined
+    image1 = np.random.normal(loc=dNonVar, scale=noise, size=dNonVar.shape)
+    image1 = cv2.resize(image1, (image[1].shape[1], image[1].shape[0]))
+
+    # fast perlin noise
+    seed = np.random.randint(2 ** 31)
+    N_threads = 4
+    perlin = fns.Noise(seed=seed, numWorkers=N_threads)
+    drawFreq = random.uniform(0.05, 0.2)  # 0.05 - 0.2
+    # drawFreq = 0.5
+    perlin.frequency = drawFreq
+    perlin.noiseType = fns.NoiseType.SimplexFractal
+    perlin.fractal.fractalType = fns.FractalType.FBM
+    drawOct = [4, 8]
+    freqOct = np.bincount(drawOct)
+    rndOct = np.random.choice(np.arange(len(freqOct)), 1, p=freqOct / len(drawOct), replace=False)
+    # rndOct = 8
+    perlin.fractal.octaves = rndOct
+    perlin.fractal.lacunarity = 2.1
+    perlin.fractal.gain = 0.45
+    perlin.perturb.perturbType = fns.PerturbType.NoPerturb
+
+    noiseX = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    noiseY = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
+    Wxy = np.random.randint(1, 5)  # 1 - 5
+    Wz = np.random.uniform(0.0001, 0.004)  # 0.0001 - 0.004
+
+    X, Y = np.meshgrid(np.arange(image[1].shape[1]), np.arange(image[1].shape[0]))
+    coords0 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])
+    coords1 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])
+    coords2 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])
+
+    coords0[0, :] = noiseX.ravel()
+    coords0[1, :] = Y.ravel()
+    coords0[2, :] = X.ravel()
+    VecF0 = perlin.genFromCoords(coords0)
+    VecF0 = VecF0.reshape((image[1].shape[0], image[1].shape[1]))
+
+    coords1[0, :] = noiseY.ravel()
+    coords1[1, :] = Y.ravel()
+    coords1[2, :] = X.ravel()
+    VecF1 = perlin.genFromCoords(coords1)
+    VecF1 = VecF1.reshape((image[1].shape[0], image[1].shape[1]))
+
+    coords2[0, :] = noiseZ.ravel()
+    coords2[1, :] = Y.ravel()
+    coords2[2, :] = X.ravel()
+    VecF2 = perlin.genFromCoords(coords2)
+    VecF2 = VecF2.reshape((image[1].shape[0] * image[1].shape[1]))
+
+    x = np.arange(resX, dtype=np.uint16)
+    x = x[np.newaxis, :].repeat(image[1].shape[0], axis=0)
+    y = np.arange(resY, dtype=np.uint16)
+    y = y[:, np.newaxis].repeat(image[1].shape[1], axis=1)
+
+    Wxy_scaled = image1 * 0.001 * Wxy
+    Wz_scaled = image1 * 0.001 * Wz
+    # scale with depth
+    fx = x + Wxy_scaled * VecF0
+    fy = y + Wxy_scaled * VecF1
+    fx = np.where(fx < 0, 0, fx)
+    fx = np.where(fx >= image[1].shape[1], image[1].shape[1] - 1, fx)
+    fy = np.where(fy < 0, 0, fy)
+    fy = np.where(fy >= image[1].shape[0], image[1].shape[0] - 1, fy)
+    fx = fx.astype(dtype=np.uint16)
+    fy = fy.astype(dtype=np.uint16)
+    image1 = image1[fy, fx] + Wz_scaled * VecF2
+    image1 = np.where(Dis > 0, image1, 0.0)
+    '''
     image1 = cv2.warpAffine(
-        image[1],
+        image1,
         matrix[:2, :],
         dsize=(image[1].shape[1], image[1].shape[0]),
         flags=params.cvInterpolation(),

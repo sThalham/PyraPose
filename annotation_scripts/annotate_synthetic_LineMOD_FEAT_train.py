@@ -17,12 +17,12 @@ from Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2
 
 if __name__ == "__main__":
 
-    root = '/home/sthalham/data/renderings/linemod/patches'
-    target = '/home/sthalham/data/prepro/linemod_RGBD_test/'
-    mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
-    feature_file = '/home/sthalham/data/Meshes/linemod_13/features.json'
+    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
+    target = '/home/stefan/data/train_data/linemod_RGBD_test/'
+    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    feature_file = '/home/stefan/data/Meshes/linemod_13/features.json'
 
-    visu = False
+    visu = True
     resX = 640
     resY = 480
     fxkin = 579.68  # blender calculated
@@ -124,8 +124,8 @@ if __name__ == "__main__":
                     rgbAug = augmentRGB_V2(rgb_refine)
                     #rgbAug = augmentAAEext(rgb_refine)
 
-                    #aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
-                    #                                                  for_vis=False)
+                    aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
+                                                                      for_vis=False)
 
                     depthAug[depthAug > depthCut] = 0
                     scaCro = 255.0 / np.nanmax(depthAug)
@@ -144,7 +144,7 @@ if __name__ == "__main__":
                     # meanRGBD[5] = np.nanmean(depthAug[:, :, 2])
 
                     cv2.imwrite(fileName, rgbAug)
-                    cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_dep)
+                    cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_xyz)
                     #img_rgbd = np.concatenate((rgbAug, aug_dep[:, :, np.newaxis]), axis=2)
                     #cv2.imwrite(fileName, img_rgbd)
                     #np.save(fileName, img_rgbd)
@@ -314,30 +314,39 @@ if __name__ == "__main__":
                         if i is not poses.shape[0]:
                             pose = np.asarray(bb3vis[i], dtype=np.float32)
 
-                            colR = 250
-                            colG = 25
-                            colB = 175
+                            colR = np.random.uniform(0, 255)
+                            colG = np.random.uniform(0, 255)
+                            colB = np.random.uniform(0, 255)
 
-                            img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
-                            img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
-                            img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
-                            img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
-                            img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
-                                           2)
-                            img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
-                                           (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
-                                           (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
-                                           (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
-                                           (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
-                                           (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
-                                           (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
-                                           (colR, colG, colB), 2)
+                            cv2.circle(img, (int(pose[0]), int(pose[1])), 4, (colR, colG, colB), 3)
+                            cv2.circle(img, (int(pose[2]), int(pose[3])), 4, (colR, colG, colB), 3)
+                            cv2.circle(img, (int(pose[4]), int(pose[5])), 4, (colR, colG, colB), 3)
+                            cv2.circle(img, (int(pose[6]), int(pose[7])), 4, (colR, colG, colB), 3)
+                            cv2.circle(img, (int(pose[8]), int(pose[9])), 4, (colR, colG, colB), 3)
+                            cv2.circle(img, (int(pose[10]), int(pose[11])), 4, (colR, colG, colB), 3)
+                            cv2.circle(img, (int(pose[12]), int(pose[13])), 4, (colR, colG, colB), 3)
+                            cv2.circle(img, (int(pose[14]), int(pose[15])), 4, (colR, colG, colB), 3)
+
+                            #img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
+                            #img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
+                            #img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
+                            #img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
+                            #img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
+                            #               2)
+                            #img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
+                            #               (colR, colG, colB), 2)
+                            #img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
+                            #               (colR, colG, colB), 2)
+                            #img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
+                            #               (colR, colG, colB), 2)
+                            #img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
+                            #               (colR, colG, colB), 2)
+                            #img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
+                            #               (colR, colG, colB), 2)
+                            #img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
+                            #               (colR, colG, colB), 2)
+                            #img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
+                            #               (colR, colG, colB), 2)
 
                     cv2.imwrite(fileName, img)
 
