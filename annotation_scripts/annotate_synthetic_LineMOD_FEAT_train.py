@@ -12,17 +12,17 @@ import json
 import OpenEXR, Imath
 from pathlib import Path
 
-from misc import manipulate_RGB, toPix_array, toPix
+from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibility
 from Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2, get_normal
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
+    root = '/home/stefan/data/rendered_data/linemod_rgbd/patches'
     target = '/home/stefan/data/train_data/linemod_RGBD_test/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
-    feature_file = '/home/stefan/data/Meshes/linemod_13/features.json'
+    feature_file = '/home/stefan/data/Meshes/linemod_13/features_8.json'
 
-    visu = True
+    visu = False
     resX = 640
     resY = 480
     fxkin = 579.68  # blender calculated
@@ -36,8 +36,6 @@ if __name__ == "__main__":
     for key, value in yaml.load(open(feature_file)).items():
         #fac = 0.001
         value = np.asarray(value, dtype=np.float32)
-        print(value)
-        print(value.shape)
 
         threeD_boxes[int(key), :, :] = value
 
@@ -124,8 +122,8 @@ if __name__ == "__main__":
                     rgbAug = augmentRGB_V2(rgb_refine)
                     #rgbAug = augmentAAEext(rgb_refine)
 
-                    aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
-                                                                      for_vis=False)
+                    #aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
+                    #                                                  for_vis=False)
 
                     depthAug[depthAug > depthCut] = 0
                     scaCro = 255.0 / np.nanmax(depthAug)
@@ -144,7 +142,7 @@ if __name__ == "__main__":
                     # meanRGBD[5] = np.nanmean(depthAug[:, :, 2])
 
                     cv2.imwrite(fileName, rgbAug)
-                    cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_xyz)
+                    cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_dep)
                     #img_rgbd = np.concatenate((rgbAug, aug_dep[:, :, np.newaxis]), axis=2)
                     #cv2.imwrite(fileName, img_rgbd)
                     #np.save(fileName, img_rgbd)
@@ -159,6 +157,7 @@ if __name__ == "__main__":
                 cats = []
                 posvis = []
                 postra = []
+                feat_visualization = []
                 # for i, bbox in enumerate(bboxes[:-1]):
                 for i, bbox in enumerate(bboxes[:-1]):
 
@@ -196,6 +195,10 @@ if __name__ == "__main__":
                     box3D = np.reshape(box3D, (16))
                     box3D = box3D.tolist()
                     bb3vis.append(box3D)
+
+                    feature_visibilities = calculate_feature_visibility(depth_refine, box3D, tDbox)
+                    feat_visualization.append(feature_visibilities)
+                    #print(feature_visibilities)
 
                     bbox = bbox.astype(int)
                     x1 = np.asscalar(bbox[2])
@@ -273,8 +276,8 @@ if __name__ == "__main__":
                     img = rgbAug
                     for i, bb in enumerate(bbvis):
 
-                        # if cats[i] not in [19, 20, 23]:
-                        #    continue
+                        if cats[i] not in [4]:
+                            continue
 
                         bb = np.array(bb)
 
@@ -314,18 +317,120 @@ if __name__ == "__main__":
                         if i is not poses.shape[0]:
                             pose = np.asarray(bb3vis[i], dtype=np.float32)
 
-                            colR = np.random.uniform(0, 255)
-                            colG = np.random.uniform(0, 255)
-                            colB = np.random.uniform(0, 255)
+                            #colR = np.random.uniform(0, 255)
+                            #colG = np.random.uniform(0, 255)
+                            #colB = np.random.uniform(0, 255)
 
-                            cv2.circle(img, (int(pose[0]), int(pose[1])), 4, (colR, colG, colB), 3)
-                            cv2.circle(img, (int(pose[2]), int(pose[3])), 4, (colR, colG, colB), 3)
-                            cv2.circle(img, (int(pose[4]), int(pose[5])), 4, (colR, colG, colB), 3)
-                            cv2.circle(img, (int(pose[6]), int(pose[7])), 4, (colR, colG, colB), 3)
-                            cv2.circle(img, (int(pose[8]), int(pose[9])), 4, (colR, colG, colB), 3)
-                            cv2.circle(img, (int(pose[10]), int(pose[11])), 4, (colR, colG, colB), 3)
-                            cv2.circle(img, (int(pose[12]), int(pose[13])), 4, (colR, colG, colB), 3)
-                            cv2.circle(img, (int(pose[14]), int(pose[15])), 4, (colR, colG, colB), 3)
+                            #colRinv = np.random.uniform(0, 255)
+                            #colGinv = np.random.uniform(0, 255)
+                            #colBinv = np.random.uniform(0, 255)
+
+                            colR = 217
+                            colG = 17
+                            colB = 112
+
+                            colRinv = 97
+                            colGinv = 241
+                            colBinv = 43
+
+                            if feat_visualization[i][0] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[0]), int(pose[1])), 4, (colr, colg, colb), 3)
+                            if feat_visualization[i][1] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[2]), int(pose[3])), 4, (colr, colg, colb), 3)
+                            if feat_visualization[i][2] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[4]), int(pose[5])), 4, (colr, colg, colb), 3)
+                            if feat_visualization[i][3] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[6]), int(pose[7])), 4, (colr, colg, colb), 3)
+                            if feat_visualization[i][4] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[8]), int(pose[9])), 4, (colr, colg, colb), 3)
+                            if feat_visualization[i][5] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[10]), int(pose[11])), 4, (colr, colg, colb), 3)
+                            if feat_visualization[i][6] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[12]), int(pose[13])), 4, (colr, colg, colb), 3)
+                            if feat_visualization[i][7] == 1:
+                                colr = colR
+                                colg = colG
+                                colb = colB
+                            else:
+                                colr = colRinv
+                                colg = colGinv
+                                colb = colBinv
+                            cv2.circle(img, (int(pose[14]), int(pose[15])), 4, (colr, colg, colb), 3)
+
+                            font = cv2.FONT_HERSHEY_COMPLEX
+                            bottomLeftCornerOfText = (5, 10)
+                            bottomLeftCornerOfText2 = (5, 20)
+                            fontScale = 0.5
+                            fontColor = (colR, colG, colB)
+                            fontthickness = 2
+                            lineType = 2
+                            gtText_vis = 'visible'
+                            gtText_invis = 'invisible'
+                            fontColor2 = (colRinv, colGinv, colBinv)
+                            fontthickness2 = 4
+                            cv2.putText(img, gtText_vis,
+                                        bottomLeftCornerOfText,
+                                        font,
+                                        fontScale,
+                                        fontColor,
+                                        fontthickness,
+                                        lineType)
+                            cv2.putText(img, gtText_invis,
+                                        bottomLeftCornerOfText2,
+                                        font,
+                                        fontScale,
+                                        fontColor2,
+                                        fontthickness,
+                                        lineType)
 
                             #img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
                             #img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)

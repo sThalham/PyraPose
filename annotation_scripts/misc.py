@@ -51,6 +51,43 @@ def rle_encode(img):
     return ' '.join(str(x) for x in runs)
 
 
+def calculate_feature_visibility(depth, features_2D, features_3D):
+
+    feat_vis = []
+    for f_i in range(0, len(features_2D), 2):
+        feat_x = int(features_2D[f_i])
+        feat_y = int(features_2D[f_i+1])
+
+        if feat_x < 0 or feat_x > depth.shape[1]-1 or feat_y < 0 or feat_y > depth.shape[0]-1:
+            feat_vis.append(0)
+            continue
+        feat_dep = depth[feat_y, feat_x]
+        feat_gt = features_3D[int(f_i/2), 2]
+
+        nbh = 3
+        feat_nbh = depth[(feat_y-nbh):(feat_y+nbh), (feat_x-nbh):(feat_x+nbh)]
+        feat_nbh = feat_nbh.flatten()
+
+        #if feat_dep < (feat_gt * 1000.0)+20.0 and feat_dep > (feat_gt * 1000.0)-20.0:
+        #    feat_vis.append(1)
+        #else:
+        #    feat_vis.append(0)
+
+        # ugly but necessary due to quantization onto image grid sampled feature locations that might be self occluded but visibility of the relevant object part is given
+        no_match = True
+        for nbh_pixel in feat_nbh:
+            if nbh_pixel < (feat_gt*1000.0) + 5.0 and nbh_pixel > (feat_gt*1000.0) - 5.0:
+                feat_vis.append(1)
+                no_match = False
+                break
+        if no_match == True:
+            feat_vis.append(0)
+
+    return feat_vis
+
+
+
+
 def manipulate_depth(fn_gt, fn_depth, fn_part):
 
     fov = 57.8
