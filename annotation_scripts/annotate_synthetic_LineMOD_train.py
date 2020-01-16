@@ -20,7 +20,7 @@ import imgaug.augmenters as iaa
 if __name__ == "__main__":
 
     root = '/home/stefan/data/rendered_data/linemod_rgbd/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_aug_V2/'
+    target = '/home/stefan/data/train_data/linemod_RGBD_aug_V3/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
 
     visu = False
