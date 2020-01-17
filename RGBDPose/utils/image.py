@@ -168,20 +168,20 @@ def apply_transform(matrix, image, params):
     )
 
     # depth
-    image1 = image[1]
-    blurK = np.random.choice([3, 5, 7], 1, replace=False).astype(int)
+    image1 = image[1][:,:,0]
+    blurK = np.random.choice([3, 5, 7], 1).astype(int)
     blurS = random.uniform(0.0, 1.5)
 
-    image1 = cv2.resize(image1, None, fx=1 / 2, fy=1 / 2)
-    res = (((image1 / 1000.0) * 1.41421356) ** 2)
+    #image1 = cv2.resize(image1, None, fx=1 / 2, fy=1 / 2)
+    #res = (((image1 / 1000.0) * 1.41421356) ** 2)
     image1 = cv2.GaussianBlur(image1, (blurK, blurK), blurS, blurS)
     # quantify to depth resolution and apply gaussian
-    dNonVar = np.divide(image1, res, out=np.zeros_like(image1), where=res != 0)
-    dNonVar = np.round(dNonVar)
-    dNonVar = np.multiply(dNonVar, res)
-    noise = np.multiply(dNonVar, random.uniform(0.002, 0.004))  # empirically determined
-    image1 = np.random.normal(loc=dNonVar, scale=noise, size=dNonVar.shape)
-    image1 = cv2.resize(image1, (image[1].shape[1], image[1].shape[0]))
+    #dNonVar = np.divide(image1, res, out=np.zeros_like(image1), where=res != 0)
+    #dNonVar = np.round(dNonVar)
+    #dNonVar = np.multiply(dNonVar, res)
+    #noise = np.multiply(dNonVar, random.uniform(0.002, 0.004))  # empirically determined
+    #image1 = np.random.normal(loc=dNonVar, scale=noise, size=dNonVar.shape)
+    #image1 = cv2.resize(image1, (image[1].shape[1], image[1].shape[0]))
 
     # fast perlin noise
     seed = np.random.randint(2 ** 31)
@@ -228,11 +228,11 @@ def apply_transform(matrix, image, params):
     coords2[1, :] = Y.ravel()
     coords2[2, :] = X.ravel()
     VecF2 = perlin.genFromCoords(coords2)
-    VecF2 = VecF2.reshape((image[1].shape[0] * image[1].shape[1]))
+    VecF2 = VecF2.reshape((image[1].shape[0], image[1].shape[1]))
 
-    x = np.arange(resX, dtype=np.uint16)
+    x = np.arange(image[1].shape[1], dtype=np.uint16)
     x = x[np.newaxis, :].repeat(image[1].shape[0], axis=0)
-    y = np.arange(resY, dtype=np.uint16)
+    y = np.arange(image[1].shape[0], dtype=np.uint16)
     y = y[:, np.newaxis].repeat(image[1].shape[1], axis=1)
 
     Wxy_scaled = image1 * 0.001 * Wxy
@@ -247,7 +247,8 @@ def apply_transform(matrix, image, params):
     fx = fx.astype(dtype=np.uint16)
     fy = fy.astype(dtype=np.uint16)
     image1 = image1[fy, fx] + Wz_scaled * VecF2
-    image1 = np.where(Dis > 0, image1, 0.0)
+    image1 = np.where(image1 > 0, image1, 0.0)
+    image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],
