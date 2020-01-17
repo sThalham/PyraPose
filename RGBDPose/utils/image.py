@@ -18,6 +18,9 @@ from __future__ import division
 import numpy as np
 import cv2
 from PIL import Image
+import imgaug.augmenters as iaa
+import pyfastnoisesimd as fns
+import random
 
 from .transform import change_transform_origin
 
@@ -130,7 +133,6 @@ class TransformParameters:
 def apply_transform(matrix, image, params):
 
     # rgb
-    '''
     # seq describes an object for rgb image augmentation using aleju/imgaug
     seq = iaa.Sequential([
         # blur
@@ -156,7 +158,6 @@ def apply_transform(matrix, image, params):
                       )
                       ), ], random_order=True)
     image0 = seq.augment_image(image[0])
-    '''
     image0 = cv2.warpAffine(
         image0,
         matrix[:2, :],
@@ -168,7 +169,6 @@ def apply_transform(matrix, image, params):
 
     # depth
     image1 = image[1]
-    '''
     blurK = np.random.choice([3, 5, 7], 1, replace=False).astype(int)
     blurS = random.uniform(0.0, 1.5)
 
@@ -248,7 +248,6 @@ def apply_transform(matrix, image, params):
     fy = fy.astype(dtype=np.uint16)
     image1 = image1[fy, fx] + Wz_scaled * VecF2
     image1 = np.where(Dis > 0, image1, 0.0)
-    '''
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],

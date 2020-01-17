@@ -28,7 +28,8 @@ def augmentDepth(depth, obj_mask, mask_ori):
     #partmask = mask_ori
     #partmask = partmask.astype(np.float32)
     #mask = partmask > (np.median(partmask) * 0.4)
-    partmask = np.where(mask_ori > 1, 255.0, 0.0)
+    #partmask = np.where(mask_ori > 1, 255.0, 0.0)
+    partmask = np.where(mask_ori > 0, 255.0, 0.0)
 
     #aug_dep = partmask.astype(np.uint8)
     #cv2.imwrite('/home/stefan/mask.png', aug_dep)
@@ -129,6 +130,21 @@ def augmentDepth(depth, obj_mask, mask_ori):
     fy = fy.astype(dtype=np.uint16)
     Dis = depth[fy, fx] + Wz_scaled * VecF2
     depth = np.where(Dis > 0, Dis, 0.0)
+
+    return depth
+
+
+def maskDepth(depth, obj_mask, mask_ori):
+
+    partmask = np.where(mask_ori > 0, 255.0, 0.0)
+
+    # apply shadow
+    kernel = np.ones((5, 5))
+    #partmask = cv2.morphologyEx(partmask, cv2.MORPH_OPEN, kernel)
+    #partmask = signal.medfilt2d(partmask, kernel_size=5)
+    partmask = partmask.astype(np.uint8)
+    #mask = partmask > 20    # historical reasons
+    depth = np.where(partmask, depth, 0.0)
 
     return depth
 
@@ -380,20 +396,20 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     res_x = depth_refine.shape[1]
 
     # inpainting
-    scaleOri = np.amax(depth_refine)
+    #scaleOri = np.amax(depth_refine)
 
-    inPaiMa = np.where(depth_refine == 0.0, 255, 0)
-    inPaiMa = inPaiMa.astype(np.uint8)
-    inPaiDia = 5.0
-    depth_refine = depth_refine.astype(np.float32)
-    depPaint = cv2.inpaint(depth_refine, inPaiMa, inPaiDia, cv2.INPAINT_NS)
+    #inPaiMa = np.where(depth_refine == 0.0, 255, 0)
+    #inPaiMa = inPaiMa.astype(np.uint8)
+    #inPaiDia = 5.0
+    #depth_refine = depth_refine.astype(np.float32)
+    #depPaint = cv2.inpaint(depth_refine, inPaiMa, inPaiDia, cv2.INPAINT_NS)
 
-    depNorm = depPaint - np.amin(depPaint)
-    rangeD = np.amax(depNorm)
-    depNorm = np.divide(depNorm, rangeD)
-    depth_refine = np.multiply(depNorm, scaleOri)
+    #depNorm = depPaint - np.amin(depPaint)
+    #rangeD = np.amax(depNorm)
+    #depNorm = np.divide(depNorm, rangeD)
+    #depth_refine = np.multiply(depNorm, scaleOri)
 
-    depth_imp = copy.deepcopy(depth_refine)
+    #depth_imp = copy.deepcopy(depth_refine)
 
     centerX = cx
     centerY = cy
@@ -437,7 +453,7 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     cross = np.nan_to_num(cross)
 
     #cross[depth_refine <= 200] = 0  # 0 and near range cut
-    #cross[depth_refine > depthCut] = 0  # far range cut
+    cross[depth_refine > 2000] = 0  # far range cut
     if not for_vis:
         scaDep = 1.0 / np.nanmax(depth_refine)
         depth_refine = np.multiply(depth_refine, scaDep)
@@ -448,4 +464,4 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
         cross = np.multiply(cross, scaCro)
         cross = cross.astype(np.uint8)
 
-    return cross, depth_refine, depth_imp
+    return cross, depth_refine # , depth_imp

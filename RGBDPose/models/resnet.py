@@ -69,17 +69,16 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
             #inputs_1 = keras.layers.Input(shape=(None, None, 3))
         #inputs = keras.layers.Concatenate()([inputs_0, inputs_1])
 
-    resnet_rgb = keras_resnet.models.ResNet34(inputs_0, include_top=False, freeze_bn=True)
-    resnet_dep = keras_resnet.models.ResNet34(inputs_1, include_top=False, freeze_bn=True)
+    #resnet_rgb = keras_resnet.models.ResNet34(inputs_0, include_top=False, freeze_bn=True)
+    #resnet_dep = keras_resnet.models.ResNet34(inputs_1, include_top=False, freeze_bn=True)
 
-    #resnet_rgb = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs_0, pooling=None, classes=num_classes)
-    #resnet_dep = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs_1, pooling=None, classes=num_classes)
+    resnet_rgb = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs_0, pooling=None, classes=num_classes)
+    resnet_dep = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs_1, pooling=None, classes=num_classes)
 
-    print(resnet_dep.summary())
-
-    for i, layer in enumerate(resnet_dep.layers):
-    #for i, layer in enumerate(effnet_dep.layers):
-        print(i, layer.name)
+    for i, layer in enumerate(resnet_rgb.layers):
+        #print(i, layer.name)
+        if i < 39:
+            layer.trainable = False
         layer.name = 'layer_' + str(i)
 
     #print(effnet_rgb.summary())
@@ -93,8 +92,8 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
         resnet_rgb = modifier(resnet_rgb)
         resnet_dep = modifier(resnet_dep)
 
-    #layer_names = [80, 142, 174]  # resnet50
-    layer_names = [72, 128, 157]  # resnet34
+    layer_names = [80, 142, 174]  # resnet50
+    #layer_names = [72, 128, 157]  # resnet34
     #layer_names = [45, 65, 85]  # resnet18
     layer_outputs_rgb = [resnet_rgb.layers[idx].output for idx in layer_names]
     layer_outputs_dep = [resnet_dep.layers[idx].output for idx in layer_names]
