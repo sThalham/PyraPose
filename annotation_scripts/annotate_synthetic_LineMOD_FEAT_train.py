@@ -17,8 +17,8 @@ from Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_test/'
+    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
+    target = '/home/stefan/data/train_data/linemod_RGBD_V3_feat/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
     feature_file = '/home/stefan/data/Meshes/linemod_13/features_8.json'
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
                 else:
                     depthAug = augmentDepth(depth_refine, obj_mask, mask)
-                    rgbAug = augmentRGB_V2(rgb_refine)
+                    rgbAug = augmentRGB(rgb_refine)
                     #rgbAug = augmentAAEext(rgb_refine)
 
                     #aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
@@ -238,7 +238,7 @@ if __name__ == "__main__":
                         "segmentation": box3D,
                         "area": area,
                         "iscrowd": 0,
-                        # "feature_visibility": feat_vis
+                        "feature_visibility": feature_visibilities
                     }
                     # print('norm q: ', np.linalg.norm(pose[3:]))
 

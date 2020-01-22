@@ -12,15 +12,15 @@ import json
 import OpenEXR, Imath
 from pathlib import Path
 
-from annotation_scripts.misc import manipulate_RGB, toPix_array, toPix
-from annotation_scripts.Augmentations import augmentDepth, maskDepth, augmentRGB, augmentAAEext, augmentRGB_V2, augmentRGB_V3, get_normal
+from misc import manipulate_RGB, toPix_array, toPix
+from Augmentations import augmentDepth, maskDepth, augmentRGB, augmentAAEext, augmentRGB_V2, augmentRGB_V3, get_normal
 
 import imgaug.augmenters as iaa
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_cc/'
+    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
+    target = '/home/stefan/data/train_data/linemod_RGBD_V3_noaug/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
 
     visu = False
@@ -131,15 +131,15 @@ if __name__ == "__main__":
                     print('File exists, skip encoding and safing.')
 
                 else:
-                    depthAug = augmentDepth(depth_refine, obj_mask, mask)
-                    rgbAug = augmentRGB(rgb_refine)
+                    #depthAug = augmentDepth(depth_refine, obj_mask, mask)
+                    #rgbAug = augmentRGB(rgb_refine)
                     #rgbAug = augmentAAEext(rgb_refine)
 
-                    #depthAug = maskDepth(depth_refine, obj_mask, mask)
-                    #rgbAug = rgb_refine
+                    depthAug = maskDepth(depth_refine, obj_mask, mask)
+                    rgbAug = rgb_refine
 
-                    aug_xyz, depth_refine_aug = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
-                                                                      for_vis=False)
+                    #aug_xyz, depth_refine_aug = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
+                    #                                                  for_vis=False)
 
                     depthAug[depthAug > depthCut] = 0
                     scaCro = 255.0 / np.nanmax(depthAug)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                     # meanRGBD[5] = np.nanmean(depthAug[:, :, 2])
 
                     cv2.imwrite(fileName, rgbAug)
-                    cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_xyz)
+                    cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_dep)
                     #img_rgbd = np.concatenate((rgbAug, aug_dep[:, :, np.newaxis]), axis=2)
                     #cv2.imwrite(fileName, img_rgbd)
                     #np.save(fileName, img_rgbd)
