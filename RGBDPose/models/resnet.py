@@ -76,7 +76,7 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
     resnet_dep = keras.applications.resnet.ResNet50(include_top=False, weights='imagenet', input_tensor=inputs_1, pooling=None, classes=num_classes)
 
     for i, layer in enumerate(resnet_rgb.layers):
-        #print(i, layer.name)
+        print(i, layer.name)
         if i < 39:
             layer.trainable = False
         layer.name = 'layer_' + str(i)

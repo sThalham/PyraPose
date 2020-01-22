@@ -245,37 +245,16 @@ def __create_BiFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
 
 
 def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
-    # FPN-Fusion test 1
-    P3_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_R)
-    P4_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_R)
-    P5_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_R)
-
-    P3_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
-    P4_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
-    P5_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
-
-    P3 = keras.layers.Add()([P3_r, P3_d])
-    P4 = keras.layers.Add()([P4_r, P4_d])
-    P5 = keras.layers.Add()([P5_r, P5_d])
-
-    # uncomment for FPN-Fusion test 2
-    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P3)
-    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4)
-    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P5)
 
     # only from here for FPN-fusion test 3
-    #C3 = keras.layers.Add()([C3_R, C3_D])
-    #C4 = keras.layers.Add()([C4_R, C4_D])
-    #C5 = keras.layers.Add()([C5_R, C5_D])
-
-    #P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
-    #P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
-    #P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
+    C3 = keras.layers.Add()([C3_R, C3_D])
+    C4 = keras.layers.Add()([C4_R, C4_D])
+    C5 = keras.layers.Add()([C5_R, C5_D])
 
     # 3x3 conv for test 4
-    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
-    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
-    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
 
     P5_upsampled = layers.UpsampleLike()([P5, C4_R])
     P4_upsampled = layers.UpsampleLike()([P4, C3_R])

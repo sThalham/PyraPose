@@ -75,9 +75,9 @@ def effnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
             inputs_0 = keras.layers.Input(shape=(480, 640, 3))
             inputs_1 = keras.layers.Input(shape=(480, 640, 3))
 
-    effnet_rgb = keras_efficientnets.EfficientNetB4(include_top=False, weights='imagenet', input_tensor=inputs_0,
+    effnet_rgb = keras_efficientnets.EfficientNetB1(include_top=False, weights='imagenet', input_tensor=inputs_0,
                                                     pooling=None, classes=num_classes)
-    effnet_dep = keras_efficientnets.EfficientNetB4(include_top=False, weights='imagenet', input_tensor=inputs_1,
+    effnet_dep = keras_efficientnets.EfficientNetB1(include_top=False, weights='imagenet', input_tensor=inputs_1,
                                                 pooling=None, classes=num_classes)
 
     print(effnet_dep.summary())
@@ -91,9 +91,9 @@ def effnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
         print(i, layer.name, layer)
     #    layer.trainable = False
 
-    #layer_names = [117, 235, 338]  # EfficientnetsB1, B2
+    layer_names = [117, 235, 338]  # EfficientnetsB1, B2
     #layer_names = [117, 265, 383] # EffNet B3 swish_102, _132, _156
-    layer_names = [147, 325, 473] # B4
+    #layer_names = [147, 325, 473] # B4
     layer_outputs_rgb = [effnet_rgb.layers[idx].output for idx in layer_names]
     layer_outputs_dep = [effnet_dep.layers[idx].output for idx in layer_names]
     print(layer_outputs_rgb)

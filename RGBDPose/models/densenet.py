@@ -89,7 +89,7 @@ def densenet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
         layer.name = 'layer_' + str(i)
     #    layer.trainable = False
 
-    #layer_names = [138, 310, 426]  # DenseNet121
+    layer_names = [138, 310, 426]  # DenseNet121
     # layer_names = [138, 366, 594]  # DenseNet169
     # layer_names = [117, 235, 706]  # DenseNet201
 
