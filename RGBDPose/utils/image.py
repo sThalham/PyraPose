@@ -171,7 +171,7 @@ def apply_transform(matrix, image, params):
             iaa.FrequencyNoiseAlpha(
                 exponent=(-4, 0),
                 first=iaa.Multiply((0.75, 1.25), per_channel=0.5),
-                second=iaa.ContrastNormalization((0.7, 1.3), per_channel=0.5))
+                second=iaa.LinearContrast((0.7, 1.3), per_channel=0.5))
         ]),
         # contrast
         iaa.SomeOf((0, 2), [
@@ -205,6 +205,7 @@ def apply_transform(matrix, image, params):
 
     # depth
     image1 = image[1]
+    image1 = image1.astype('float32')
     blurK = np.random.choice([3, 5, 7], 1).astype(int)
     blurS = random.uniform(0.0, 1.5)
 
@@ -285,6 +286,7 @@ def apply_transform(matrix, image, params):
     image1 = image1[fy, fx] + Wz_scaled * VecF2
     image1 = np.where(image1 > 0, image1, 0.0)
     image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
+    image1 = np.multiply(image1, 255.0/np.nanmax(image1))
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],
