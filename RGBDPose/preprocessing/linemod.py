@@ -158,7 +158,7 @@ class LinemodGenerator(Generator):
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = path[:-4] + '_dep' + path[-4:]
 
-        return read_image_bgr(path)
+        return read_image_dep(path)
 
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.

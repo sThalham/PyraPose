@@ -35,6 +35,16 @@ def read_image_bgr(path):
     return image[:, :, ::-1].copy()
 
 
+def read_image_dep(path):
+    """ Read an image in BGR format.
+
+    Args
+        path: Path to the image.
+    """
+    image = np.asarray(Image.open(path))
+    return image[:, :].copy()
+
+
 def preprocess_image(x, mode='caffe'):
     """ Preprocess an image by subtracting the ImageNet mean.
 
@@ -136,27 +146,53 @@ def apply_transform(matrix, image, params):
     # seq describes an object for rgb image augmentation using aleju/imgaug
     seq = iaa.Sequential([
         # blur
-        iaa.SomeOf((1, 2), [
-            iaa.Sometimes(0.5, iaa.GaussianBlur(1.5)),
-            iaa.Sometimes(0.25, iaa.AverageBlur(k=(3, 7))),
-            iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 7))),
-            iaa.Sometimes(0.25, iaa.BilateralBlur(d=(1, 7))),
-            iaa.Sometimes(0.25, iaa.MotionBlur(k=(3, 7))),
+        iaa.SomeOf((0, 2), [
+            iaa.GaussianBlur((0.0, 2.0)),
+            iaa.AverageBlur(k=(3, 7)),
+            iaa.MedianBlur(k=(3, 7)),
+            iaa.BilateralBlur(d=(1, 7)),
+            iaa.MotionBlur(k=(3, 7))
         ]),
-
-        iaa.Sometimes(0.25, iaa.Add((-25, 25), per_channel=0.3)),
-        iaa.Sometimes(0.25, iaa.Multiply((0.6, 1.4), per_channel=0.5)),
-        iaa.Sometimes(0.25, iaa.ContrastNormalization((0.4, 2.3), per_channel=0.3)),
-
-        # iaa.Sometimes(0.25, iaa.AddToHueAndSaturation((-15, 15))),
-        # iaa.Sometimes(0.25, iaa.Grayscale(alpha=(0.0, 0.2))),
-        iaa.Sometimes(0.25,
-                      iaa.FrequencyNoiseAlpha(
-                          exponent=(-4, 0),
-                          first=iaa.Add((-25, 25), per_channel=0.3),
-                          second=iaa.Multiply((0.6, 1.4), per_channel=0.3)
-                      )
-                      ), ], random_order=True)
+        # color
+        iaa.SomeOf((0, 2), [
+            # iaa.WithColorspace(),
+            iaa.AddToHueAndSaturation((-15, 15)),
+            # iaa.ChangeColorspace(to_colorspace[], alpha=0.5),
+            iaa.Grayscale(alpha=(0.0, 0.2))
+        ]),
+        # brightness
+        iaa.OneOf([
+            iaa.Sequential([
+                iaa.Add((-10, 10), per_channel=0.5),
+                iaa.Multiply((0.75, 1.25), per_channel=0.5)
+            ]),
+            iaa.Add((-10, 10), per_channel=0.5),
+            iaa.Multiply((0.75, 1.25), per_channel=0.5),
+            iaa.FrequencyNoiseAlpha(
+                exponent=(-4, 0),
+                first=iaa.Multiply((0.75, 1.25), per_channel=0.5),
+                second=iaa.ContrastNormalization((0.7, 1.3), per_channel=0.5))
+        ]),
+        # contrast
+        iaa.SomeOf((0, 2), [
+            iaa.GammaContrast((0.75, 1.25), per_channel=0.5),
+            iaa.SigmoidContrast(gain=(0, 10), cutoff=(0.25, 0.75), per_channel=0.5),
+            iaa.LogContrast(gain=(0.75, 1), per_channel=0.5),
+            iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
+        ]),
+        # arithmetic
+        iaa.SomeOf((0, 3), [
+            iaa.AdditiveGaussianNoise(scale=(0, 0.05), per_channel=0.5),
+            iaa.AdditiveLaplaceNoise(scale=(0, 0.05), per_channel=0.5),
+            iaa.AdditivePoissonNoise(lam=(0, 8), per_channel=0.5),
+            iaa.Dropout(p=(0, 0.05), per_channel=0.5),
+            iaa.ImpulseNoise(p=(0, 0.05)),
+            iaa.SaltAndPepper(p=(0, 0.05)),
+            iaa.Salt(p=(0, 0.05)),
+            iaa.Pepper(p=(0, 0.05))
+        ]),
+        # iaa.Sometimes(p=0.5, iaa.JpegCompression((0, 30)), None),
+    ], random_order=True)
     image0 = seq.augment_image(image[0])
     image0 = cv2.warpAffine(
         image0,
@@ -168,20 +204,20 @@ def apply_transform(matrix, image, params):
     )
 
     # depth
-    image1 = image[1][:,:,0]
+    image1 = image[1]
     blurK = np.random.choice([3, 5, 7], 1).astype(int)
     blurS = random.uniform(0.0, 1.5)
 
-    #image1 = cv2.resize(image1, None, fx=1 / 2, fy=1 / 2)
-    #res = (((image1 / 1000.0) * 1.41421356) ** 2)
+    image1 = cv2.resize(image1, None, fx=1 / 2, fy=1 / 2)
+    res = (((image1 / 1000.0) * 1.41421356) ** 2)
     image1 = cv2.GaussianBlur(image1, (blurK, blurK), blurS, blurS)
     # quantify to depth resolution and apply gaussian
-    #dNonVar = np.divide(image1, res, out=np.zeros_like(image1), where=res != 0)
-    #dNonVar = np.round(dNonVar)
-    #dNonVar = np.multiply(dNonVar, res)
-    #noise = np.multiply(dNonVar, random.uniform(0.002, 0.004))  # empirically determined
-    #image1 = np.random.normal(loc=dNonVar, scale=noise, size=dNonVar.shape)
-    #image1 = cv2.resize(image1, (image[1].shape[1], image[1].shape[0]))
+    dNonVar = np.divide(image1, res, out=np.zeros_like(image1), where=res != 0)
+    dNonVar = np.round(dNonVar)
+    dNonVar = np.multiply(dNonVar, res)
+    noise = np.multiply(dNonVar, random.uniform(0.002, 0.004))  # empirically determined
+    image1 = np.random.normal(loc=dNonVar, scale=noise, size=dNonVar.shape)
+    image1 = cv2.resize(image1, (image[1].shape[1], image[1].shape[0]))
 
     # fast perlin noise
     seed = np.random.randint(2 ** 31)
