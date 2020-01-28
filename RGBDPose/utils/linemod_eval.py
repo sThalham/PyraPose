@@ -94,7 +94,7 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
+    mesh_path ="/RGBDPose/linemod_13/"
     #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
@@ -158,8 +158,8 @@ def boxoverlap(a, b):
 def evaluate_linemod(generator, model, threshold=0.05):
     threshold = 0.5
 
-    #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
-    mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
+    mesh_info = '/RGBDPose/linemod_13/models_info.yml'
+    #mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
 
@@ -639,6 +639,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
     less_repr_5 = sum(rep_less5) / sum(rep_e) * 100.0
     less_add_d = sum(add_less_d) / sum(add_e) * 100.0
     less_vsd_t = sum(vsd_less_t) / sum(vsd_e) * 100.0
+
+    print('ADD: ', less_add_d)
 
     print('IoU 05: ', sum(tp) / (sum(tp) + sum(fp)) * 100.0, sum(tp) / (sum(tp) + sum(fn)) * 100.0)
     print('IoU 055: ', sum(tp55) / (sum(tp55) + sum(fp55)) * 100.0, sum(tp55) / (sum(tp55) + sum(fn55)) * 100.0)

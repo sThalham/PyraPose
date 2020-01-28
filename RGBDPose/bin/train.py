@@ -242,7 +242,7 @@ def create_generators(args, preprocess_image):
             transform_generator=transform_generator,
             **common_args
         )
-        train_iterations = len(os.listdir(os.path.join(args.occlusion_path, 'images/train')))
+        train_iterations = int(len(os.listdir(os.path.join(args.occlusion_path, 'images/train')))/2)
 
     elif args.dataset_type == 'tless':
         from ..preprocessing.tless import TlessGenerator
