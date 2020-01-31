@@ -146,17 +146,6 @@ def maskDepth(depth, obj_mask, mask_ori):
     #mask = partmask > 20    # historical reasons
     depth = np.where(partmask, depth, 0.0)
 
-    depthFinal = cv2.resize(depth, None, fx=1 / 2, fy=1 / 2)
-    res = (((depthFinal / 1000.0) * 1.41421356) ** 2)
-    depthFinal = cv2.GaussianBlur(depthFinal, (blurK, blurK), blurS, blurS)
-    # quantify to depth resolution and apply gaussian
-    dNonVar = np.divide(depthFinal, res, out=np.zeros_like(depthFinal), where=res != 0)
-    dNonVar = np.round(dNonVar)
-    dNonVar = np.multiply(dNonVar, res)
-    noise = np.multiply(dNonVar, random.uniform(0.002, 0.004))  # empirically determined
-    depthFinal = np.random.normal(loc=dNonVar, scale=noise, size=dNonVar.shape)
-    depth = cv2.resize(depthFinal, (resX, resY))
-
     return depth
 
 

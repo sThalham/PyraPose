@@ -17,15 +17,6 @@ from pathlib import Path
 import geometry
 from shutil import copyfile
 
-depSca = 1.0
-resX = 720
-resY = 540
-fxkin = 572.41140
-fykin = 573.57043
-cxkin = 325.26110
-cykin = 242.04899
-depthCut = 1500.0
-
 
 def draw_axis(img, cam_R, cam_T):
     # unit is mm
@@ -149,12 +140,63 @@ def compute_disparity(depth):
     return disp_final
 
 
+def compute_angle2gravity(normals, depth):
+    r, c, p = normals.shape
+    mask = depth < depthCut
+    normals[:, :, 0] = np.where(mask, normals[:, :, 0], np.NaN)
+    normals[:, :, 1] = np.where(mask, normals[:, :, 1], np.NaN)
+    normals[:, :, 2] = np.where(mask, normals[:, :, 2], np.NaN)
+
+    angEst = np.zeros(normals.shape, dtype=np.float32)
+    angEst[:, :, 2] = 1.0
+    ang = (45.0, 45.0, 45.0, 45.0, 45.0, 15.0, 15.0, 15.0, 15.0, 15.0, 5.0, 5.0)
+    for th in ang:
+        angtemp = np.einsum('ijk,ijk->ij', normals, angEst)
+        angEstNorm = np.linalg.norm(angEst, axis=2)
+        normalsNorm = np.linalg.norm(normals, axis=2)
+        normalize = np.multiply(normalsNorm, angEstNorm)
+        angDif = np.divide(angtemp, normalize)
+
+        np.where(angDif < 0.0, angDif + 1.0, angDif)
+        angDif = np.arccos(angDif)
+        angDif = np.multiply(angDif, (180 / math.pi))
+
+        cond1 = (angDif < th)
+        cond1_ = (angDif > (180.0 - th))
+        cond2 = (angDif > (90.0 - th)) & (angDif < (90.0 + th))
+        cond1 = np.repeat(cond1[:, :, np.newaxis], 3, axis=2)
+        cond1_ = np.repeat(cond1_[:, :, np.newaxis], 3, axis=2)
+        cond2 = np.repeat(cond2[:, :, np.newaxis], 3, axis=2)
+
+        NyPar1 = np.extract(cond1, normals)
+        NyPar2 = np.extract(cond1_, normals)
+        NyPar = np.concatenate((NyPar1, NyPar2))
+        npdim = (NyPar.shape[0] / 3)
+        NyPar = np.reshape(NyPar, (int(npdim), 3))
+        NyOrt = np.extract(cond2, normals)
+        nodim = (NyOrt.shape[0] / 3)
+        NyOrt = np.reshape(NyOrt, (int(nodim), 3))
+
+        cov = (np.transpose(NyOrt)).dot(NyOrt) - (np.transpose(NyPar)).dot(NyPar)
+        u, s, vh = np.linalg.svd(cov)
+        angEst = np.tile(u[:, 2], r * c).reshape((r, c, 3))
+
+    angDifSca = angDif - np.nanmin(angDif)
+    maxV = 255.0 / np.nanmax(angDifSca)
+    scatemp = np.multiply(angDifSca, maxV)
+    gImg = scatemp.astype(np.uint8)
+    gImg[gImg is np.NaN] = 0
+
+    return gImg
+
+
 def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     res_y = depth_refine.shape[0]
     res_x = depth_refine.shape[1]
 
     # inpainting
     scaleOri = np.amax(depth_refine)
+    print(scaleOri)
 
     inPaiMa = np.where(depth_refine == 0.0, 255, 0)
     inPaiMa = inPaiMa.astype(np.uint8)
@@ -165,7 +207,9 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     depNorm = depPaint - np.amin(depPaint)
     rangeD = np.amax(depNorm)
     depNorm = np.divide(depNorm, rangeD)
-    depth_inp = np.multiply(depNorm, scaleOri)
+    depth_refine = np.multiply(depNorm, scaleOri)
+
+    depth_inp = copy.deepcopy(depth_refine)
 
     centerX = cx
     centerY = cy
@@ -211,6 +255,8 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     #cross[depth_refine <= 200] = 0  # 0 and near range cut
     cross[depth_refine > depthCut] = 0  # far range cut
     if not for_vis:
+        scaDep = 1.0 / np.nanmax(depth_refine)
+        depth_refine = np.multiply(depth_refine, scaDep)
         cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine - 0.5))  # nearer has higher intensity
         cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine - 0.5))
         cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine - 0.5))
@@ -250,15 +296,9 @@ def create_BB(rgb):
 
 if __name__ == "__main__":
 
-    dataset = 'tless'
-    if dataset == 'linemod':
-        root = "/home/sthalham/data/LINEMOD/test/"  # path to train samples, depth + rgb
-    elif dataset == 'tless':
-        root = "/home/sthalham/data/t-less_v2/test_primesense/"
-    else:
-        raise ValueError('Specify the dataset correctly')
-
-    target = '/home/sthalham/data/prepro/val_tless_dep/'
+    dataset = 'linemod'
+    root = "/home/sthalham/data/datasets/YCBV_BOP_val/"  # path to train samples, depth + rgb
+    target = '/home/sthalham/data/prepro/val_YCBV_BOP_RGBD/'
     # print(root)
     visu = False
 
@@ -292,16 +332,21 @@ if __name__ == "__main__":
     times = []
 
     for s in sub:
+
         rgbPath = root + s + "/rgb/"
         depPath = root + s + "/depth/"
-        gtPath = root + s + "/gt.yml"
-        infoPath = root + s + "/info.yml"
+        camPath = root + s + "/scene_camera.json"
+        gtPath = root + s + "/scene_gt.json"
+        infoPath = root + s + "/scene_gt_info.json"
 
-        with open(infoPath, 'r') as stream:
-            opYML = yaml.load(stream)
+        with open(camPath, 'r') as streamCAM:
+            camjson = json.load(streamCAM)
 
         with open(gtPath, 'r') as streamGT:
-            gtYML = yaml.load(streamGT)
+            scenejson = json.load(streamGT)
+
+        with open(infoPath, 'r') as streamINFO:
+            gtjson = json.load(streamINFO)
 
         subsub = os.listdir(rgbPath)
 
@@ -316,7 +361,11 @@ if __name__ == "__main__":
             depImgPath = depPath + ss
             #print(rgbImgPath)
 
-            if ss.startswith('000'):
+            if ss.startswith('00000'):
+                ss = ss[5:]
+            elif ss.startswith('0000'):
+                ss = ss[4:]
+            elif ss.startswith('000'):
                 ss = ss[3:]
             elif ss.startswith('00'):
                 ss = ss[2:]
@@ -324,7 +373,7 @@ if __name__ == "__main__":
                 ss = ss[1:]
             ss = ss[:-4]
 
-            calib = opYML[int(ss)]
+            calib = camjson.get(str(ss))
             K = calib["cam_K"]
             depSca = calib["depth_scale"]
             fxca = K[0]
@@ -344,7 +393,7 @@ if __name__ == "__main__":
             #depImg = cv2.resize(depImg, None, fx=1 / 2, fy=1 / 2)
             rows, cols = depImg.shape
             depImg = np.multiply(depImg, depSca)
-            #print(np.amax(depImg))
+            print(np.amax(depImg))
 
             # create image number and name
             template = '00000'
@@ -358,71 +407,55 @@ if __name__ == "__main__":
             imgNam = tempSS + imgNum + '.jpg'
             iname = str(imgNam)
 
-            #cv2.imwrite('/home/sthalham/visTests/disp.jpg', imgI[:,:,0])
-            #cv2.imwrite('/home/sthalham/visTests/area.jpg', imgI[:, :, 1])
-            #cv2.imwrite('/home/sthalham/visTests/grav.jpg', imgI[:, :, 2])
-            #cv2.imwrite('/home/sthalham/visTests/HAA.jpg', imgI)
+            gtImg = gtjson.get(str(ss))
 
-            # THIS for Training
-            # cnt, bb, area, mask = create_BB(rgbImg)
-
-            # THAT for Testing
-            # print(s)
-            # print(ss)
-            # print(gtYML[int(ss)])
-            gtImg = gtYML[int(ss)]
-
-            drawN = [1, 2, 2, 2]
-            freq = np.bincount(drawN)
-            rnd = np.random.choice(np.arange(len(freq)), 1, p=freq / len(drawN), replace=False)
-
-            # change drawN if you want a data split
-            #print("storage choice: ", rnd)
-            #rnd = 1
             bbox_vis = []
             cat_vis = []
             camR_vis = []
             camT_vis = []
-            if rnd == 1:
-            #rnd = True
+            #if rnd == 1:
+            rnd = True
             #print(rnd)
-            #if rnd == True:
+            if rnd == True:
 
-                fileName = target + 'images/val/' + imgNam
-                print(fileName)
+                fileName = target + 'images/val/' + imgNam[:-4] + '_dep.jpg'
+
                 myFile = Path(fileName)
                 if myFile.exists():
                     print('File exists, skip encoding, ', fileName)
                 else:
                     # imgI = encodeImage(depImg)
-                    imgI, depth_refine, depth_inp = get_normal(depImg, fx=fxca, fy=fyca, cx=cxca, cy=cyca, for_vis=False)
-                    depName = target + 'images/val/' + tempSS + imgNum + '_dep.png'
-                    copyfile(depImgPath, depName)
+                    #imgI, depth_refine, depth_inp = get_normal(depImg, fx=fxca, fy=fyca, cx=cxca, cy=cyca, for_vis=False)
+                    #depName = target + 'images/val/' + tempSS + imgNum + '_dep.png'
+                    #copyfile(depImgPath, depName)
 
-                    print(np.nanmax(depth_refine))
-
-                    depth_inp[depth_inp > depthCut] = 0
-                    #depth_refine[depth_refine > depthCut] = 0
-                    scaCro = 255.0 / np.nanmax(depth_inp)
-                    cross = np.multiply(depth_inp, scaCro)
+                    depImg[depImg > depthCut] = 0
+                    scaCro = 255/depthCut
+                    cross = np.multiply(depImg, scaCro)
                     dep_sca = cross.astype(np.uint8)
-                    #imgI[:, :, 2] = dep_sca
+                    imgI = np.repeat(dep_sca[:, :, np.newaxis], 3, 2)
 
-                    cv2.imwrite(fileName, dep_sca)
+                    rgb_name = fileName[:-8] + '_rgb.jpg'
+                    cv2.imwrite(rgb_name, rgbImg)
+                    cv2.imwrite(fileName, imgI)
                     print("storing image in : ", fileName)
 
                 #bbsca = 720.0 / 640.0
                 for i in range(len(gtImg)):
 
                     curlist = gtImg[i]
-                    obj_id = curlist["obj_id"]
-
-                    obj_bb = curlist["obj_bb"]
+                    #if obj_id > 6:
+                    #    obj_id = obj_id - 2
+                    #elif obj_id > 2:
+                    #    obj_id = obj_id - 1
+                    obj_bb = curlist["bbox_obj"]
                     bbox_vis.append(obj_bb)
-                    cat_vis.append(obj_id)
 
-                    R = curlist["cam_R_m2c"]
-                    T = curlist["cam_t_m2c"]
+                    gtPose = scenejson.get(str(ss))
+                    obj_id = gtPose[0]['obj_id']
+                    R = gtPose[0]["cam_R_m2c"]
+                    T = gtPose[0]["cam_t_m2c"]
+                    cat_vis.append(obj_id)
 
                     # pose [x, y, z, roll, pitch, yaw]
                     R = np.asarray(R, dtype=np.float32)
@@ -455,8 +488,7 @@ if __name__ == "__main__":
                         "pose": pose,
                         "segmentation": box3D,
                         "area": area,
-                        "iscrowd": 0,
-                        "calib": np.array([fxca, fyca, cxca, cyca], dtype=np.float32).tolist()
+                        "iscrowd": 0
                     }
                     dictVal["annotations"].append(tempVa)
 
@@ -632,14 +664,10 @@ if __name__ == "__main__":
 
                     camR = camR_vis[i]
                     camT = camT_vis[i]
-                    #t_lie = [[0.0, camR[0], camR[1]],
-                    #         [-camR[0], 0.0, camR[2]],
-                    #         [-camR[1], -camR[2], 0.0]]
-                    #t_lie = np.asarray(t_lie, dtype=np.float32)
-                    #t_eul = geometry.rotations.map_hat(t_lie)
+
                     t_rot = tf3d.euler.euler2quat(camR[0], camR[1], camR[2])
-                    t_rot = np.asarray(t_rot, dtype=np.float32)
-                    draw_axis(img, cam_R=camR, cam_T=camT)
+                    #t_rot = np.asarray(t_rot, dtype=np.float32)
+                    draw_axis(img, cam_R=t_rot, cam_T=camT)
 
                 cv2.imwrite('/home/sthalham/visTests/testBB.jpg', img)
 
