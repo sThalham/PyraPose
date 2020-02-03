@@ -19,11 +19,11 @@ import imgaug.augmenters as iaa
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_DA/'
-    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    root = '/home/stefan/data/rendered_data/ycbv_rgbd/patches'
+    target = '/home/stefan/data/train_data/ycbv_RGBD/'
+    mesh_info = '/home/stefan/data/Meshes/ycb_video_st/models/models_info.json'
 
-    visu = False
+    visu = True
     resX = 640
     resY = 480
     fxkin = 579.68  # blender calculated
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
 
-    for key, value in yaml.load(open(mesh_info)).items():
+    for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
         x_minus = value['min_x'] * fac
         y_minus = value['min_y'] * fac
@@ -90,8 +90,6 @@ if __name__ == "__main__":
     meanRGBD = np.zeros((6), np.float64)
 
     syns = os.listdir(root)
-    print(len(syns))
-    syns = syns[:18273]
     all = len(syns)
     for fileInd in syns:
         if fileInd.endswith(".yaml"):
@@ -330,6 +328,7 @@ if __name__ == "__main__":
                         # print(posvis[i])
                         if i is not poses.shape[0]:
                             pose = np.asarray(bb3vis[i], dtype=np.float32)
+                            print(pose)
 
                             colR = 250
                             colG = 25
