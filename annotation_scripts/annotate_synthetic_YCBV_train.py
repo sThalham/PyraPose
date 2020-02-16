@@ -19,9 +19,9 @@ import imgaug.augmenters as iaa
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/ycbv_rgbd/patches'
-    target = '/home/stefan/data/train_data/ycbv_RGBD/'
-    mesh_info = '/home/stefan/data/Meshes/ycb_video_st/models/models_info.json'
+    root = '/home/sthalham/ycb_test/patches'
+    target = '/home/sthalham/data/prepro/ycbv_RGBD/'
+    mesh_info = '/home/sthalham/data/Meshes/ycbv_st/models/models_info.json'
 
     visu = True
     resX = 640
@@ -194,12 +194,7 @@ if __name__ == "__main__":
                     rot = tf3d.quaternions.quat2mat(poses[i, 3:])
                     rot = np.asarray(rot, dtype=np.float32)
 
-                    if objID > 5:
-                        cls = objID + 2
-                    elif objID > 2:
-                        cls = objID + 1
-                    else:
-                        cls = objID
+                    cls = objID
 
                     tDbox = rot[:3, :3].dot(threeD_boxes[cls, :, :].T).T
                     tDbox = tDbox + np.repeat(poses[i, np.newaxis, 0:3], 8, axis=0)
