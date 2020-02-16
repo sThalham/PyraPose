@@ -10,14 +10,34 @@ def swish(x, beta=1.0):
     return x * keras.activations.sigmoid(beta*x)
 
 
-#class batch_norm(keras.layers.layers):
+class wBiFPNAdd(keras.layers.Layer):
+    def __init__(self, epsilon=1e-4, **kwargs):
+        super(wBiFPNAdd, self).__init__(**kwargs)
+        self.epsilon = epsilon
 
-#    def call(self, inputs, **kwargs):
+    def build(self, input_shape):
+        num_in = len(input_shape)
+        self.w = self.add_weight(name=self.name,
+                                 shape=(num_in,),
+                                 initializer=keras.initializers.constant(1 / num_in),
+                                 trainable=True,
+                                 dtype=tf.float32)
 
-#        return keras.layers.BatchNormalization(axis=-1)(inputs)
+    def call(self, inputs, **kwargs):
+        w = keras.activations.relu(self.w)
+        x = tf.reduce_sum([w[i] * inputs[i] for i in range(len(inputs))], axis=0)
+        x = x / (tf.reduce_sum(w) + self.epsilon)
+        return x
 
-#    def compute_output_shape(self, input_shape):
-#        return input_shape
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
+
+    def get_config(self):
+        config = super(wBiFPNAdd, self).get_config()
+        config.update({
+            'epsilon': self.epsilon
+        })
+        return config
 
 
 def max_norm(w):
@@ -244,6 +264,86 @@ def __create_BiFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
     return [P3, P4, P5]
 
 
+def __create_BiFPN_noW(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+    P3_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_R)
+    P4_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_R)
+    P5_r = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_R)
+    P6_r = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(C5_R)
+    P7_r = keras.layers.Activation('relu')(P6_r)
+    P7_r = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P7_r)
+
+    P3_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
+    P4_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
+    P5_d = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
+    P6_d = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(C5_D)
+    P7_d = keras.layers.Activation('relu')(P6_d)
+    P7_d = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P7_d)
+
+    P3 = keras.layers.Add()([P3_r, P3_d])
+    P4 = keras.layers.Add()([P4_r, P4_d])
+    P5 = keras.layers.Add()([P5_r, P5_d])
+    P6 = keras.layers.Add()([P6_r, P6_d])
+    P7 = keras.layers.Add()([P7_r, P7_d])
+
+    P7_upsampled = layers.UpsampleLike()([P7, P6])
+    P6_td = wBiFPNAdd()([P7_upsampled, P6])
+    #P6_td = keras.layers.Add()([P7_upsampled, P6])
+    P6_td = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P6_td)
+    P6_td = keras.layers.BatchNormalization(axis=-1)(P6_td)
+    P6_td = keras.layers.Activation('relu')(P6_td)
+
+    P6_upsampled = layers.UpsampleLike()([P6_td, P5])
+    P5_td = wBiFPNAdd()([P6_upsampled, P5])
+    #P5_td = keras.layers.Add()([P6_upsampled, P5])
+    P5_td = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P5_td)
+    P5_td = keras.layers.BatchNormalization(axis=-1)(P5_td)
+    P5_td = keras.layers.Activation('relu')(P5_td)
+
+    P5_upsampled = layers.UpsampleLike()([P5_td, P4])
+    P4_td = wBiFPNAdd()([P5_upsampled, P4])
+    #P4_td = keras.layers.Add()([P5_upsampled, P4])
+    P4_td = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P4_td)
+    P4_td = keras.layers.BatchNormalization(axis=-1)(P4_td)
+    P4_td = keras.layers.Activation('relu')(P4_td)
+
+    P4_upsampled = layers.UpsampleLike()([P4_td, P3])
+    P3_out = wBiFPNAdd()([P4_upsampled, P3])
+    #P3_out = keras.layers.Add()([P4_upsampled, P3])
+    P3_out = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P3_out)
+    P3_out = keras.layers.BatchNormalization(axis=-1)(P3_out)
+    P3_out = keras.layers.Activation('relu', name='P3_con')(P3_out)
+
+    P3_down = keras.layers.MaxPooling2D(strides=2)(P3_out)
+    P4_out = wBiFPNAdd()([P3_down, P4_td, P4])
+    #P4_out = keras.layers.Add()([P3_down, P4_td, P4])
+    P4_out = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P4_out)
+    P4_out = keras.layers.BatchNormalization(axis=-1)(P4_out)
+    P4_out = keras.layers.Activation('relu', name='P4_con')(P4_out)
+
+    P4_down = keras.layers.MaxPooling2D(strides=2)(P4_out)
+    P5_out = wBiFPNAdd()([P4_down, P5_td, P5])
+    #P5_out = keras.layers.Add()([P4_down, P5_td, P5])
+    P5_out = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P5_out)
+    P5_out = keras.layers.BatchNormalization(axis=-1)(P5_out)
+    P5_out = keras.layers.Activation('relu', name='P5_con')(P5_out)
+
+    P5_down = keras.layers.MaxPooling2D(strides=2, padding='same')(P5_out)
+    P6_out = wBiFPNAdd()([P5_down, P6_td, P6])
+    #P6_out = keras.layers.Add()([P5_down, P6_td, P6])
+    P6_out = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P6_out)
+    P6_out = keras.layers.BatchNormalization(axis=-1)(P6_out)
+    P6_out = keras.layers.Activation('relu', name='P6_con')(P6_out)
+
+    P6_down = keras.layers.MaxPooling2D(strides=2)(P6_out)
+    P7_out = wBiFPNAdd()([P6_down, P7])
+    #P7_out = keras.layers.Add()([P6_down, P7])
+    P7_out = keras.layers.DepthwiseConv2D(kernel_size=3, strides=1, padding='same')(P7_out)
+    P7_out = keras.layers.BatchNormalization(axis=-1)(P7_out)
+    P7_out = keras.layers.Activation('relu', name='P7_con')(P7_out)
+
+    return [P3_out, P4_out, P5_out, P6_out, P7_out]
+
+
 def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
 
     # only from here for FPN-fusion test 3
@@ -458,7 +558,7 @@ def retinanet(
     backbone_layers_dep,
     num_classes,
     num_anchors             = None,
-    create_pyramid_features = __create_sparceFPN,
+    create_pyramid_features = __create_BiFPN_noW,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -596,8 +696,8 @@ def retinanet_bbox(
         assert_training_model(model)
 
     # compute the anchors
-    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
-    features = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5']]
+    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    #features = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5']]
     anchors = __build_anchors(anchor_params, features)
 
     # we expect the anchors, regression and classification values as first output
