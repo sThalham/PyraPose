@@ -73,10 +73,16 @@ def get_disc_sympose(rot_pose, sym, oid):
 
 if __name__ == "__main__":
 
+<<<<<<< HEAD
     root = '/home/stefan/data/rendered_data/ycbv_rgbd/patches'
     root2 = '/home/stefan/data/rendered_data/ycbv_rgbd_2/patches'
     target = '/home/stefan/data/train_data/ycbv_RGBD_V2/'
     mesh_info = '/home/stefan/data/Meshes/ycb_video_st/models/models_info.json'
+=======
+    root = '/home/sthalham/ycb_test/patches'
+    target = '/home/sthalham/data/prepro/ycbv_RGBD/'
+    mesh_info = '/home/sthalham/data/Meshes/ycbv_st/models/models_info.json'
+>>>>>>> 177484e6aa32844a6e9ebe9a55dc81406dd72afc
 
     visu = False
     resX = 640
@@ -274,6 +280,7 @@ if __name__ == "__main__":
 
                     rot = np.asarray(rot, dtype=np.float32)
 
+<<<<<<< HEAD
                     tDbox = rot[:3, :3].dot(threeD_boxes[objID, :, :].T).T
                     tDbox = tDbox + np.repeat(poses[i, np.newaxis, 0:3], 8, axis=0)
 
@@ -536,6 +543,9 @@ if __name__ == "__main__":
                     #                           objID)
 
                     rot = np.asarray(rot, dtype=np.float32)
+=======
+                    cls = objID
+>>>>>>> 177484e6aa32844a6e9ebe9a55dc81406dd72afc
 
                     tDbox = rot[:3, :3].dot(threeD_boxes[objID, :, :].T).T
                     tDbox = tDbox + np.repeat(poses[i, np.newaxis, 0:3], 8, axis=0)

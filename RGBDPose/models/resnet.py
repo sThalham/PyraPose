@@ -81,6 +81,10 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
             layer.trainable = False
         layer.name = 'layer_' + str(i)
 
+
+    # <39 is first 2 layers... 11 layer, freeze either <22 or <25
+    # resnet18
+
     #print(effnet_rgb.summary())
     #[<tf.Tensor 'res3d_relu/Relu:0' shape=(?, ?, ?, 512) dtype=float32>, <tf.Tensor 'res4f_relu/Relu:0' shape=(?, ?, ?, 1024) dtype=float32>, <tf.Tensor 'res5c_relu/Relu:0' shape=(?, ?, ?, 2048) dtype=float32>]
     # [B1:236(swish_98) B1/B2:338(swish_138), B3:383(swish_156)] separate
