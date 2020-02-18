@@ -19,7 +19,6 @@ limitations under the License.
 import keras
 import numpy as np
 import json
-import pyquaternion
 import math
 import transforms3d as tf3d
 import geometry
@@ -31,6 +30,8 @@ from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import time
+
+from matplotlib import pyplot
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -94,8 +95,8 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    mesh_path ="/RGBDPose/linemod_13/"
-    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    #mesh_path ="/RGBDPose/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -158,8 +159,8 @@ def boxoverlap(a, b):
 def evaluate_linemod(generator, model, threshold=0.05):
     threshold = 0.5
 
-    mesh_info = '/RGBDPose/linemod_13/models_info.yml'
-    #mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
+    #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
+    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
 
@@ -293,7 +294,23 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes, boxes3D, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes, boxes3D, scores, labels, P3, P4, P5 = model.predict_on_batch([np.expand_dims(image_dep, axis=0)])#, np.expand_dims(image_dep, axis=0)])
+
+        print(P3.shape) # 60, 80
+        print(P4.shape) # 30, 40
+        print(P5.shape) # 15, 20
+
+        square = 16
+        ix = 1
+        for _ in range(square):
+            for _ in range(square):
+                ax = pyplot.subplot(square, square, ix)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                pyplot.imshow(P3[0, :, :, ix-1], cmap='brg')
+                ix +=1
+
+        pyplot.show()
 
         # correct boxes for image scale
         boxes /= scale

@@ -558,7 +558,7 @@ def retinanet(
     backbone_layers_dep,
     num_classes,
     num_anchors             = None,
-    create_pyramid_features = __create_BiFPN_noW,
+    create_pyramid_features = __create_sparceFPN,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -696,9 +696,19 @@ def retinanet_bbox(
         assert_training_model(model)
 
     # compute the anchors
-    features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
-    #features = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5']]
+    #features = [model.get_layer(p_name).output for p_name in ['P3_con', 'P4_con', 'P5_con', 'P6_con', 'P7_con']]
+    features = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5']]
     anchors = __build_anchors(anchor_params, features)
+
+    #for i in range(len(model.layers)):
+    #    layer = model.layers[i]
+    #    print(i, layer.name, layer.output.shape)
+    #print(model.layers[368].output)
+    #print(model.layers[369].output)
+    #print(model.layers[370].output)
+    print(model.layers[190].output)
+    print(model.layers[191].output)
+    print(model.layers[192].output)
 
     # we expect the anchors, regression and classification values as first output
     #intermediate_tensor_function = ([model.inputs], [model.outputs[-1]])
@@ -720,6 +730,14 @@ def retinanet_bbox(
         class_specific_filter = class_specific_filter,
         name                  = 'filtered_detections'
     )([boxes, boxes3D, classification] + other)
+
+    #detections.append(model.layers[368].output)
+    #detections.append(model.layers[369].output)
+    #detections.append(model.layers[370].output)
+
+    detections.append(model.layers[190].output)
+    detections.append(model.layers[191].output)
+    detections.append(model.layers[192].output)
 
     # construct the model
     return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
