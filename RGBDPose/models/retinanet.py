@@ -741,13 +741,13 @@ def retinanet_bbox(
         name                  = 'filtered_detections'
     )([boxes, boxes3D, classification] + other)
 
-    detections.append(model.layers[368].output)
-    detections.append(model.layers[369].output)
-    detections.append(model.layers[370].output)
+    #detections.append(model.layers[368].output)
+    #detections.append(model.layers[369].output)
+    #detections.append(model.layers[370].output)
 
-    #detections.append(model.layers[190].output)
-    #detections.append(model.layers[191].output)
-    #detections.append(model.layers[192].output)
+    detections.append(model.layers[190].output)
+    detections.append(model.layers[191].output)
+    detections.append(model.layers[192].output)
 
     # construct the model
     return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)

@@ -145,6 +145,7 @@ class LinemodGenerator(Generator):
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = path[:-4] + '_rgb' + path[-4:]
+        print(path)
 
         return read_image_bgr(path)
 
