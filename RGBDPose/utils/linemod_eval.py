@@ -96,11 +96,9 @@ def toPix_array(translation):
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/linemod_13/"
-<<<<<<< HEAD
-    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
-=======
+    #mesh_path = "/home/stefan/data/Meshes/linemod_13/"
     mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
->>>>>>> 177484e6aa32844a6e9ebe9a55dc81406dd72afc
+
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -164,11 +162,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
     threshold = 0.1
 
     #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
-<<<<<<< HEAD
-    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
-=======
+    #mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
     mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
->>>>>>> 177484e6aa32844a6e9ebe9a55dc81406dd72afc
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
 
@@ -302,8 +297,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-<<<<<<< HEAD
-        boxes, boxes3D, scores, labels, P3, P4, P5 = model.predict_on_batch([np.expand_dims(image_dep, axis=0)])#, np.expand_dims(image_dep, axis=0)])
+
+        boxes, boxes3D, scores, labels, P3, P4, P5 = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         print(P3.shape) # 60, 80
         print(P4.shape) # 30, 40
@@ -316,15 +311,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 ax = pyplot.subplot(square, square, ix)
                 ax.set_xticks([])
                 ax.set_yticks([])
-                pyplot.imshow(P3[0, :, :, ix-1], cmap='brg')
+                pyplot.imshow(P5[0, :, :, ix-1], cmap='hot')
                 ix +=1
 
         pyplot.show()
-=======
-        start_time = time.time()
-        boxes, boxes3D, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
-        print(time.time() - start_time)
->>>>>>> 177484e6aa32844a6e9ebe9a55dc81406dd72afc
 
         # correct boxes for image scale
         boxes /= scale

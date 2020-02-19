@@ -706,9 +706,19 @@ def retinanet_bbox(
     #print(model.layers[368].output)
     #print(model.layers[369].output)
     #print(model.layers[370].output)
-    print(model.layers[190].output)
-    print(model.layers[191].output)
-    print(model.layers[192].output)
+    #print(model.layers[355].output)
+    #print(model.layers[351].output)
+    #print(model.layers[356].output)
+
+    #print(model.layers[190].output.get_weights())
+    #print(model.layers[191].output)
+    #print(model.layers[192].output)
+
+    #for layer in model.layers:
+    #    if 'conv' not in layer.name:
+    #        continue
+    #    filters, biases = layer.get_weights()
+    #    print(layer.name, filters.shape)
 
     # we expect the anchors, regression and classification values as first output
     #intermediate_tensor_function = ([model.inputs], [model.outputs[-1]])
@@ -731,13 +741,13 @@ def retinanet_bbox(
         name                  = 'filtered_detections'
     )([boxes, boxes3D, classification] + other)
 
-    #detections.append(model.layers[368].output)
-    #detections.append(model.layers[369].output)
-    #detections.append(model.layers[370].output)
+    detections.append(model.layers[368].output)
+    detections.append(model.layers[369].output)
+    detections.append(model.layers[370].output)
 
-    detections.append(model.layers[190].output)
-    detections.append(model.layers[191].output)
-    detections.append(model.layers[192].output)
+    #detections.append(model.layers[190].output)
+    #detections.append(model.layers[191].output)
+    #detections.append(model.layers[192].output)
 
     # construct the model
     return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
