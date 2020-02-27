@@ -20,7 +20,7 @@ from shutil import copyfile
 depthCut = 2000.0
 
 
-def draw_axis(img, cam_R, cam_T):
+def draw_axis(img, cam_R, cam_T, fxkin=None, fykin=None, cxkin=None, cykin=None):
     # unit is mm
     points = np.float32([[100, 0, 0], [0, 100, 0], [0, 0, 100], [0, 0, 0]]).reshape(-1, 3)
 
@@ -329,8 +329,15 @@ if __name__ == "__main__":
                     rgb_name = fileName[:-8] + '_rgb.jpg'
                     cv2.imwrite(rgb_name, rgbImg)
                     cv2.imwrite(fileName, imgI)
+                    dep_raw_name = fileName[:-8] + '_dep_raw.png'
+                    copyfile(depImgPath, dep_raw_name)
                     print("storing image in : ", fileName)
 
+                bbvis = []
+                bb3vis = []
+                cats = []
+                posvis = []
+                postra = []
                 #bbsca = 720.0 / 640.0
                 for i in range(len(gtImg)):
 
@@ -340,13 +347,13 @@ if __name__ == "__main__":
                     #elif obj_id > 2:
                     #    obj_id = obj_id - 1
                     obj_bb = curlist["bbox_obj"]
-                    bbox_vis.append(obj_bb)
+                    bbvis.append(obj_bb)
 
                     gtPose = scenejson.get(str(ss))
-                    obj_id = gtPose[0]['obj_id']
-                    R = gtPose[0]["cam_R_m2c"]
-                    T = gtPose[0]["cam_t_m2c"]
-                    cat_vis.append(obj_id)
+                    obj_id = gtPose[i]['obj_id']
+                    R = gtPose[i]["cam_R_m2c"]
+                    T = gtPose[i]["cam_t_m2c"]
+                    #cats.append(objID)
 
                     # pose [x, y, z, roll, pitch, yaw]
                     R = np.asarray(R, dtype=np.float32)
@@ -356,7 +363,7 @@ if __name__ == "__main__":
                     pose = [np.asscalar(tra[0]), np.asscalar(tra[1]), np.asscalar(tra[2]),
                             np.asscalar(rot[0]), np.asscalar(rot[1]), np.asscalar(rot[2])]
                     camR_vis.append([np.asscalar(rot[0]), np.asscalar(rot[1]), np.asscalar(rot[2])])
-                    camT_vis.append(tra)
+                    #camT_vis.append(tra)
 
                     if tra[2] > max_obj_dist:
                         max_obj_dist = tra[2]
@@ -409,111 +416,6 @@ if __name__ == "__main__":
 
             else:
                 continue
-                fileName = target + 'images/test/' + imgNam
-                myFile = Path(fileName)
-                if myFile.exists():
-                    print('File exists, skip encoding, ', fileName)
-                else:
-                    # imgI = encodeImage(depImg)
-                    imgI, depth_refine = get_normal(depImg, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin, for_vis=False)
-                    depImg[depImg > depthCut] = 0
-                    scaCro = 255.0 / np.nanmax(depImg)
-                    cross = np.multiply(depImg, scaCro)
-                    dep_sca = cross.astype(np.uint8)
-                    imgI[:, :, 2] = dep_sca
-                    cv2.imwrite(fileName, dep_sca)
-                    #cv2.imwrite(fileName, imgI)
-                    print("storing image in : ", fileName)
-
-                for i in range(len(gtImg)):
-
-                    curlist = gtImg[i]
-                    obj_id = curlist["obj_id"]
-                    obj_bb = curlist["obj_bb"]
-                    bbox_vis.append(obj_bb)
-                    cat_vis.append(obj_id)
-
-                    R = curlist["cam_R_m2c"]
-                    T = curlist["cam_t_m2c"]
-                    tra = np.asarray(T, dtype=np.float32)
-                    R = np.asarray(R, dtype=np.float64)
-                    #rot = tf3d.quaternions.mat2quat(R.reshape(3, 3))
-                    #rot = tf3d.euler.quat2mat(rot)
-                    #rot = np.asarray(rot, dtype=np.float32)
-                    #lie = geometry.rotations.hat_map(rot)
-                    #lie = geometry.poses.pose_from_rotation_translation(rot, tra)
-                    #tra = np.asarray(T, dtype=np.float32)
-                    #camR_vis.append([np.asscalar(lie[0, 1]), np.asscalar(lie[0, 2]), np.asscalar(lie[1, 2])])
-                    #camT_vis.append(tra)
-
-                    #pose = np.concatenate([tra.transpose(), rot.transpose()])
-                    #pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
-                    #        np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]),
-                    #        np.asscalar(pose[6])]
-                    #pose = [np.asscalar(tra[0]), np.asscalar(tra[1]), np.asscalar(tra[2]),
-                    #        np.asscalar(lie[0, 1]), np.asscalar(lie[0, 2]), np.asscalar(lie[1, 2])]
-                    #pose = [np.asscalar(lie[0, 3]), np.asscalar(lie[1, 3]), np.asscalar(lie[2, 3]),
-                    #        np.asscalar(lie[2, 1]), np.asscalar(lie[0, 2]), np.asscalar(lie[1, 0])]
-
-                    rot = tf3d.euler.mat2euler(R.reshape(3, 3))
-                    rot = np.asarray(rot, dtype=np.float32)
-                    pose = [np.asscalar(tra[0]), np.asscalar(tra[1]), np.asscalar(tra[2]),
-                            np.asscalar(rot[0]), np.asscalar(rot[1]), np.asscalar(rot[2])]
-                    camR_vis.append([np.asscalar(rot[0]), np.asscalar(rot[1]), np.asscalar(rot[2])])
-                    camT_vis.append(tra)
-
-                    pose[0:2] = toPix(pose[0:3])
-
-                    area = obj_bb[2] * obj_bb[3]
-
-                    nx1 = obj_bb[0]
-                    ny1 = obj_bb[1]
-                    nx2 = nx1 + obj_bb[2]
-                    ny2 = ny1 + obj_bb[3]
-                    npseg = np.array([nx1, ny1, nx2, ny1, nx2, ny2, nx1, ny2])
-                    cont = npseg.tolist()
-
-                    annoID = annoID + 1
-                    tempVa = {
-                        "id": annoID,
-                        "image_id": img_id,
-                        "category_id": obj_id,
-                        "bbox": obj_bb,
-                        "pose": pose,
-                        "segmentation": [cont],
-                        "area": area,
-                        "iscrowd": 0
-                    }
-                    dict["annotations"].append(tempVa)
-
-                # cnt = cnt.ravel()
-                # cont = cnt.tolist()
-
-                # depthName = '/home/sthalham/data/T-less_Detectron/linemodTest_HAA/train/' + imgNam
-                # rgbName = '/home/sthalham/data/T-less_Detectron/tlessC_all/val/' + imgNam
-                #cv2.imwrite(depthName, imgI)
-                # cv2.imwrite(rgbName, rgbImg)
-
-                #print("storing in test: ", imgNam)
-
-                # create dictionaries for json
-                tempVl = {
-                    "url": "cmp.felk.cvut.cz/t-less/",
-                    "id": img_id,
-                    "name": iname
-                }
-                dict["licenses"].append(tempVl)
-
-                tempVi = {
-                    "license": 2,
-                    "url": "cmp.felk.cvut.cz/t-less/",
-                    "file_name": iname,
-                    "height": rows,
-                    "width": cols,
-                    "date_captured": dateT,
-                    "id": img_id
-                }
-                dict["images"].append(tempVi)
 
             elapsed_time = time.time() - start_time
             times.append(elapsed_time)
@@ -524,21 +426,28 @@ if __name__ == "__main__":
                 times = []
 
             if visu is True:
-                img = cv2.imread(rgbImgPath)
-                #img = cv2.imread(fileName, cv2.IMREAD_UNCHANGED)
-                for i, bb in enumerate(bbox_vis):
-                    cv2.rectangle(img, (int(bb[0]), int(bb[1])), (int(bb[0]) + int(bb[2]), int(bb[1]) + int(bb[3])),
-                                  (255, 255, 255), 3)
-                    cv2.rectangle(img, (int(bb[0]), int(bb[1])), (int(bb[0]) + int(bb[2]), int(bb[1]) + int(bb[3])),
+
+                img = rgbImg
+                for i, bb in enumerate(bbvis):
+
+                    # if cats[i] not in [19, 20, 23]:
+                    #    continue
+
+                    bb = np.array(bb)
+
+                    cv2.rectangle(img, (int(bb[1]), int(bb[0])), (int(bb[3]), int(bb[2])),
+                                  (255, 255, 255), 2)
+                    cv2.rectangle(img, (int(bb[1]), int(bb[0])), (int(bb[3]), int(bb[2])),
                                   (0, 0, 0), 1)
-                    #
+
                     font = cv2.FONT_HERSHEY_SIMPLEX
-                    bottomLeftCornerOfText = (int(bb[2]), int(bb[1]))
+                    bottomLeftCornerOfText = (int(bb[1]), int(bb[0]))
                     fontScale = 1
                     fontColor = (0, 0, 0)
                     fontthickness = 1
                     lineType = 2
-                    gtText = str(cat_vis[i])
+                    gtText = str(cats[i])
+                    # print(cats[i])
 
                     fontColor2 = (255, 255, 255)
                     fontthickness2 = 3
@@ -558,41 +467,50 @@ if __name__ == "__main__":
                                 fontthickness,
                                 lineType)
 
-                    camR = camR_vis[i]
-                    camT = camT_vis[i]
+                    # print(posvis[i])
+                    if i is not poses.shape[0]:
+                        pose = np.asarray(bb3vis[i], dtype=np.float32)
 
-                    t_rot = tf3d.euler.euler2quat(camR[0], camR[1], camR[2])
-                    #t_rot = np.asarray(t_rot, dtype=np.float32)
-                    draw_axis(img, cam_R=t_rot, cam_T=camT)
+                        colR = 250
+                        colG = 25
+                        colB = 175
 
-                cv2.imwrite('/home/sthalham/visTests/testBB.jpg', img)
+                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
+                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
+                                       2)
+                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
+                                       (colR, colG, colB), 2)
+
+                cv2.imwrite(fileName, img)
 
                 print('STOP')
 
-    if dataset == 'tless':
-        catsInt = range(1, 31)
+    catsInt = range(1, 22)
 
-        for s in catsInt:
-            objName = str(s)
-            tempC = {
-                "id": s,
-                "name": objName,
-                "supercategory": "object"
-            }
-            dict["categories"].append(tempC)
-            dictVal["categories"].append(tempC)
-    elif dataset == 'linemod':
-        catsInt = range(1, 16)
-
-        for s in catsInt:
-            objName = str(s)
-            tempC = {
-                "id": s,
-                "name": objName,
-                "supercategory": "object"
-            }
-            dict["categories"].append(tempC)
-            dictVal["categories"].append(tempC)
+    for s in catsInt:
+        objName = str(s)
+        tempC = {
+            "id": s,
+            "name": objName,
+            "supercategory": "object"
+        }
+        dict["categories"].append(tempC)
+        dictVal["categories"].append(tempC)
 
     valAnno = target + 'annotations/instances_val.json'
     trainAnno = target + 'annotations/instances_test.json'

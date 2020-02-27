@@ -306,8 +306,8 @@ def create_BB(rgb):
 if __name__ == "__main__":
 
     dataset = 'linemod'
-    root = "/home/sthalham/data/LineMOD_val_BOP/"  # path to train samples, depth + rgb
-    target = '/home/sthalham/data/prepro/val_linemod_BOP_RGBD/'
+    root = "/home/stefan/data/datasets/LM_BOP_val/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/val_linemod_BOP_RGBD_icp/'
     # print(root)
     visu = False
 
@@ -447,6 +447,8 @@ if __name__ == "__main__":
                     rgb_name = fileName[:-8] + '_rgb.jpg'
                     cv2.imwrite(rgb_name, rgbImg)
                     cv2.imwrite(fileName, imgI)
+                    dep_raw_name = fileName[:-8] + '_dep_raw.png'
+                    copyfile(depImgPath, dep_raw_name)
                     print("storing image in : ", fileName)
 
                 #bbsca = 720.0 / 640.0

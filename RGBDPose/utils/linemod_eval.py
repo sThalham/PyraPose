@@ -44,35 +44,96 @@ cxkin = 325.26110
 cykin = 242.04899
 
 
-def get_evaluation(pcd_temp_, pcd_scene_, inlier_thres, tf, final_th=0, n_iter=5):#queue
+def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
     tf_pcd =np.eye(4)
+    pcd_temp_.transform(tf)
 
-    reg_p2p = open3d.registration_icp(pcd_temp_, pcd_scene_ , inlier_thres, np.eye(4),
-              open3d.TransformationEstimationPointToPoint(),
-              open3d.ICPConvergenceCriteria(max_iteration=1)) #5?
-    tf = np.matmul(reg_p2p.transformation, tf)
+    mean_temp = np.mean(np.array(pcd_temp_.points)[:, 2])
+    mean_scene = np.median(np.array(pcd_scene_.points)[:, 2])
+    pcd_diff = mean_scene - mean_temp
+
+    #open3d.draw_geometries([pcd_temp_])
+    # align model with median depth of scene
+    new_pcd_trans = []
+    for i, point in enumerate(pcd_temp_.points):
+        poi = np.asarray(point)
+        poi = poi + [0.0, 0.0, pcd_diff]
+        new_pcd_trans.append(poi)
+    tf = np.array(tf)
+    tf[2, 3] = tf[2, 3] + pcd_diff
+    pcd_temp_.points = open3d.Vector3dVector(np.asarray(new_pcd_trans))
+    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=5.0, max_nn=10))
+
+    pcd_min = mean_scene - (model_dia * 2)
+    pcd_max = mean_scene + (model_dia * 2)
+    new_pcd_scene = []
+    for i, point in enumerate(pcd_scene_.points):
+        if point[2] > pcd_min or point[2] < pcd_max:
+            new_pcd_scene.append(point)
+    pcd_scene_.points = open3d.Vector3dVector(np.asarray(new_pcd_scene))
+    #open3d.draw_geometries([pcd_scene_])
+    open3d.estimate_normals(pcd_scene_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=5.0, max_nn=10))
+
+    reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
+                                                   open3d.registration.TransformationEstimationPointToPoint(),
+                                                   open3d.registration.ICPConvergenceCriteria(max_iteration = 5)) #5?
+    tf = np.matmul(reg_p2p.transformation,tf)
     tf_pcd = np.matmul(reg_p2p.transformation,tf_pcd)
     pcd_temp_.transform(reg_p2p.transformation)
 
-    for i in range(4):
-        inlier_thres = reg_p2p.inlier_rmse*3
-        if inlier_thres == 0:
-            continue
+    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=2.0, max_nn=30))
+    #open3d.draw_geometries([pcd_scene_])
+    points_unfiltered = np.asarray(pcd_temp_.points)
+    last_pcd_temp = []
+    for i, normal in enumerate(pcd_temp_.normals):
+        if normal[2] < 0:
+            last_pcd_temp.append(points_unfiltered[i, :])
+    if not last_pcd_temp:
+        normal_array = np.asarray(pcd_temp_.normals) * -1
+        pcd_temp_.normals = open3d.Vector3dVector(normal_array)
+        points_unfiltered = np.asarray(pcd_temp_.points)
+        last_pcd_temp = []
+        for i, normal in enumerate(pcd_temp_.normals):
+            if normal[2] < 0:
+                last_pcd_temp.append(points_unfiltered[i, :])
+    #print(np.asarray(last_pcd_temp))
+    pcd_temp_.points = open3d.Vector3dVector(np.asarray(last_pcd_temp))
 
-        reg_p2p = open3d.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
-                  open3d.TransformationEstimationPointToPlane(),
-                  open3d.ICPConvergenceCriteria(max_iteration=1)) #5?
-        tf = np.matmul(reg_p2p.transformation, tf)
-        tf_pcd = np.matmul(reg_p2p.transformation, tf_pcd)
+    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=5.0, max_nn=30))
+
+    hyper_tresh = inlier_thres
+    for i in range(4):
+        inlier_thres = reg_p2p.inlier_rmse*2
+        hyper_thres = hyper_tresh * 0.75
+        if inlier_thres < 1.0:
+            inlier_thres = hyper_tresh * 0.75
+            hyper_tresh = inlier_thres
+        reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
+                                                       open3d.registration.TransformationEstimationPointToPlane(),
+                                                       open3d.registration.ICPConvergenceCriteria(max_iteration = 1)) #5?
+        tf = np.matmul(reg_p2p.transformation,tf)
+        tf_pcd = np.matmul(reg_p2p.transformation,tf_pcd)
         pcd_temp_.transform(reg_p2p.transformation)
     inlier_rmse = reg_p2p.inlier_rmse
 
+    #open3d.draw_geometries([pcd_temp_, pcd_scene_])
+
     ##Calculate fitness with depth_inlier_th
     if(final_th>0):
+
         inlier_thres = final_th #depth_inlier_th*2 #reg_p2p.inlier_rmse*3
-        reg_p2p = registration_icp(pcd_temp_,pcd_scene_, inlier_thres, np.eye(4),
-                  TransformationEstimationPointToPlane(),
-                  ICPConvergenceCriteria(max_iteration = 1)) #5?
+        reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_, inlier_thres, np.eye(4),
+                                                       open3d.registration.TransformationEstimationPointToPlane(),
+                                                       open3d.registration.ICPConvergenceCriteria(max_iteration = 1)) #5?
+        tf = np.matmul(reg_p2p.transformation, tf)
+        tf_pcd = np.matmul(reg_p2p.transformation, tf_pcd)
+        pcd_temp_.transform(reg_p2p.transformation)
+
+    #open3d.draw_geometries([last_pcd_temp_, pcd_scene_])
 
     if( np.abs(np.linalg.det(tf[:3,:3])-1)>0.001):
         tf[:3,0]=tf[:3,0]/np.linalg.norm(tf[:3,0])
@@ -96,8 +157,8 @@ def toPix_array(translation):
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/linemod_13/"
-    #mesh_path = "/home/stefan/data/Meshes/linemod_13/"
-    mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -112,7 +173,7 @@ def load_pcd(cat):
     return pcd_model, model_vsd, model_vsd_mm
 
 
-def create_point_cloud(depth, ds):
+def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
     rows, cols = depth.shape
 
@@ -120,14 +181,15 @@ def create_point_cloud(depth, ds):
     zP = np.multiply(depRe, ds)
 
     x, y = np.meshgrid(np.arange(0, cols, 1), np.arange(0, rows, 1), indexing='xy')
-    yP = y.reshape(rows * cols) - cykin
-    xP = x.reshape(rows * cols) - cxkin
+    yP = y.reshape(rows * cols) - cy
+    xP = x.reshape(rows * cols) - cx
     yP = np.multiply(yP, zP)
     xP = np.multiply(xP, zP)
-    yP = np.divide(yP, fykin)
-    xP = np.divide(xP, fxkin)
+    yP = np.divide(yP, fy)
+    xP = np.divide(xP, fx)
 
     cloud_final = np.transpose(np.array((xP, yP, zP)))
+    #cloud_final[cloud_final[:,2]==0] = np.NaN
 
     return cloud_final
 
@@ -158,11 +220,11 @@ def boxoverlap(a, b):
 
 
 def evaluate_linemod(generator, model, threshold=0.05):
-    threshold = 0.1
+    threshold = 0.5
 
     #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
-    #mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
-    mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
+    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    #mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
@@ -265,6 +327,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image_dep = generator.preprocess_image(image_raw_dep)
         image_dep, scale = generator.resize_image(image_dep)
 
+        raw_dep_path = generator.load_image_dep_raw(index)
+
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
 
@@ -297,8 +361,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes, boxes3D, scores, labels, P3, P4, P5 = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes, boxes3D, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
+        '''
         print(P3.shape) # 60, 80
         print(P4.shape) # 30, 40
         print(P5.shape) # 15, 20
@@ -306,13 +371,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
         square = 16
         ix = 1
         magnitude_spectrum = np.zeros((60, 80))
+        s_value = 0
         for _ in range(1):
             for _ in range(256):
-                if ix <7:
-                    ax = pyplot.subplot(2, 3, ix)
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-                    pyplot.imshow(P3[0, :, :, ix - 1], cmap='hot')
+                #if ix <7:
+                    #ax = pyplot.subplot(2, 3, ix)
+                    #ax.set_xticks([])
+                    #ax.set_yticks([])
+                    #pyplot.imshow(P3[0, :, :, ix - 1], cmap='hot')
 
                 #ax = pyplot.subplot(4, 2, ix+1)
                 #ax.set_xticks([])
@@ -324,11 +390,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 #pyplot.imshow(np.abs(sp*(255/np.nanmax(sp))), cmap='gnuplot')
 
                 f = np.fft.fft2(P3[0, :, :, ix - 1])
+                s_value += np.sum(np.abs(f[1:, 1:])) / (80*60)
                 #print(f.shape)
                 fshift = np.fft.fftshift(f)
                 #print(fshift.shape)
-                ##magnitude_spectrum = 20 * np.log(np.abs(fshift))
-                magnitude_spectrum += np.log(np.abs(fshift))
+                magnitude_spectrum = np.abs(fshift)
+                #magnitude_spectrum += np.log(np.abs(fshift))
                 #pyplot.imshow(magnitude_spectrum, cmap='gnuplot')
                 #pyplot.show()
 
@@ -343,10 +410,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 #var = var + np.var(P3[0, :, :, ix - 1])
 
 
-        pyplot.show()
+        #pyplot.show()
+        print(s_value/256.0)
 
-        pyplot.imshow(magnitude_spectrum, cmap='gnuplot')
+        pyplot.imshow(magnitude_spectrum, cmap='gnuplot', vmin=0, vmax=3000)
         pyplot.show()
+        '''
 
         # correct boxes for image scale
         boxes /= scale
@@ -359,6 +428,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         if obj_name != model_pre:
             point_cloud, model_vsd, model_vsd_mm = load_pcd(obj_name)
+            point_cloud.scale(1000.0)
             model_pre = obj_name
 
         rotD[t_cat] += 1
@@ -401,8 +471,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             elif cls > 2:
                 cls += 1
             else: pass
-
-            print(cls, score)
 
             #cls = 1
             #control_points = box3D[(cls - 1), :]
@@ -516,6 +584,47 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         rd = re(R_gt, R_est)
                         xyz = te(t_gt, t_est.T)
+
+                        print('--------------------- ICP refinement -------------------')
+                        # print(raw_dep_path)
+                        image_dep = cv2.imread(raw_dep_path, cv2.IMREAD_UNCHANGED)
+                        #image_icp = np.multiply(image_dep, 0.1)
+                        image_icp = image_dep
+                        #print(np.nanmax(image_icp))
+
+                        pcd_img = create_point_cloud(image_icp, fxkin, fykin, cxkin, cykin, 1.0)
+                        pcd_img = pcd_img.reshape((480, 640, 3))[int(b1[1]):int(b1[3]), int(b1[0]):int(b1[2]), :]
+                        pcd_img = pcd_img.reshape((pcd_img.shape[0] * pcd_img.shape[1], 3))
+                        todel = []
+
+                        for i in range(len(pcd_img[:, 2])):
+                            if pcd_img[i, 2] < 300:
+                                todel.append(i)
+                        pcd_img = np.delete(pcd_img, todel, axis=0)
+                        #print(pcd_img)
+
+                        pcd_crop = open3d.PointCloud()
+                        pcd_crop.points = open3d.Vector3dVector(pcd_img)
+                       # open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(
+                       #     radius=2.0, max_nn=30))
+
+                        # pcd_crop.paint_uniform_color(np.array([0.99, 0.0, 0.00]))
+                        #open3d.draw_geometries([pcd_crop])
+
+                        guess = np.zeros((4, 4), dtype=np.float32)
+                        guess[:3, :3] = R_est
+                        guess[:3, 3] = t_est.T * 1000.0
+                        guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
+
+
+                        pcd_model = open3d.geometry.voxel_down_sample(point_cloud, voxel_size=5.0)
+                        pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=5.0)
+
+                        #open3d.draw_geometries([pcd_crop, pcd_model])
+                        reg_p2p, _, _, _ = get_evaluation_kiru(pcd_model, pcd_crop, 50, guess, 5,
+                                                               model_dia[cls] * 1000.0)
+                        R_est = reg_p2p[:3, :3]
+                        t_est = reg_p2p[:3, 3] * 0.001
 
                         '''
                         pose = est_points.reshape((16)).astype(np.int16)

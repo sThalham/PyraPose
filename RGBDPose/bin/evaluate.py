@@ -81,6 +81,17 @@ def create_generator(args):
             image_max_side=args.image_max_side,
             config=args.config
         )
+    elif args.dataset_type == 'ycbv':
+        # import here to prevent unnecessary dependency on cocoapi
+        from ..preprocessing.occlusion import OcclusionGenerator
+
+        validation_generator = OcclusionGenerator(
+            args.ycbv_path,
+            'val',
+            image_min_side=args.image_min_side,
+            image_max_side=args.image_max_side,
+            config=args.config
+        )
     elif args.dataset_type == 'tless':
         # import here to prevent unnecessary dependency on cocoapi
         from ..preprocessing.tless import TlessGenerator
@@ -114,6 +125,9 @@ def parse_args(args):
 
     occlusion_parser = subparsers.add_parser('occlusion')
     occlusion_parser.add_argument('occlusion_path', help='Path to dataset directory (ie. /tmp/Occlusion).')
+
+    ycbv_parser = subparsers.add_parser('ycbv')
+    ycbv_parser.add_argument('ycbv_path', help='Path to dataset directory (ie. /tmp/ycbv).')
 
     tless_parser = subparsers.add_parser('tless')
     tless_parser.add_argument('tless_path', help='Path to dataset directory (ie. /tmp/Tless).')
@@ -214,6 +228,18 @@ def main(args=None):
         from ..utils.occlusion_eval import evaluate_occlusion
         dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_occlusion(generator, model, args.score_threshold)
         print('RESULTS LINEMOD')
+        print('dataset recall:              ', dataset_recall, '%')
+        print('dataset precision:           ', dataset_precision, '%')
+        print('poses below 5cm and 5°:      ', less55, '%')
+        print('VSD below tau 0.02m:         ', less_vsd_t, '%')
+        print('reprojection below 5 pixel:  ', less_repr_5, '%')
+        print('ADD below model diameter:    ', less_add_d, '%')
+        print('F1 ADD < 0.15d:              ', F1_add_015, '%')
+
+    elif args.dataset_type == 'ycbv':
+        from ..utils.ycbv_eval import evaluate_ycbv
+        dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_ycbv(generator, model, args.score_threshold)
+        print('RESULTS YCB_video')
         print('dataset recall:              ', dataset_recall, '%')
         print('dataset precision:           ', dataset_precision, '%')
         print('poses below 5cm and 5°:      ', less55, '%')

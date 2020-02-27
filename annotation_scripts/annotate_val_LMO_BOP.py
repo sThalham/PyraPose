@@ -297,8 +297,8 @@ def create_BB(rgb):
 if __name__ == "__main__":
 
     dataset = 'linemod'
-    root = "/home/sthalham/data/datasets/YCBV_BOP_val/"  # path to train samples, depth + rgb
-    target = '/home/sthalham/data/prepro/val_YCBV_BOP_RGBD/'
+    root = "/home/stefan/data/datasets/LMO_BOP_val/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/val_occlusion_BOP_RGBD_icp/'
     # print(root)
     visu = False
 
@@ -429,6 +429,7 @@ if __name__ == "__main__":
                     #depName = target + 'images/val/' + tempSS + imgNum + '_dep.png'
                     #copyfile(depImgPath, depName)
 
+                    depthCut = 2000.0
                     depImg[depImg > depthCut] = 0
                     scaCro = 255/depthCut
                     cross = np.multiply(depImg, scaCro)
@@ -438,6 +439,8 @@ if __name__ == "__main__":
                     rgb_name = fileName[:-8] + '_rgb.jpg'
                     cv2.imwrite(rgb_name, rgbImg)
                     cv2.imwrite(fileName, imgI)
+                    dep_raw_name = fileName[:-8] + '_dep_raw.png'
+                    copyfile(depImgPath, dep_raw_name)
                     print("storing image in : ", fileName)
 
                 #bbsca = 720.0 / 640.0

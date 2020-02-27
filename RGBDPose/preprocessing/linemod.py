@@ -162,6 +162,20 @@ class LinemodGenerator(Generator):
 
         return read_image_dep(path)
 
+    def load_image_dep_raw(self, image_index):
+        """ Load an image at the image_index.
+        """
+        if _isArrayLike(image_index):
+            image_info = (self.image_ann[id] for id in image_index)
+        elif type(image_index) == int:
+            image_info = self.image_ann[image_index]
+        path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        # path = path[:-4] + '_dep.png'# + path[-4:]
+        path = path[:-4] + '_dep_raw.png'
+
+        return path
+
+
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.
             CHECK DONE HERE: Annotations + images correct

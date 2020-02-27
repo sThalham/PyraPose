@@ -39,7 +39,7 @@ def augmentDepth(depth, obj_mask, mask_ori):
     partmask = cv2.morphologyEx(partmask, cv2.MORPH_OPEN, kernel)
     partmask = signal.medfilt2d(partmask, kernel_size=shadowMK)
     partmask = partmask.astype(np.uint8)
-    mask = partmask > 20
+    mask = partmask > 0
     depth = np.where(mask, depth, 0.0)
 
     depthFinal = cv2.resize(depth, None, fx=1 / 2, fy=1 / 2)

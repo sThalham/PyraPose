@@ -20,7 +20,7 @@ import imgaug.augmenters as iaa
 if __name__ == "__main__":
 
     root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_DA/'
+    target = '/home/stefan/data/train_data/linemod_RGBD_aug/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
 
     visu = False
@@ -133,33 +133,34 @@ if __name__ == "__main__":
                     print('File exists, skip encoding and safing.')
 
                 else:
-                    #depthAug = augmentDepth(depth_refine, obj_mask, mask)
-                    #rgbAug = augmentRGB(rgb_refine)
+                    depthAug = augmentDepth(depth_refine, obj_mask, mask)
+                    rgbAug = augmentRGB(rgb_refine)
                     #rgbAug = augmentAAEext(rgb_refine)
 
-                    depthAug = maskDepth(depth_refine, obj_mask, mask)
-                    rgbAug = rgb_refine
+                    #depthAug = maskDepth(depth_refine, obj_mask, mask)
+                    #rgbAug = rgb_refine
 
                     #aug_xyz, depth_refine_aug = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
                     #                                                  for_vis=False)
 
                     depthAug[depthAug > depthCut] = 0
-                    aug_dep = depthAug.astype(np.uint16)
-                    #scaCro = 255.0 / np.nanmax(depthAug)
-                    #cross = np.multiply(depthAug, scaCro)
-                    #aug_dep = cross.astype(np.uint8)
-                    #aug_dep = np.repeat(aug_dep[:, :, np.newaxis], 3, 2)
+                    #aug_dep = depthAug.astype(np.uint16)
+                    scaCro = 255.0 / np.nanmax(depthAug)
+                    cross = np.multiply(depthAug, scaCro)
+                    aug_dep = cross.astype(np.uint8)
+                    aug_dep = np.repeat(aug_dep[:, :, np.newaxis], 3, 2)
 
                     meanRGBD[0] += np.nanmean(rgbAug[:, :, 0])
                     meanRGBD[1] += np.nanmean(rgbAug[:, :, 1])
                     meanRGBD[2] += np.nanmean(rgbAug[:, :, 2])
-                    meanRGBD[3] += np.nanmean(aug_dep[:, :])
-                    meanRGBD[4] += np.nanmean(aug_dep[:, :])
-                    meanRGBD[5] += np.nanmean(aug_dep[:, :])
+                    #meanRGBD[3] += np.nanmean(aug_dep[:, :])
+                    #meanRGBD[4] += np.nanmean(aug_dep[:, :])
+                    #meanRGBD[5] += np.nanmean(aug_dep[:, :])
                     # meanRGBD[3] = np.nanmean(depthAug[:, :, 0])
                     # meanRGBD[4] = np.nanmean(depthAug[:, :, 1])
                     # meanRGBD[5] = np.nanmean(depthAug[:, :, 2])
 
+                    print('file safed')
                     cv2.imwrite(fileName, rgbAug)
                     cv2.imwrite(fileName[:-8] + '_dep.png', aug_dep)
                     #img_rgbd = np.concatenate((rgbAug, aug_dep[:, :, np.newaxis]), axis=2)
