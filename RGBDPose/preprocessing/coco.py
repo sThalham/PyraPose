@@ -123,7 +123,17 @@ class CocoGenerator(Generator):
         """
         image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = path[:-4] + '_rgb' + path[-4:]
         return read_image_bgr(path)
+
+    def load_image_dep(self, image_index):
+        """ Load an image at the image_index.
+        """
+        image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
+        path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = path[:-4] + '_dep' + path[-4:]
+        return read_image_bgr(path)
+
 
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.

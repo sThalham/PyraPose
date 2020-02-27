@@ -297,8 +297,8 @@ def create_BB(rgb):
 if __name__ == "__main__":
 
     dataset = 'linemod'
-    root = "/home/stefan/data/datasets/LMO_BOP_val/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/val_occlusion_BOP_RGBD_icp/'
+    root = "/home/sthalham/data/OCCLUSION_test_BOP/"  # path to train samples, depth + rgb
+    target = '/home/sthalham/data/prepro/val_occlusion_BOP_RGBD_icp/'
     # print(root)
     visu = False
 
@@ -455,9 +455,9 @@ if __name__ == "__main__":
                     bbox_vis.append(obj_bb)
 
                     gtPose = scenejson.get(str(ss))
-                    obj_id = gtPose[0]['obj_id']
-                    R = gtPose[0]["cam_R_m2c"]
-                    T = gtPose[0]["cam_t_m2c"]
+                    obj_id = gtPose[i]['obj_id']
+                    R = gtPose[i]["cam_R_m2c"]
+                    T = gtPose[i]["cam_t_m2c"]
                     cat_vis.append(obj_id)
 
                     # pose [x, y, z, roll, pitch, yaw]

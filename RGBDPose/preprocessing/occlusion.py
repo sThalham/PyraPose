@@ -1,25 +1,4 @@
-"""
-Copyright 2017-2018 Fizyr (https://fizyr.com)
-<<<<<<< HEAD
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-=======
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
->>>>>>> 8c2e681694dc6139bce99b0f06bc9455d70215b3
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 
 from ..preprocessing.generator import Generator
 from ..utils.image import read_image_bgr, read_image_dep
@@ -127,7 +106,6 @@ class OcclusionGenerator(Generator):
         """ Map COCO label to the label as used in the network.
         COCO has some gaps in the order of labels. The highest label is 90, but there are 80 classes.
         """
-        print(label)
         return self.labels_inverse[label]
 
     def inv_label_to_name(self, label):

@@ -1,25 +1,3 @@
-"""
-Copyright 2017-2018 Fizyr (https://fizyr.com)
-<<<<<<< HEAD
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-=======
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
->>>>>>> 8c2e681694dc6139bce99b0f06bc9455d70215b3
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 
 #from pycocotools.cocoeval import COCOeval
 
@@ -36,7 +14,7 @@ import cv2
 import open3d
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
-import time
+import yaml
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -49,162 +27,96 @@ cxkin = 325.26110
 cykin = 242.04899
 
 
-threeD_boxes = np.ndarray((15, 8, 3), dtype=np.float32)
-threeD_boxes[0, :, :] = np.array([[0.038, 0.039, 0.046],  # ape [76, 78, 92]
-                                     [0.038, 0.039, -0.046],
-                                     [0.038, -0.039, -0.046],
-                                     [0.038, -0.039, 0.046],
-                                     [-0.038, 0.039, 0.046],
-                                     [-0.038, 0.039, -0.046],
-                                     [-0.038, -0.039, -0.046],
-                                     [-0.038, -0.039, 0.046]])
-threeD_boxes[1, :, :] = np.array([[0.108, 0.061, 0.1095],  # benchvise [216, 122, 219]
-                                     [0.108, 0.061, -0.1095],
-                                     [0.108, -0.061, -0.1095],
-                                     [0.108, -0.061, 0.1095],
-                                     [-0.108, 0.061, 0.1095],
-                                     [-0.108, 0.061, -0.1095],
-                                     [-0.108, -0.061, -0.1095],
-                                     [-0.108, -0.061, 0.1095]])
-threeD_boxes[2, :, :] = np.array([[0.083, 0.0825, 0.037],  # bowl [166, 165, 74]
-                                     [0.083, 0.0825, -0.037],
-                                     [0.083, -0.0825, -0.037],
-                                     [0.083, -0.0825, 0.037],
-                                     [-0.083, 0.0825, 0.037],
-                                     [-0.083, 0.0825, -0.037],
-                                     [-0.083, -0.0825, -0.037],
-                                     [-0.083, -0.0825, 0.037]])
-threeD_boxes[3, :, :] = np.array([[0.0685, 0.0715, 0.05],  # camera [137, 143, 100]
-                                     [0.0685, 0.0715, -0.05],
-                                     [0.0685, -0.0715, -0.05],
-                                     [0.0685, -0.0715, 0.05],
-                                     [-0.0685, 0.0715, 0.05],
-                                     [-0.0685, 0.0715, -0.05],
-                                     [-0.0685, -0.0715, -0.05],
-                                     [-0.0685, -0.0715, 0.05]])
-threeD_boxes[4, :, :] = np.array([[0.0505, 0.091, 0.097],  # can [101, 182, 194]
-                                     [0.0505, 0.091, -0.097],
-                                     [0.0505, -0.091, -0.097],
-                                     [0.0505, -0.091, 0.097],
-                                     [-0.0505, 0.091, 0.097],
-                                     [-0.0505, 0.091, -0.097],
-                                     [-0.0505, -0.091, -0.097],
-                                     [-0.0505, -0.091, 0.097]])
-threeD_boxes[5, :, :] = np.array([[0.0335, 0.064, 0.0585],  # cat [67, 128, 117]
-                                     [0.0335, 0.064, -0.0585],
-                                     [0.0335, -0.064, -0.0585],
-                                     [0.0335, -0.064, 0.0585],
-                                     [-0.0335, 0.064, 0.0585],
-                                     [-0.0335, 0.064, -0.0585],
-                                     [-0.0335, -0.064, -0.0585],
-                                     [-0.0335, -0.064, 0.0585]])
-threeD_boxes[6, :, :] = np.array([[0.059, 0.046, 0.0475],  # mug [118, 92, 95]
-                                     [0.059, 0.046, -0.0475],
-                                     [0.059, -0.046, -0.0475],
-                                     [0.059, -0.046, 0.0475],
-                                     [-0.059, 0.046, 0.0475],
-                                     [-0.059, 0.046, -0.0475],
-                                     [-0.059, -0.046, -0.0475],
-                                     [-0.059, -0.046, 0.0475]])
-threeD_boxes[7, :, :] = np.array([[0.115, 0.038, 0.104],  # drill [230, 76, 208]
-                                     [0.115, 0.038, -0.104],
-                                     [0.115, -0.038, -0.104],
-                                     [0.115, -0.038, 0.104],
-                                     [-0.115, 0.038, 0.104],
-                                     [-0.115, 0.038, -0.104],
-                                     [-0.115, -0.038, -0.104],
-                                     [-0.115, -0.038, 0.104]])
-threeD_boxes[8, :, :] = np.array([[0.052, 0.0385, 0.043],  # duck [104, 77, 86]
-                                     [0.052, 0.0385, -0.043],
-                                     [0.052, -0.0385, -0.043],
-                                     [0.052, -0.0385, 0.043],
-                                     [-0.052, 0.0385, 0.043],
-                                     [-0.052, 0.0385, -0.043],
-                                     [-0.052, -0.0385, -0.043],
-                                     [-0.052, -0.0385, 0.043]])
-threeD_boxes[9, :, :] = np.array([[0.075, 0.0535, 0.0345],  # eggbox [150, 107, 69]
-                                     [0.075, 0.0535, -0.0345],
-                                     [0.075, -0.0535, -0.0345],
-                                     [0.075, -0.0535, 0.0345],
-                                     [-0.075, 0.0535, 0.0345],
-                                     [-0.075, 0.0535, -0.0345],
-                                     [-0.075, -0.0535, -0.0345],
-                                     [-0.075, -0.0535, 0.0345]])
-threeD_boxes[10, :, :] = np.array([[0.0185, 0.039, 0.0865],  # glue [37, 78, 173]
-                                     [0.0185, 0.039, -0.0865],
-                                     [0.0185, -0.039, -0.0865],
-                                     [0.0185, -0.039, 0.0865],
-                                     [-0.0185, 0.039, 0.0865],
-                                     [-0.0185, 0.039, -0.0865],
-                                     [-0.0185, -0.039, -0.0865],
-                                     [-0.0185, -0.039, 0.0865]])
-threeD_boxes[11, :, :] = np.array([[0.0505, 0.054, 0.04505],  # holepuncher [101, 108, 91]
-                                     [0.0505, 0.054, -0.04505],
-                                     [0.0505, -0.054, -0.04505],
-                                     [0.0505, -0.054, 0.04505],
-                                     [-0.0505, 0.054, 0.04505],
-                                     [-0.0505, 0.054, -0.04505],
-                                     [-0.0505, -0.054, -0.04505],
-                                     [-0.0505, -0.054, 0.04505]])
-threeD_boxes[12, :, :] = np.array([[0.115, 0.038, 0.104],  # drill [230, 76, 208]
-                                     [0.115, 0.038, -0.104],
-                                     [0.115, -0.038, -0.104],
-                                     [0.115, -0.038, 0.104],
-                                     [-0.115, 0.038, 0.104],
-                                     [-0.115, 0.038, -0.104],
-                                     [-0.115, -0.038, -0.104],
-                                     [-0.115, -0.038, 0.104]])
-threeD_boxes[13, :, :] = np.array([[0.129, 0.059, 0.0705],  # iron [258, 118, 141]
-                                     [0.129, 0.059, -0.0705],
-                                     [0.129, -0.059, -0.0705],
-                                     [0.129, -0.059, 0.0705],
-                                     [-0.129, 0.059, 0.0705],
-                                     [-0.129, 0.059, -0.0705],
-                                     [-0.129, -0.059, -0.0705],
-                                     [-0.129, -0.059, 0.0705]])
-threeD_boxes[14, :, :] = np.array([[0.047, 0.0735, 0.0925],  # phone [94, 147, 185]
-                                     [0.047, 0.0735, -0.0925],
-                                     [0.047, -0.0735, -0.0925],
-                                     [0.047, -0.0735, 0.0925],
-                                     [-0.047, 0.0735, 0.0925],
-                                     [-0.047, 0.0735, -0.0925],
-                                     [-0.047, -0.0735, -0.0925],
-                                     [-0.047, -0.0735, 0.0925]])
-
-#model_radii = np.array([0.041, 0.0928, 0.0675, 0.0633, 0.0795, 0.052, 0.0508, 0.0853, 0.0445, 0.0543, 0.048, 0.05, 0.0862, 0.0888, 0.071])
-#model_radii = np.array([0.0515, 0.143454, 0.0675, 0.0865, 0.101, 0.0775, 0.0508, 0.131, 0.545, 0.88182, 0.088, 0.081, 0.1515765, 0.1425775, 0.1065])
-model_dia = np.array([0.10209865663, 0.24750624233, 0.16735486092, 0.17249224865, 0.20140358597, 0.15454551808, 0.12426430816, 0.26147178102, 0.10899920102, 0.16462758848, 0.17588933422, 0.14554287471, 0.27807811733, 0.28260129399, 0.21235825148])
-
-
-def get_evaluation(pcd_temp_, pcd_scene_, inlier_thres, tf, final_th=0, n_iter=5):#queue
+def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
     tf_pcd =np.eye(4)
+    pcd_temp_.transform(tf)
 
-    reg_p2p = open3d.registration_icp(pcd_temp_, pcd_scene_ , inlier_thres, np.eye(4),
-              open3d.TransformationEstimationPointToPoint(),
-              open3d.ICPConvergenceCriteria(max_iteration=1)) #5?
-    tf = np.matmul(reg_p2p.transformation, tf)
+    mean_temp = np.mean(np.array(pcd_temp_.points)[:, 2])
+    mean_scene = np.median(np.array(pcd_scene_.points)[:, 2])
+    pcd_diff = mean_scene - mean_temp
+
+    #open3d.draw_geometries([pcd_temp_])
+    # align model with median depth of scene
+    new_pcd_trans = []
+    for i, point in enumerate(pcd_temp_.points):
+        poi = np.asarray(point)
+        poi = poi + [0.0, 0.0, pcd_diff]
+        new_pcd_trans.append(poi)
+    tf = np.array(tf)
+    tf[2, 3] = tf[2, 3] + pcd_diff
+    pcd_temp_.points = open3d.Vector3dVector(np.asarray(new_pcd_trans))
+    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=5.0, max_nn=10))
+
+    pcd_min = mean_scene - (model_dia * 2)
+    pcd_max = mean_scene + (model_dia * 2)
+    new_pcd_scene = []
+    for i, point in enumerate(pcd_scene_.points):
+        if point[2] > pcd_min or point[2] < pcd_max:
+            new_pcd_scene.append(point)
+    pcd_scene_.points = open3d.Vector3dVector(np.asarray(new_pcd_scene))
+    #open3d.draw_geometries([pcd_scene_])
+    open3d.estimate_normals(pcd_scene_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=5.0, max_nn=10))
+
+    reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
+                                                   open3d.registration.TransformationEstimationPointToPoint(),
+                                                   open3d.registration.ICPConvergenceCriteria(max_iteration = 5)) #5?
+    tf = np.matmul(reg_p2p.transformation,tf)
     tf_pcd = np.matmul(reg_p2p.transformation,tf_pcd)
     pcd_temp_.transform(reg_p2p.transformation)
 
-    for i in range(4):
-        inlier_thres = reg_p2p.inlier_rmse*3
-        if inlier_thres == 0:
-            continue
+    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=2.0, max_nn=30))
+    #open3d.draw_geometries([pcd_scene_])
+    points_unfiltered = np.asarray(pcd_temp_.points)
+    last_pcd_temp = []
+    for i, normal in enumerate(pcd_temp_.normals):
+        if normal[2] < 0:
+            last_pcd_temp.append(points_unfiltered[i, :])
+    if not last_pcd_temp:
+        normal_array = np.asarray(pcd_temp_.normals) * -1
+        pcd_temp_.normals = open3d.Vector3dVector(normal_array)
+        points_unfiltered = np.asarray(pcd_temp_.points)
+        last_pcd_temp = []
+        for i, normal in enumerate(pcd_temp_.normals):
+            if normal[2] < 0:
+                last_pcd_temp.append(points_unfiltered[i, :])
+    #print(np.asarray(last_pcd_temp))
+    pcd_temp_.points = open3d.Vector3dVector(np.asarray(last_pcd_temp))
 
-        reg_p2p = open3d.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
-                  open3d.TransformationEstimationPointToPlane(),
-                  open3d.ICPConvergenceCriteria(max_iteration=1)) #5?
-        tf = np.matmul(reg_p2p.transformation, tf)
-        tf_pcd = np.matmul(reg_p2p.transformation, tf_pcd)
+    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=5.0, max_nn=30))
+
+    hyper_tresh = inlier_thres
+    for i in range(4):
+        inlier_thres = reg_p2p.inlier_rmse*2
+        hyper_thres = hyper_tresh * 0.75
+        if inlier_thres < 1.0:
+            inlier_thres = hyper_tresh * 0.75
+            hyper_tresh = inlier_thres
+        reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
+                                                       open3d.registration.TransformationEstimationPointToPlane(),
+                                                       open3d.registration.ICPConvergenceCriteria(max_iteration = 1)) #5?
+        tf = np.matmul(reg_p2p.transformation,tf)
+        tf_pcd = np.matmul(reg_p2p.transformation,tf_pcd)
         pcd_temp_.transform(reg_p2p.transformation)
     inlier_rmse = reg_p2p.inlier_rmse
 
+    #open3d.draw_geometries([pcd_temp_, pcd_scene_])
+
     ##Calculate fitness with depth_inlier_th
     if(final_th>0):
+
         inlier_thres = final_th #depth_inlier_th*2 #reg_p2p.inlier_rmse*3
-        reg_p2p = registration_icp(pcd_temp_,pcd_scene_, inlier_thres, np.eye(4),
-                  TransformationEstimationPointToPlane(),
-                  ICPConvergenceCriteria(max_iteration = 1)) #5?
+        reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_, inlier_thres, np.eye(4),
+                                                       open3d.registration.TransformationEstimationPointToPlane(),
+                                                       open3d.registration.ICPConvergenceCriteria(max_iteration = 1)) #5?
+        tf = np.matmul(reg_p2p.transformation, tf)
+        tf_pcd = np.matmul(reg_p2p.transformation, tf_pcd)
+        pcd_temp_.transform(reg_p2p.transformation)
+
+    #open3d.draw_geometries([last_pcd_temp_, pcd_scene_])
 
     if( np.abs(np.linalg.det(tf[:3,:3])-1)>0.001):
         tf[:3,0]=tf[:3,0]/np.linalg.norm(tf[:3,0])
@@ -243,7 +155,7 @@ def load_pcd(cat):
     return pcd_model, model_vsd, model_vsd_mm
 
 
-def create_point_cloud(depth, ds):
+def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
     rows, cols = depth.shape
 
@@ -251,14 +163,15 @@ def create_point_cloud(depth, ds):
     zP = np.multiply(depRe, ds)
 
     x, y = np.meshgrid(np.arange(0, cols, 1), np.arange(0, rows, 1), indexing='xy')
-    yP = y.reshape(rows * cols) - cykin
-    xP = x.reshape(rows * cols) - cxkin
+    yP = y.reshape(rows * cols) - cy
+    xP = x.reshape(rows * cols) - cx
     yP = np.multiply(yP, zP)
     xP = np.multiply(xP, zP)
-    yP = np.divide(yP, fykin)
-    xP = np.divide(xP, fxkin)
+    yP = np.divide(yP, fy)
+    xP = np.divide(xP, fx)
 
     cloud_final = np.transpose(np.array((xP, yP, zP)))
+    #cloud_final[cloud_final[:,2]==0] = np.NaN
 
     return cloud_final
 
@@ -290,16 +203,33 @@ def boxoverlap(a, b):
 
 def evaluate_occlusion(generator, model, threshold=0.05):
     threshold = 0.5
-    """ Use the pycocotools to evaluate a COCO model on a dataset.
-<<<<<<< HEAD
-=======
 
->>>>>>> 8c2e681694dc6139bce99b0f06bc9455d70215b3
-    Args
-        generator : The generator for generating the evaluation data.
-        model     : The model to evaluate.
-        threshold : The score threshold to use.
-    """
+    #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
+    #mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
+
+    threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
+    model_dia = np.zeros((31), dtype=np.float32)
+
+    for key, value in yaml.load(open(mesh_info)).items():
+        fac = 0.001
+        x_minus = value['min_x'] * fac
+        y_minus = value['min_y'] * fac
+        z_minus = value['min_z'] * fac
+        x_plus = value['size_x'] * fac + x_minus
+        y_plus = value['size_y'] * fac + y_minus
+        z_plus = value['size_z'] * fac + z_minus
+        three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                  [x_plus, y_plus, z_minus],
+                                  [x_plus, y_minus, z_minus],
+                                  [x_plus, y_minus, z_plus],
+                                  [x_minus, y_plus, z_plus],
+                                  [x_minus, y_plus, z_minus],
+                                  [x_minus, y_minus, z_minus],
+                                  [x_minus, y_minus, z_plus]])
+        threeD_boxes[int(key), :, :] = three_box_solo
+        model_dia[int(key)] = value['diameter'] * fac
+
     # start collecting results
     results = []
     image_ids = []
@@ -311,6 +241,42 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     fn = np.zeros((16), dtype=np.uint32)
 
     # interlude
+    tp05 = np.zeros((16), dtype=np.uint32)
+    fp05 = np.zeros((16), dtype=np.uint32)
+    fn05 = np.zeros((16), dtype=np.uint32)
+
+    tp10 = np.zeros((16), dtype=np.uint32)
+    fp10 = np.zeros((16), dtype=np.uint32)
+    fn10 = np.zeros((16), dtype=np.uint32)
+
+    tp15 = np.zeros((16), dtype=np.uint32)
+    fp15 = np.zeros((16), dtype=np.uint32)
+    fn15 = np.zeros((16), dtype=np.uint32)
+
+    tp20 = np.zeros((16), dtype=np.uint32)
+    fp20 = np.zeros((16), dtype=np.uint32)
+    fn20 = np.zeros((16), dtype=np.uint32)
+
+    tp25 = np.zeros((16), dtype=np.uint32)
+    fp25 = np.zeros((16), dtype=np.uint32)
+    fn25 = np.zeros((16), dtype=np.uint32)
+
+    tp30 = np.zeros((16), dtype=np.uint32)
+    fp30 = np.zeros((16), dtype=np.uint32)
+    fn30 = np.zeros((16), dtype=np.uint32)
+
+    tp35 = np.zeros((16), dtype=np.uint32)
+    fp35 = np.zeros((16), dtype=np.uint32)
+    fn35 = np.zeros((16), dtype=np.uint32)
+
+    tp40 = np.zeros((16), dtype=np.uint32)
+    fp40 = np.zeros((16), dtype=np.uint32)
+    fn40 = np.zeros((16), dtype=np.uint32)
+
+    tp45 = np.zeros((16), dtype=np.uint32)
+    fp45 = np.zeros((16), dtype=np.uint32)
+    fn45 = np.zeros((16), dtype=np.uint32)
+
     tp55 = np.zeros((16), dtype=np.uint32)
     fp55 = np.zeros((16), dtype=np.uint32)
     fn55 = np.zeros((16), dtype=np.uint32)
@@ -404,12 +370,21 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
+        image_raw_dep = generator.load_image_dep(index)
+        image_dep = generator.preprocess_image(image_raw_dep)
+        image_dep, scale = generator.resize_image(image_dep)
+
+        raw_dep_path = generator.load_image_dep_raw(index)
+
+        load_viz_path = raw_dep_path[:-17] + raw_dep_path[-17:-12] + '_rgb.jpg'
+        image_viz = cv2.imread(load_viz_path)
+
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
 
         anno = generator.load_annotations(index)
 
-        print(anno['labels'])
+        #print(anno['labels'])
         t_cat = anno['labels'].astype(np.int8) + 1
         obj_name = []
         for idx, obj_temp in enumerate(t_cat):
@@ -421,7 +396,10 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         gt_poses = anno['poses']
 
         # run network
-        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        boxes, boxes3D, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+
+        #print(scores)
+        #print(labels)
 
         # correct boxes for image scale
         boxes /= scale
@@ -434,6 +412,15 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         rep_e[t_cat] += 1
         add_e[t_cat] += 1
         vsd_e[t_cat] += 1
+        fn05[t_cat] += 1
+        fn10[t_cat] += 1
+        fn15[t_cat] += 1
+        fn20[t_cat] += 1
+        fn25[t_cat] += 1
+        fn30[t_cat] += 1
+        fn35[t_cat] += 1
+        fn40[t_cat] += 1
+        fn45[t_cat] += 1
         fn[t_cat] += 1
         fn55[t_cat] += 1
         fn6[t_cat] += 1
@@ -463,9 +450,17 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             if label == 1:
                 continue
 
+
+
             cls = generator.label_to_inv_label(label)
+            if cls > 5:
+                cls += 2
+            elif cls > 2:
+                cls += 1
+            else: pass
             #cls = 1
-            control_points = box3D[(cls - 1), :]
+            #control_points = box3D[(cls - 1), :]
+            control_points = box3D
             #control_points = box3D[0, :]
 
             # append detection for each positively labeled class
@@ -487,9 +482,11 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
                 IoU = boxoverlap(b1, b2)
                 # occurences of 2 or more instances not possible in LINEMOD
+                #print(cls, IoU)
                 if IoU > 0.5:
                     if fnit[cls] == True:
                         # interlude
+                        '''
                         if IoU > 0.55:
                             tp55[cls] += 1
                             fn55[cls] -= 1
@@ -550,6 +547,53 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
                         tp[cls] += 1
                         fn[cls] -= 1
+                        '''
+                        if IoU > 0.05:
+                            tp05[t_cat[odx[0]]] += 1
+                            fn05[t_cat[odx[0]]] -= 1
+                        else:
+                            fp05[t_cat[odx[0]]] += 1
+                        if IoU > 0.1:
+                            tp10[t_cat[odx[0]]] += 1
+                            fn10[t_cat[odx[0]]] -= 1
+                        else:
+                            fp10[t_cat[odx[0]]] += 1
+                        if IoU > 0.15:
+                            tp15[t_cat[odx[0]]] += 1
+                            fn15[t_cat[odx[0]]] -= 1
+                        else:
+                            fp15[t_cat[odx[0]]] += 1
+                        if IoU > 0.2:
+                            tp20[t_cat[odx[0]]] += 1
+                            fn20[t_cat[odx[0]]] -= 1
+                        else:
+                            fp20[t_cat[odx[0]]] += 1
+                        if IoU > 0.25:
+                            tp25[t_cat[odx[0]]] += 1
+                            fn25[t_cat[odx[0]]] -= 1
+                        else:
+                            fp25[t_cat[odx[0]]] += 1
+                        if IoU > 0.3:
+                            tp30[t_cat[odx[0]]] += 1
+                            fn30[t_cat[odx[0]]] -= 1
+                        else:
+                            fp30[t_cat[odx[0]]] += 1
+                        if IoU > 0.35:
+                            tp35[t_cat[odx[0]]] += 1
+                            fn35[t_cat[odx[0]]] -= 1
+                        else:
+                            fp35[t_cat[odx[0]]] += 1
+                        if IoU > 0.4:
+                            tp40[t_cat[odx[0]]] += 1
+                            fn40[t_cat[odx[0]]] -= 1
+                        else:
+                            fp40[t_cat[odx[0]]] += 1
+                        if IoU > 0.45:
+                            tp45[t_cat[odx[0]]] += 1
+                            fn45[t_cat[odx[0]]] -= 1
+                        else:
+                            fp45[t_cat[odx[0]]] += 1
+                        if IoU > 0.55:
                             tp55[t_cat[odx[0]]] += 1
                             fn55[t_cat[odx[0]]] -= 1
                         else:
@@ -611,7 +655,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         fn[t_cat[odx[0]]] -= 1
                         fnit[cls] = False
 
-                        obj_points = np.ascontiguousarray(threeD_boxes[cls-1, :, :], dtype=np.float32) #.reshape((8, 1, 3))
+                        obj_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32) #.reshape((8, 1, 3))
                         est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
 
                         K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
@@ -626,7 +670,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
                         R_est, _ = cv2.Rodrigues(orvec)
                         t_est = otvec
-
+                        #print(t_est)
 
                         cur_pose = gt_poses[odx[0]]
                         t_rot = cur_pose[0][3:]
@@ -640,95 +684,8 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         xyz = te(t_gt, t_est.T)
                         #print(control_points)
 
-                        #tDbox = R_gt.dot(obj_points.T).T
-                        #tDbox = tDbox + np.repeat(t_gt[np.newaxis, :], 8, axis=0)
-                        #box3D = toPix_array(tDbox)
-                        #tDbox = np.reshape(box3D, (16))
-                        #print(tDbox)
 
                         '''
-                        colR = 242
-                        colG = 119
-                        colB = 25
-                        colR1 = 242
-                        colG1 = 119
-                        colB1 = 25
-                        colR2 = 242
-                        colG2 = 119
-                        colB2 = 25
-                        colR3 = 65
-                        colG3 = 102
-                        colB3 = 245
-                        colR4 = 65
-                        colG4 = 102
-                        colB4 = 245
-                        colR5 = 65
-                        colG5 = 102
-                        colB5 = 245
-                        colR1 = 242
-                        colG1 = 119
-                        colB1 = 25
-
-                        colR2 = 242
-                        colG2 = 119
-                        colB2 = 25
-
-                        colR3 = 65
-                        colG3 = 102
-                        colB3 = 245
-
-                        colR4 = 65
-                        colG4 = 102
-                        colB4 = 245
-
-                        colR5 = 65
-                        colG5 = 102
-                        colB5 = 245
-
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (255, 255, 255), 5)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (255, 255, 255), 5)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
-                           (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
-                           (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
-                           (255, 255, 255),
-                           5)
-                        img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
-                           (255, 255, 255),
-                           5)
-
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (colR, colG, colB), 4)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (colR, colG, colB), 4)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (colR1, colG1, colB1), 4)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (colR1, colG1, colB1), 4)
-                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR2, colG2, colB2), 4)
-                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), (colR2, colG2, colB2), 4)
-                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), (colR5, colG5, colB5), 4)
-                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), (colR5, colG5, colB5), 4)
-                        img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), (colR3, colG3, colB3),
-                           4)
-                        img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), (colR3, colG3, colB3),
-                           4)
-                        img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), (colR4, colG4, colB4),
-                           4)
-                        img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), (colR4, colG4, colB4),
-                           4)
-
                         font = cv2.FONT_HERSHEY_COMPLEX
                         bottomLeftCornerOfText = (int(bb[0]) + 5, int(bb[1]) + int(bb[3]) - 5)
                         fontScale = 0.5
@@ -786,26 +743,141 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         name = '/home/sthalham/visTests/detected.jpg'
                         img_con = np.concatenate((img, img_gt), axis=1)
                         cv2.imwrite(name, img_con)
-                        name_est = '/home/sthalham/visTests/detected_est.jpg'
-                        cv2.imwrite(name_est, img_con)
                         '''
+
                         if cls == 1:
                             model_vsd = mv1
+                            point_cloud = pc1
                         elif cls == 5:
                             model_vsd = mv5
+                            point_cloud = pc5
                         elif cls == 6:
                             model_vsd = mv6
+                            point_cloud = pc6
                         elif cls == 8:
                             model_vsd = mv8
+                            point_cloud = pc8
                         elif cls == 9:
                             model_vsd = mv9
+                            point_cloud = pc9
                         elif cls == 10:
                             model_vsd = mv10
+                            point_cloud = pc10
                         elif cls == 11:
                             model_vsd = mv11
+                            point_cloud = pc11
                         elif cls == 12:
                             model_vsd = mv12
+                            point_cloud = pc12
 
+                        #print('--------------------- ICP refinement -------------------')
+                        '''
+                        image_dep = cv2.imread(raw_dep_path, cv2.IMREAD_UNCHANGED)
+                        # image_icp = np.multiply(image_dep, 0.1)
+                        image_icp = image_dep
+                        # print(np.nanmax(image_icp))
+
+                        pcd_img = create_point_cloud(image_icp, fxkin, fykin, cxkin, cykin, 1.0)
+                        pcd_img = pcd_img.reshape((480, 640, 3))[int(b1[1]):int(b1[3]), int(b1[0]):int(b1[2]), :]
+                        pcd_img = pcd_img.reshape((pcd_img.shape[0] * pcd_img.shape[1], 3))
+                        todel = []
+
+                        for i in range(len(pcd_img[:, 2])):
+                            if pcd_img[i, 2] < 300:
+                                todel.append(i)
+                        pcd_img = np.delete(pcd_img, todel, axis=0)
+                        # print(pcd_img)
+
+                        pcd_crop = open3d.PointCloud()
+                        pcd_crop.points = open3d.Vector3dVector(pcd_img)
+                        # open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(
+                        #     radius=2.0, max_nn=30))
+
+                        # pcd_crop.paint_uniform_color(np.array([0.99, 0.0, 0.00]))
+                        # open3d.draw_geometries([pcd_crop])
+
+                        guess = np.zeros((4, 4), dtype=np.float32)
+                        guess[:3, :3] = R_est
+                        guess[:3, 3] = t_est.T * 1000.0
+                        guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
+
+                        pcd_model = open3d.geometry.voxel_down_sample(point_cloud, voxel_size=5.0)
+                        pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=5.0)
+
+                        # open3d.draw_geometries([pcd_crop, pcd_model])
+                        reg_p2p, _, _, _ = get_evaluation_kiru(pcd_model, pcd_crop, 50, guess, 5,
+                                                               model_dia[cls] * 1000.0)
+                        R_est = reg_p2p[:3, :3]
+                        t_est = reg_p2p[:3, 3] * 0.001
+                        '''
+
+                        # ----- Visualization
+                        '''
+
+                        tDbox = R_gt.dot(obj_points.T).T
+                        tDbox = tDbox + np.repeat(t_gt[np.newaxis, :], 8, axis=0)
+                        box3D = toPix_array(tDbox)
+                        tDbox = np.reshape(box3D, (16))
+                        tDbox = tDbox.astype(np.uint16)
+
+                        eDbox = R_est.dot(obj_points.T).T
+                        eDbox = eDbox + np.repeat(t_est[np.newaxis, :], 8, axis=0)
+                        ebox3D = toPix_array(eDbox)
+                        eDbox = np.reshape(ebox3D, (16))
+                        eDbox = eDbox.astype(np.uint16)
+
+                        colGT = (0, 223, 255)
+                        colEst = (255, 112, 132)
+
+                        #cv2.rectangle(image, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                        #              (255, 255, 255), 2)
+
+
+                        image_viz = cv2.line(image_viz, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
+                                         colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
+                                         colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
+                                         colGT,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
+                                         colGT,
+                                         2)
+
+                        image_viz = cv2.line(image_viz, tuple(eDbox[0:2].ravel()), tuple(eDbox[2:4].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[2:4].ravel()), tuple(eDbox[4:6].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[4:6].ravel()), tuple(eDbox[6:8].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[6:8].ravel()), tuple(eDbox[0:2].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[0:2].ravel()), tuple(eDbox[8:10].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[2:4].ravel()), tuple(eDbox[10:12].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[4:6].ravel()), tuple(eDbox[12:14].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[6:8].ravel()), tuple(eDbox[14:16].ravel()), colEst, 2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[8:10].ravel()), tuple(eDbox[10:12].ravel()), colEst,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[10:12].ravel()), tuple(eDbox[12:14].ravel()), colEst,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[12:14].ravel()), tuple(eDbox[14:16].ravel()), colEst,
+                                         2)
+                        image_viz = cv2.line(image_viz, tuple(eDbox[14:16].ravel()), tuple(eDbox[8:10].ravel()), colEst,
+                                         2)
+
+                        '''
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
                                 less5[cls - 1] += 1
@@ -816,74 +888,13 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                             if err_repr < 5.0:
                                 rep_less5[cls - 1] += 1
 
-                        err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                        if cls == 3 or cls == 7 or cls == 10 or cls == 11:
+                            err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                        else:
+                            err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-                        if not math.isnan(err_add):
-                            if err_add < (model_dia[cls - 1] * 0.05):
-                                add_less_d005[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.1):
-                                add_less_d[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.15):
-                                add_less_d015[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.2):
-                                add_less_d02[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.25):
-                                add_less_d025[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.3):
-                                add_less_d03[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.35):
-                                add_less_d035[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.4):
-                                add_less_d04[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.45):
-                                add_less_d045[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.5):
-                                add_less_d05[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.55):
-                                add_less_d055[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.6):
-                                add_less_d06[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.65):
-                                add_less_d065[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.7):
-                                add_less_d07[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.75):
-                                add_less_d075[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.8):
-                                add_less_d08[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.85):
-                                add_less_d085[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.9):
-                                add_less_d09[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] * 0.95):
-                                add_less_d095[cls] += 1
-
-                            if err_add < (model_dia[cls - 1] ):
-                                add_less_d1[cls] += 1
-
-                        if not math.isnan(err_add):
-                            if err_add < (model_dia[cls - 1] * 0.15):
-                                tp_add[cls] += 1
-                                fn_add[cls] -= 1
-                        print(err_add)
+                        print(' ')
+                        print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
                         if not math.isnan(err_add):
                             if err_add < (model_dia[cls - 1] * 0.05):
@@ -915,6 +926,15 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                         fp[cls] += 1
                         fp_add[cls] += 1
 
+                        fp05[cls] += 1
+                        fp10[cls] += 1
+                        fp15[cls] += 1
+                        fp20[cls] += 1
+                        fp25[cls] += 1
+                        fp30[cls] += 1
+                        fp35[cls] += 1
+                        fp40[cls] += 1
+                        fp45[cls] += 1
                         fp55[cls] += 1
                         fp6[cls] += 1
                         fp65[cls] += 1
@@ -930,6 +950,15 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                     fp[cls] += 1
                     fp_add[cls] += 1
 
+                    fp05[cls] += 1
+                    fp10[cls] += 1
+                    fp15[cls] += 1
+                    fp20[cls] += 1
+                    fp25[cls] += 1
+                    fp30[cls] += 1
+                    fp35[cls] += 1
+                    fp40[cls] += 1
+                    fp45[cls] += 1
                     fp55[cls] += 1
                     fp6[cls] += 1
                     fp65[cls] += 1
@@ -942,7 +971,11 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                     fp95[cls] += 1
                     fp975[cls] += 1
 
-                print('Stop')
+        #print(raw_dep_path)
+        vis_name='/home/sthalham/occlusion_viz/' + raw_dep_path[-17:-12] + '.jpg'
+        name_est = '/home/sthalham/visTests/detected_est.jpg'
+        cv2.imwrite(vis_name, image_viz)
+        print('Stop')
 
         # append image to list of processed images
         image_ids.append(generator.image_ids[index])
@@ -994,7 +1027,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             continue
 
         if ind == 2 or ind == 3 or ind == 4 or ind == 7 or ind == 13 or ind == 14 or ind == 15:
-        if tp[ind] == 0:
+        #if tp[ind] == 0:
             detPre[ind] = 0.0
             detRec[ind] = 0.0
             detPre_add[ind] = 0.0
@@ -1081,6 +1114,15 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     less_add_d = sum(add_less_d) / sum(add_e) * 100.0
     less_vsd_t = sum(vsd_less_t) / sum(vsd_e) * 100.0
 
+    print('IoU 005: ', sum(tp05) / (sum(tp05) + sum(fp05)) * 100.0, sum(tp05) / (sum(tp05) + sum(fn05)) * 100.0)
+    print('IoU 010: ', sum(tp10) / (sum(tp10) + sum(fp10)) * 100.0, sum(tp10) / (sum(tp10) + sum(fn10)) * 100.0)
+    print('IoU 015: ', sum(tp15) / (sum(tp15) + sum(fp15)) * 100.0, sum(tp15) / (sum(tp15) + sum(fn15)) * 100.0)
+    print('IoU 020: ', sum(tp20) / (sum(tp20) + sum(fp20)) * 100.0, sum(tp20) / (sum(tp20) + sum(fn20)) * 100.0)
+    print('IoU 025: ', sum(tp25) / (sum(tp25) + sum(fp25)) * 100.0, sum(tp25) / (sum(tp25) + sum(fn25)) * 100.0)
+    print('IoU 030: ', sum(tp30) / (sum(tp30) + sum(fp30)) * 100.0, sum(tp30) / (sum(tp30) + sum(fn30)) * 100.0)
+    print('IoU 035: ', sum(tp35) / (sum(tp35) + sum(fp35)) * 100.0, sum(tp35) / (sum(tp35) + sum(fn35)) * 100.0)
+    print('IoU 040: ', sum(tp40) / (sum(tp40) + sum(fp40)) * 100.0, sum(tp40) / (sum(tp40) + sum(fn40)) * 100.0)
+    print('IoU 045: ', sum(tp45) / (sum(tp45) + sum(fp45)) * 100.0, sum(tp45) / (sum(tp45) + sum(fn45)) * 100.0)
     print('IoU 05: ', sum(tp) / (sum(tp) + sum(fp)) * 100.0, sum(tp) / (sum(tp) + sum(fn)) * 100.0)
     print('IoU 055: ', sum(tp55) / (sum(tp55) + sum(fp55)) * 100.0, sum(tp55) / (sum(tp55) + sum(fn55)) * 100.0)
     print('IoU 06: ', sum(tp6) / (sum(tp6) + sum(fp6)) * 100.0, sum(tp6) / (sum(tp6) + sum(fn6)) * 100.0)

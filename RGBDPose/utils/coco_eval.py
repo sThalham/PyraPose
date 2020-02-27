@@ -40,11 +40,15 @@ def evaluate_coco(generator, model, threshold=0.05):
         image = generator.preprocess_image(image)
         image, scale = generator.resize_image(image)
 
+        image_raw_dep = generator.load_image_dep(index)
+        image_dep = generator.preprocess_image(image_raw_dep)
+        image_dep, scale = generator.resize_image(image_dep)
+
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
 
         # run network
-        boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        boxes, tDboxes, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         # correct boxes for image scale
         boxes /= scale
