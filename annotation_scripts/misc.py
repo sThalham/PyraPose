@@ -179,7 +179,7 @@ def manipulate_RGB(fn_gt, fn_depth, fn_part, fn_rgb):
             class_id = qr['class_id']
             bbox = qr['bbox']
             mask_ids[j] = int(qr['mask_id'])
-            visibilities[j] = float(qr['visibility'])
+            #visibilities[j] = float(qr['visibility'])
             pose = np.array(qr['pose']).reshape(4, 4)
             bboxes[j, 0] = class_id
             bboxes[j, 1:5] = np.array(bbox)

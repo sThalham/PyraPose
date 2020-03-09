@@ -19,11 +19,11 @@ import imgaug.augmenters as iaa
 
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_aug/'
+    root = '/home/stefan/data/rendered_data/linemod_rgbd_V4/patches'
+    target = '/home/stefan/data/train_data/linemod_V4/'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
 
-    visu = False
+    visu = True
     resX = 640
     resY = 480
     fxkin = 579.68  # blender calculated
@@ -180,9 +180,9 @@ if __name__ == "__main__":
                 # for i, bbox in enumerate(bboxes[:-1]):
                 for i, bbox in enumerate(bboxes[:-1]):
 
-                    if visibilities[i] < 0.5:
-                        # print('visivility: ', visibilities[i], ' skip!')
-                        continue
+                    #if visibilities[i] < 0.5:
+                    #    # print('visivility: ', visibilities[i], ' skip!')
+                    #    continue
                     #print(visibilities[i])
                     #if (np.asscalar(bbox[0]) + 1) > 13:
                     #    continue
@@ -331,6 +331,7 @@ if __name__ == "__main__":
                         # print(posvis[i])
                         if i is not poses.shape[0]:
                             pose = np.asarray(bb3vis[i], dtype=np.float32)
+                            print(pose)
 
                             colR = 250
                             colG = 25
