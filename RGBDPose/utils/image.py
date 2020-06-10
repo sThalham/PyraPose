@@ -288,7 +288,6 @@ def apply_transform(matrix, image, params):
     image1 = np.where(image1 > 2000.0, 0.0, image1)
     image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
     image1 = np.multiply(image1, 255.0/np.nanmax(image1))
-    print(np.nanmax(image1), np.nanmin(image1))
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],
