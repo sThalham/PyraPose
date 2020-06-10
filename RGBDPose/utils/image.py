@@ -285,6 +285,7 @@ def apply_transform(matrix, image, params):
     fy = fy.astype(dtype=np.uint16)
     image1 = image1[fy, fx] + Wz_scaled * VecF2
     image1 = np.where(image1 > 0, image1, 0.0)
+    image1 = np.where(image1 > 2000.0, 0.0, image1)
     image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
     image1 = np.multiply(image1, 255.0/np.nanmax(image1))
     image1 = cv2.warpAffine(
