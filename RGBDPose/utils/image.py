@@ -204,7 +204,7 @@ def apply_transform(matrix, image, params):
     )
 
     # depth
-    image1 = image[1][:, :, 0]
+    image1 = image[1]
     image1 = image1.astype('float32')
     blurK = np.random.choice([3, 5, 7], 1).astype(int)
     blurS = random.uniform(0.0, 1.5)
