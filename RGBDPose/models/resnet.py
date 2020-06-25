@@ -94,10 +94,10 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
     resnet_dep = keras_resnet.models.ResNet50(inputs_1, include_top=False, freeze_bn=True)
 
     for i, layer in enumerate(resnet_rgb.layers):
-        #print(i, layer.name)
-        if i<40:
+        print(i, layer.name)
+        if i < 40:
             layer.trainable=False
-        layer.name = 'layer_' + str(i)
+    #    layer.name = 'layer_' + str(i)
 
         # invoke modifier if given
     if modifier:
@@ -106,6 +106,7 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
 
         # create the full model
     return retinanet.retinanet(inputs=[inputs_0, inputs_1], num_classes=num_classes, backbone_layers_rgb=resnet_rgb.outputs[1:], backbone_layers_dep=resnet_dep.outputs[1:], **kwargs)
+
 
 def resnet50_retinanet(num_classes, inputs=None, **kwargs):
     return resnet_retinanet(num_classes=num_classes, backbone='resnet50', inputs=inputs, **kwargs)

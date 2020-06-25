@@ -51,11 +51,13 @@ class LinemodGenerator(Generator):
 
         for cat in cat_ann:
             self.cats[cat['id']] = cat
+
         for img in self.image_ann:
-            self.fx = img['fx']
-            self.fy = img['fy']
-            self.cx = img['cx']
-            self.cy = img['cy']
+            if "fx" in img:
+                self.fx = img["fx"]
+                self.fy = img["fy"]
+                self.cx = img["cx"]
+                self.cy = img["cy"]
             self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
         for ann in anno_ann:
             self.imgToAnns[ann['image_id']].append(ann)
@@ -211,6 +213,8 @@ class LinemodGenerator(Generator):
         annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
         for idx, a in enumerate(anns):
+            if a['feature_visibility'] < 0.5:
+                continue
 
             # some annotations have basically no width / height, skip them
             if a['bbox'][2] < 1 or a['bbox'][3] < 1:
@@ -238,9 +242,6 @@ class LinemodGenerator(Generator):
             ]]], axis=0)
             annotations['mask_ids'] = np.concatenate([annotations['mask_ids'], [
                 a['mask_id'],
-            ]], axis=0)
-            annotations['visibilities'] = np.concatenate([annotations['visibilities'], [
-                a['feature_visibility'],
             ]], axis=0)
             objID = a['category_id']
             if objID > 5:

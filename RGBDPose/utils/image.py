@@ -181,16 +181,16 @@ def apply_transform(matrix, image, params):
             iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
         ]),
         # arithmetic
-        iaa.SomeOf((0, 3), [
-            iaa.AdditiveGaussianNoise(scale=(0, 0.05), per_channel=0.5),
-            iaa.AdditiveLaplaceNoise(scale=(0, 0.05), per_channel=0.5),
-            iaa.AdditivePoissonNoise(lam=(0, 8), per_channel=0.5),
-            iaa.Dropout(p=(0, 0.05), per_channel=0.5),
-            iaa.ImpulseNoise(p=(0, 0.05)),
-            iaa.SaltAndPepper(p=(0, 0.05)),
-            iaa.Salt(p=(0, 0.05)),
-            iaa.Pepper(p=(0, 0.05))
-        ]),
+        #iaa.SomeOf((0, 3), [
+        #    iaa.AdditiveGaussianNoise(scale=(0, 0.05), per_channel=0.5),
+        #    iaa.AdditiveLaplaceNoise(scale=(0, 0.05), per_channel=0.5),
+        #    iaa.AdditivePoissonNoise(lam=(0, 8), per_channel=0.5),
+        #    iaa.Dropout(p=(0, 0.05), per_channel=0.5),
+        #    iaa.ImpulseNoise(p=(0, 0.05)),
+        #    iaa.SaltAndPepper(p=(0, 0.05)),
+        #    iaa.Salt(p=(0, 0.05)),
+        #    iaa.Pepper(p=(0, 0.05))
+        #]),
         # iaa.Sometimes(p=0.5, iaa.JpegCompression((0, 30)), None),
     ], random_order=True)
     image0 = seq.augment_image(image[0])
@@ -308,7 +308,7 @@ def adjust_pose_annotation(matrix, pose, cpara):
     return pose
 
 
-def compute_resize_scale(image_shape, min_side=800, max_side=1333):
+def compute_resize_scale(image_shape, min_side=480, max_side=640):
     """ Compute an image scale such that the image size is constrained to min_side and max_side.
 
     Args
@@ -334,7 +334,7 @@ def compute_resize_scale(image_shape, min_side=800, max_side=1333):
     return scale
 
 
-def resize_image(img, min_side=800, max_side=1333):
+def resize_image(img, min_side=480, max_side=640):
     """ Resize an image such that the size is constrained to min_side and max_side.
 
     Args

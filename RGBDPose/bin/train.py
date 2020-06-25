@@ -69,7 +69,7 @@ def model_with_weights(model, weights, skip_mismatch):
 
 
 def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
-                  freeze_backbone=False, lr=3e-5):
+                  freeze_backbone=False, lr=1e-5):
 
     modifier = freeze_model if freeze_backbone else None
 
@@ -98,7 +98,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
         },
-        optimizer=keras.optimizers.adam(lr=lr, decay=3e-5, clipnorm=0.001)
+        optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
     )
 
     return model, training_model, prediction_model
@@ -289,7 +289,7 @@ def parse_args(args):
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
-    parser.add_argument('--lr',               help='Learning rate.', type=float, default=3e-5)
+    parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
@@ -300,7 +300,7 @@ def parse_args(args):
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Fit generator arguments
-    parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=3)
+    parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=5)
     parser.add_argument('--max-queue-size', help='Queue length for multiprocessing workers in fit generator.', type=int, default=10)
 
     return parser.parse_args(args)
@@ -313,6 +313,7 @@ def main(args=None):
     args = parse_args(args)
 
     backbone = models.backbone(args.backbone)
+    print('backbone: ', backbone)
     # should be 2 times resnet50
 
     check_keras_version()
