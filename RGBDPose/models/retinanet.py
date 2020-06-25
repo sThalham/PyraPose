@@ -347,17 +347,21 @@ def __create_BiFPN_noW(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
 def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
 
     # only from here for FPN-fusion test 3
-    C3 = keras.layers.Add()([C3_R, C3_D])
-    C4 = keras.layers.Add()([C4_R, C4_D])
-    C5 = keras.layers.Add()([C5_R, C5_D])
+    #C3 = keras.layers.Add()([C3_R, C3_D])
+    #C4 = keras.layers.Add()([C4_R, C4_D])
+    #C5 = keras.layers.Add()([C5_R, C5_D])
 
+    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
+    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
+    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
+    
     # 3x3 conv for test 4
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
 
-    P5_upsampled = layers.UpsampleLike()([P5, C4_R])
-    P4_upsampled = layers.UpsampleLike()([P4, C3_R])
+    P5_upsampled = layers.UpsampleLike()([P5, C4_D])
+    P4_upsampled = layers.UpsampleLike()([P4, C3_D])
     P4_mid = keras.layers.Add()([P5_upsampled, P4])
     P4_mid = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4_mid)    # replace with depthwise and 3x1+1x3
     P3_mid = keras.layers.Add()([P4_upsampled, P3])

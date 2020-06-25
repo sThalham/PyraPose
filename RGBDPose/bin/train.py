@@ -69,7 +69,7 @@ def model_with_weights(model, weights, skip_mismatch):
 
 
 def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
-                  freeze_backbone=False, lr=1e-5):
+                  freeze_backbone=False, lr=3e-5):
 
     modifier = freeze_model if freeze_backbone else None
 
@@ -98,7 +98,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
         },
-        optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
+        optimizer=keras.optimizers.adam(lr=lr, decay=3e-5, clipnorm=0.001)
     )
 
     return model, training_model, prediction_model
@@ -222,7 +222,6 @@ def create_generators(args, preprocess_image):
             transform_generator=transform_generator,
             **common_args
         )
-        train_iterations = int(len(os.listdir(os.path.join(args.linemod_path, 'images/train')))/2)
 
     elif args.dataset_type == 'occlusion':
         from ..preprocessing.occlusion import OcclusionGenerator
@@ -240,7 +239,6 @@ def create_generators(args, preprocess_image):
             transform_generator=transform_generator,
             **common_args
         )
-        train_iterations = int(len(os.listdir(os.path.join(args.occlusion_path, 'images/train')))/2)
 
     elif args.dataset_type == 'tless':
         from ..preprocessing.tless import TlessGenerator
@@ -258,12 +256,11 @@ def create_generators(args, preprocess_image):
             transform_generator=transform_generator,
             **common_args
         )
-        train_iterations = len(os.listdir(os.path.join(args.tless_path, 'images/train')))
 
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
 
-    return train_generator, validation_generator, train_iterations
+    return train_generator, validation_generator
 
 
 def parse_args(args):
@@ -292,7 +289,7 @@ def parse_args(args):
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
-    parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
+    parser.add_argument('--lr',               help='Learning rate.', type=float, default=3e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
@@ -326,7 +323,7 @@ def main(args=None):
     #keras.backend.tensorflow_backend.set_session(get_session())
 
     # create the generators
-    train_generator, validation_generator, train_iterations = create_generators(args, backbone.preprocess_image)
+    train_generator, validation_generator = create_generators(args, backbone.preprocess_image)
 
     # create the model
     if args.snapshot is not None:
@@ -341,7 +338,7 @@ def main(args=None):
         weights = args.weights
         # default to imagenet if nothing else is specified
         if weights is None and args.imagenet_weights:
-            weights = None
+            weights = backbone.download_imagenet()
 
         print('Creating model, this may take a second...')
         model, training_model, prediction_model = create_models(
@@ -374,7 +371,7 @@ def main(args=None):
     # start training
     training_model.fit_generator(
         generator=train_generator,
-        steps_per_epoch=train_iterations,
+        steps_per_epoch=train_generator.size(),
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,

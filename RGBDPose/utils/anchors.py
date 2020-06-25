@@ -132,6 +132,7 @@ def anchor_targets_bbox(
             regression_3D[index, :, :-1] = box3D_transform(anchors, annotations['segmentations'][argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
+        '''
         for anni, pose in enumerate(annotations['segmentations']):
             pose = pose.reshape((16)).astype(np.int16)
 
@@ -184,6 +185,7 @@ def anchor_targets_bbox(
             cv2.imwrite(name, image_dep)
 
             print('break')
+            '''
 
         # ignore annotations outside of image
         if image[0].shape:
