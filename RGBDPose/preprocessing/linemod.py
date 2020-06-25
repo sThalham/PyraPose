@@ -22,7 +22,7 @@ import os
 import json
 import numpy as np
 import itertools
-import cv2
+import yaml
 
 
 def _isArrayLike(obj):
@@ -38,6 +38,7 @@ class LinemodGenerator(Generator):
         self.data_dir  = data_dir
         self.set_name  = set_name
         self.path      = os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json')
+        self.mesh_info = os.path.join(data_dir, 'annotations', 'models_info' + '.yml')
         with open(self.path, 'r') as js:
             data = json.load(js)
 
@@ -51,12 +52,35 @@ class LinemodGenerator(Generator):
         for cat in cat_ann:
             self.cats[cat['id']] = cat
         for img in self.image_ann:
+            self.fx = img['fx']
+            self.fy = img['fy']
+            self.cx = img['cx']
+            self.cy = img['cy']
             self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
         for ann in anno_ann:
             self.imgToAnns[ann['image_id']].append(ann)
             self.catToImgs[ann['category_id']].append(ann['image_id'])
 
         self.load_classes()
+
+        self.TDboxes = np.ndarray((16, 8, 3), dtype=np.float32)
+
+        for key, value in yaml.load(open(self.mesh_info)).items():
+            x_minus = value['min_x']
+            y_minus = value['min_y']
+            z_minus = value['min_z']
+            x_plus = value['size_x'] + x_minus
+            y_plus = value['size_y'] + y_minus
+            z_plus = value['size_z'] + z_minus
+            three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                       [x_plus, y_plus, z_minus],
+                                       [x_plus, y_minus, z_minus],
+                                       [x_plus, y_minus, z_plus],
+                                       [x_minus, y_plus, z_plus],
+                                       [x_minus, y_plus, z_minus],
+                                       [x_minus, y_minus, z_minus],
+                                       [x_minus, y_minus, z_plus]])
+            self.TDboxes[int(key), :, :] = three_box_solo
 
         super(LinemodGenerator, self).__init__(**kwargs)
 
@@ -156,8 +180,7 @@ class LinemodGenerator(Generator):
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
-        path = path[:-4] + '_dep.png'# + path[-4:]
-        #path = path[:-4] + '_dep' + path[-4:]
+        path = path[:-4] + '_dep' + path[-4:]
 
         return read_image_dep(path)
 
@@ -174,7 +197,6 @@ class LinemodGenerator(Generator):
 
         return path
 
-
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.
             CHECK DONE HERE: Annotations + images correct
@@ -186,7 +208,7 @@ class LinemodGenerator(Generator):
         lists = [self.imgToAnns[imgId] for imgId in ids if imgId in self.imgToAnns]
         anns = list(itertools.chain.from_iterable(lists))
 
-        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 6)), 'segmentations': np.empty((0, 16))}
+        annotations     = {'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
         for idx, a in enumerate(anns):
 
@@ -201,6 +223,10 @@ class LinemodGenerator(Generator):
                 a['bbox'][0] + a['bbox'][2],
                 a['bbox'][1] + a['bbox'][3],
             ]]], axis=0)
+            if a['pose'][2] < 10.0:  # needed for adjusting pose annotations
+                a['pose'][0] = a['pose'][0] * 1000.0
+                a['pose'][1] = a['pose'][1] * 1000.0
+                a['pose'][2] = a['pose'][2] * 1000.0
             annotations['poses'] = np.concatenate([annotations['poses'], [[
                 a['pose'][0],
                 a['pose'][1],
@@ -208,24 +234,28 @@ class LinemodGenerator(Generator):
                 a['pose'][3],
                 a['pose'][4],
                 a['pose'][5],
+                a['pose'][6],
             ]]], axis=0)
-            annotations['segmentations'] = np.concatenate([annotations['segmentations'], [[
-                a['segmentation'][0],
-                a['segmentation'][1],
-                a['segmentation'][2],
-                a['segmentation'][3],
-                a['segmentation'][4],
-                a['segmentation'][5],
-                a['segmentation'][6],
-                a['segmentation'][7],
-                a['segmentation'][8],
-                a['segmentation'][9],
-                a['segmentation'][10],
-                a['segmentation'][11],
-                a['segmentation'][12],
-                a['segmentation'][13],
-                a['segmentation'][14],
-                a['segmentation'][15],
+            annotations['mask_ids'] = np.concatenate([annotations['mask_ids'], [
+                a['mask_id'],
+            ]], axis=0)
+            annotations['visibilities'] = np.concatenate([annotations['visibilities'], [
+                a['feature_visibility'],
+            ]], axis=0)
+            objID = a['category_id']
+            if objID > 5:
+                objID = objID + 2
+            elif objID > 2:
+                objID = objID + 1
+            else:
+                objID = objID
+            threeDbox = self.TDboxes[objID, :, :]
+            annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
+            annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[
+                self.fx,
+                self.fy,
+                self.cx,
+                self.cy,
             ]]], axis=0)
 
         return annotations

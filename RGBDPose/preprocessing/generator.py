@@ -32,11 +32,12 @@ from ..utils.config import parse_anchor_parameters
 from ..utils.image import (
     TransformParameters,
     adjust_transform_for_image,
+    adjust_pose_annotation,
     apply_transform,
     preprocess_image,
     resize_image,
 )
-from ..utils.transform import transform_aabb, transform_box3d
+from ..utils.transform import transform_aabb
 
 
 class Generator(keras.utils.Sequence):
@@ -134,6 +135,11 @@ class Generator(keras.utils.Sequence):
         """
         raise NotImplementedError('load_image method not implemented')
 
+    def load_image_dep(self, image_index):
+        """ Load an image at the image_index.
+        """
+        raise NotImplementedError('load_image method not implemented')
+
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.
         """
@@ -164,39 +170,39 @@ class Generator(keras.utils.Sequence):
                 (annotations['bboxes'][:, 0] < 0) |
                 (annotations['bboxes'][:, 1] < 0) |
                 (annotations['bboxes'][:, 2] > image[0].shape[1]) |
-                (annotations['bboxes'][:, 3] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 0] < 0) |
-                (annotations['segmentations'][:, 0] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 1] < 0) |
-                (annotations['segmentations'][:, 1] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 2] < 0) |
-                (annotations['segmentations'][:, 2] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 3] < 0) |
-                (annotations['segmentations'][:, 3] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 4] < 0) |
-                (annotations['segmentations'][:, 4] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 5] < 0) |
-                (annotations['segmentations'][:, 5] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 6] < 0) |
-                (annotations['segmentations'][:, 6] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 7] < 0) |
-                (annotations['segmentations'][:, 7] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 8] < 0) |
-                (annotations['segmentations'][:, 8] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 9] < 0) |
-                (annotations['segmentations'][:, 9] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 10] < 0) |
-                (annotations['segmentations'][:, 10] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 11] < 0) |
-                (annotations['segmentations'][:, 11] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 12] < 0) |
-                (annotations['segmentations'][:, 12] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 13] < 0) |
-                (annotations['segmentations'][:, 13] > image[0].shape[0]) |
-                (annotations['segmentations'][:, 14] < 0) |
-                (annotations['segmentations'][:, 14] > image[0].shape[1]) |
-                (annotations['segmentations'][:, 15] < 0) |
-                (annotations['segmentations'][:, 15] > image[0].shape[0])
+                (annotations['bboxes'][:, 3] > image[0].shape[0])
+                #(annotations['segmentations'][:, 0] < 0) |
+                #(annotations['segmentations'][:, 0] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 1] < 0) |
+                #(annotations['segmentations'][:, 1] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 2] < 0) |
+                #(annotations['segmentations'][:, 2] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 3] < 0) |
+                #(annotations['segmentations'][:, 3] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 4] < 0) |
+                #(annotations['segmentations'][:, 4] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 5] < 0) |
+                #(annotations['segmentations'][:, 5] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 6] < 0) |
+                #(annotations['segmentations'][:, 6] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 7] < 0) |
+                #(annotations['segmentations'][:, 7] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 8] < 0) |
+                #(annotations['segmentations'][:, 8] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 9] < 0) |
+                #(annotations['segmentations'][:, 9] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 10] < 0) |
+                #(annotations['segmentations'][:, 10] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 11] < 0) |
+                #(annotations['segmentations'][:, 11] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 12] < 0) |
+                #(annotations['segmentations'][:, 12] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 13] < 0) |
+                #(annotations['segmentations'][:, 13] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 14] < 0) |
+                #(annotations['segmentations'][:, 14] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 15] < 0) |
+                #(annotations['segmentations'][:, 15] > image[0].shape[0])
             )[0]
 
             # delete invalid indices
@@ -233,34 +239,8 @@ class Generator(keras.utils.Sequence):
             annotations['segmentations'] = annotations['segmentations'].copy()
             for index in range(annotations['bboxes'].shape[0]):
                 annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
-                annotations['segmentations'][index, :] = transform_box3d(transform, annotations['segmentations'][index, :])
-
-                #image_rgb = image[0]
-                #image_dep = image[1]
-                #cv2.rectangle(image_dep, (int(annotations['bboxes'][index, 0]), int(annotations['bboxes'][index, 1])), (int(annotations['bboxes'][index, 2]), int(annotations['bboxes'][index, 3])),(255, 255, 255), 2)
-                #cv2.rectangle(image_dep, (int(annotations['bboxes'][index, 0]), int(annotations['bboxes'][index, 1])), (int(annotations['bboxes'][index, 2]), int(annotations['bboxes'][index, 3])),(0, 0, 0), 1)
-
-                #print(annotations['segmentations'][index, :])
-                ##colR = random.randint(0, 255)
-                #colG = random.randint(0, 255)
-                #colB = random.randint(0, 255)
-                #annotations['segmentations'] = annotations['segmentations'].astype(np.uint16)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,0:2].ravel()), tuple(annotations['segmentations'][index,2:4].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,2:4].ravel()), tuple(annotations['segmentations'][index,4:6].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,4:6].ravel()), tuple(annotations['segmentations'][index,6:8].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,6:8].ravel()), tuple(annotations['segmentations'][index,0:2].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,0:2].ravel()), tuple(annotations['segmentations'][index,8:10].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,2:4].ravel()), tuple(annotations['segmentations'][index,10:12].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,4:6].ravel()), tuple(annotations['segmentations'][index,12:14].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,6:8].ravel()), tuple(annotations['segmentations'][index,14:16].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,8:10].ravel()), tuple(annotations['segmentations'][index,10:12].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,10:12].ravel()), tuple(annotations['segmentations'][index,12:14].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,12:14].ravel()), tuple(annotations['segmentations'][index,14:16].ravel()), (colR, colG, colB), 2)
-                #image_dep = cv2.line(image_dep, tuple(annotations['segmentations'][index,14:16].ravel()), tuple(annotations['segmentations'][index,8:10].ravel()), (colR, colG, colB), 2)
-
-            #print('image storing')
-            #time_now = time.time()
-            #cv2.imwrite('/home/stefan/RGBD_inprocess/rgb_after_transform' + str(time_now) + '.jpg', image_dep)
+                #annotations['segmentations'][index, :] = transform_box3d(transform, annotations['segmentations'][index, :])
+                annotations['poses'][index, :] = adjust_pose_annotation(transform, annotations['poses'][index, :], annotations['cam_params'][index, :])
 
         return image, annotations
 

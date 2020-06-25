@@ -119,6 +119,16 @@ def anchor_targets_bbox(
 
             regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
+            print(annotations['segmentations'])
+            rot = tf3d.quaternions.quat2mat(annotations['poses'])
+            rot = np.asarray(rot, dtype=np.float32)
+            tra = annotations['poses'][:3]
+            tDbox = rot[:3, :3].dot(annotations['segmentations'].T).T
+            tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+            box3D = toPix_array(tDbox, fx=annotations['cam_params'][0], fy=annotations['cam_params'][1], cx=annotations['cam_params'][2], cy=annotations['cam_params'][3])
+            box3D = np.reshape(box3D, (16))
+
             regression_3D[index, :, :-1] = box3D_transform(anchors, annotations['segmentations'][argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
@@ -458,4 +468,11 @@ def box3D_transform(anchors, gt_boxes, num_classes, mean=None, std=None):
 
     return targets
 
+
+def toPix_array(translation, fx=None, fy=None, cx=None, cy=None):
+
+    xpix = ((translation[:, 0] * fx) / translation[:, 2]) + cx
+    ypix = ((translation[:, 1] * fy) / translation[:, 2]) + cy
+
+    return np.stack((xpix, ypix), axis=1)
 

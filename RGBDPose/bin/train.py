@@ -56,10 +56,10 @@ def makedirs(path):
             raise
 
 
-def get_session():
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    return tf.Session(config=config)
+#def get_session():
+#    config = tf.ConfigProto()
+#    config.gpu_options.allow_growth = True
+#    return tf.Session(config=config)
 
 
 def model_with_weights(model, weights, skip_mismatch):
@@ -184,12 +184,10 @@ def create_generators(args, preprocess_image):
     }
 
     transform_generator = random_transform_generator(
-            min_rotation=-0.1,
-            max_rotation=0.1,
             min_translation=(-0.2, -0.2),
             max_translation=(0.2, 0.2),
-            min_scaling=(0.9, 0.9),
-            max_scaling=(1.1, 1.1),
+            min_scaling=(0.8, 0.8),
+            max_scaling=(1.2, 1.2),
         )
 
     if args.dataset_type == 'coco':
@@ -325,7 +323,7 @@ def main(args=None):
     # optionally choose specific GPU
     if args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    keras.backend.tensorflow_backend.set_session(get_session())
+    #keras.backend.tensorflow_backend.set_session(get_session())
 
     # create the generators
     train_generator, validation_generator, train_iterations = create_generators(args, backbone.preprocess_image)

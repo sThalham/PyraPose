@@ -285,9 +285,9 @@ def apply_transform(matrix, image, params):
     fy = fy.astype(dtype=np.uint16)
     image1 = image1[fy, fx] + Wz_scaled * VecF2
     image1 = np.where(image1 > 0, image1, 0.0)
+    image1 = np.where(image1 > 2000.0, 0.0, image1)
     image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
     image1 = np.multiply(image1, 255.0/np.nanmax(image1))
-    print(np.nanmax(image1), np.nanmin(image1))
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],
@@ -297,6 +297,15 @@ def apply_transform(matrix, image, params):
         borderValue=params.cval,
     )
     return [image0, image1]
+
+
+def adjust_pose_annotation(matrix, pose, cpara):
+
+    pose[2] = pose[2] / matrix[0, 0]
+    pose[0] = pose[0] + ((matrix[0, 2] + ((cpara[2] * matrix[0, 0]) - cpara[2])) * pose[2]) / cpara[0]
+    pose[1] = pose[1] + ((matrix[1, 2] + ((cpara[3] * matrix[0, 0]) - cpara[3])) * pose[2]) / cpara[1]
+
+    return pose
 
 
 def compute_resize_scale(image_shape, min_side=800, max_side=1333):

@@ -152,7 +152,7 @@ def scaling(factor):
     """
     return np.array([
         [factor[0], 0, 0],
-        [0, factor[1], 0],
+        [0, factor[0], 0],
         [0, 0, 1]
     ])
 
@@ -183,8 +183,6 @@ def change_transform_origin(transform, center):
 
 
 def random_transform(
-    min_rotation=-0.1,
-    max_rotation=0.1,
     min_translation=(-0.2, -0.2),
     max_translation=(0.2, 0.2),
     min_scaling=(0.9, 0.9),
