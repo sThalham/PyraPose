@@ -244,12 +244,6 @@ class LinemodGenerator(Generator):
                 a['mask_id'],
             ]], axis=0)
             objID = a['category_id']
-            if objID > 5:
-                objID = objID + 2
-            elif objID > 2:
-                objID = objID + 1
-            else:
-                objID = objID
             threeDbox = self.TDboxes[objID, :, :]
             annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
             annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[

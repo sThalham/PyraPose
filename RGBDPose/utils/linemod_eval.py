@@ -324,6 +324,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image, scale = generator.resize_image(image)
 
         image_raw_dep = generator.load_image_dep(index)
+        image_raw_dep = np.multiply(image_raw_dep, 255.0 / np.nanmax(image_raw_dep))
+        image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
         image_dep = generator.preprocess_image(image_raw_dep)
         image_dep, scale = generator.resize_image(image_dep)
 
@@ -350,8 +352,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             t_tra = anno['poses'][0][:3]
             t_rot = anno['poses'][0][3:]
 
-        #if t_cat != 2:
-        #    continue
+        if t_cat == 6:
+            continue
 
         if t_cat == 3 or t_cat == 7:
             print(t_cat, ' ====> skip')
@@ -361,7 +363,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes, boxes3D, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image_dep, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
         '''
         print(P3.shape) # 60, 80
@@ -428,7 +430,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         if obj_name != model_pre:
             point_cloud, model_vsd, model_vsd_mm = load_pcd(obj_name)
-            point_cloud.scale(1000.0)
+            #point_cloud.scale(1000.0)
             model_pre = obj_name
 
         rotD[t_cat] += 1
@@ -578,13 +580,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         #pose = np.concatenate(
                         #            (np.array(t_est[:, 0], dtype=np.float32), np.array(rot, dtype=np.float32)), axis=0)
 
-                        t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
+                        t_rot = tf3d.quaternions.quat2mat(t_rot)
                         R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
                         t_gt = np.array(t_tra, dtype=np.float32) * 0.001
 
                         rd = re(R_gt, R_est)
                         xyz = te(t_gt, t_est.T)
 
+                        '''
                         print('--------------------- ICP refinement -------------------')
                         # print(raw_dep_path)
                         image_dep = cv2.imread(raw_dep_path, cv2.IMREAD_UNCHANGED)
@@ -625,7 +628,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                                                model_dia[cls] * 1000.0)
                         R_est = reg_p2p[:3, :3]
                         t_est = reg_p2p[:3, 3] * 0.001
-
+                    
                         '''
                         pose = est_points.reshape((16)).astype(np.int16)
                         bb = b1
@@ -686,11 +689,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         image = cv2.line(image, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                                          5)
 
-                        name = '/home/sthalham/visTests/detection_LM.jpg'
-                        cv2.imwrite(name, image)
+                        name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+                        cv2.imwrite(name, image+100)
 
                         print('break')
-                        '''
+
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
