@@ -21,7 +21,6 @@ import numpy as np
 import json
 import math
 import transforms3d as tf3d
-import geometry
 import os
 import copy
 import cv2
@@ -352,8 +351,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             t_tra = anno['poses'][0][:3]
             t_rot = anno['poses'][0][3:]
 
-        if t_cat == 6:
-            continue
+        print(t_cat)
+
+        #if t_cat == 6:
+        #    continue
 
         if t_cat == 3 or t_cat == 7:
             print(t_cat, ' ====> skip')
@@ -365,6 +366,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images.append(image_dep)
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image_dep, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
+        print(scores)
         '''
         print(P3.shape) # 60, 80
         print(P4.shape) # 30, 40
