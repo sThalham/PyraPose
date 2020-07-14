@@ -216,10 +216,6 @@ class LinemodGenerator(Generator):
             if a['feature_visibility'] < 0.5:
                 continue
 
-            # some annotations have basically no width / height, skip them
-            if a['bbox'][2] < 1 or a['bbox'][3] < 1:
-                continue
-
             annotations['labels'] = np.concatenate([annotations['labels'], [self.inv_label_to_label(a['category_id'])]], axis=0)
             annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[
                 a['bbox'][0],
@@ -244,6 +240,12 @@ class LinemodGenerator(Generator):
                 a['mask_id'],
             ]], axis=0)
             objID = a['category_id']
+            if objID > 5:
+                objID = objID + 2
+            elif objID > 2:
+                objID = objID + 1
+            else:
+                objID = objID
             threeDbox = self.TDboxes[objID, :, :]
             annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
             annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[

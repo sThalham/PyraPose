@@ -109,20 +109,6 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
     tensorboard_callback = None
 
-    if args.tensorboard_dir:
-        tensorboard_callback = keras.callbacks.TensorBoard(
-            log_dir                = args.tensorboard_dir,
-            histogram_freq         = 0,
-            batch_size             = args.batch_size,
-            write_graph            = True,
-            write_grads            = False,
-            write_images           = False,
-            embeddings_freq        = 0,
-            embeddings_layer_names = None,
-            embeddings_metadata    = None
-        )
-        callbacks.append(tensorboard_callback)
-
     if args.evaluation and validation_generator:
         if args.dataset_type == 'coco':
             from ..callbacks.coco import CocoEval
@@ -286,7 +272,7 @@ def parse_args(args):
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
 
     parser.add_argument('--backbone', help='Backbone model used by retinanet.', default='resnet50', type=str)
-    parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
+    parser.add_argument('--batch-size',       help='Size of the batches.', default=4, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
@@ -313,7 +299,6 @@ def main(args=None):
     args = parse_args(args)
 
     backbone = models.backbone(args.backbone)
-    print('backbone: ', backbone)
     # should be 2 times resnet50
 
     check_keras_version()
@@ -372,7 +357,7 @@ def main(args=None):
     # start training
     training_model.fit_generator(
         generator=train_generator,
-        steps_per_epoch=train_generator.size(),
+        steps_per_epoch=train_generator.size()/args.batch_size,
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,
