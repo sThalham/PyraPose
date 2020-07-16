@@ -272,7 +272,7 @@ def parse_args(args):
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
 
     parser.add_argument('--backbone', help='Backbone model used by retinanet.', default='resnet50', type=str)
-    parser.add_argument('--batch-size',       help='Size of the batches.', default=4, type=int)
+    parser.add_argument('--batch-size',       help='Size of the batches.', default=8, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)

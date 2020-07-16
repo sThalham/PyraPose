@@ -155,8 +155,8 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    #mesh_path ="/RGBDPose/linemod_13/"
-    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    mesh_path ="/RGBDPose/Meshes/linemod_13/"
+    #mesh_path = "/home/stefan/data/Meshes/linemod_13/"
     #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
@@ -221,8 +221,8 @@ def boxoverlap(a, b):
 def evaluate_linemod(generator, model, threshold=0.05):
     threshold = 0.5
 
-    #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
-    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    mesh_info = '/RGBDPose/Meshes/linemod_13/models_info.yml'
+    #mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
     #mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
@@ -342,6 +342,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             t_tra = anno['poses'][ent][0][:3]
             t_rot = anno['poses'][ent][0][3:]
 
+        elif len(anno['labels']) < 1:
+            continue
+
         else:
             t_cat = int(anno['labels']) + 1
             obj_name = str(t_cat)
@@ -350,8 +353,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
             t_tra = anno['poses'][0][:3]
             t_rot = anno['poses'][0][3:]
-
-        print(t_cat)
 
         #if t_cat == 6:
         #    continue
@@ -362,11 +363,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         # run network
         images = []
-        images.append(image)
-        images.append(image_dep)
-        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image_dep, axis=0))#, np.expand_dims(image_dep, axis=0)])
+        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
-        print(scores)
         '''
         print(P3.shape) # 60, 80
         print(P4.shape) # 30, 40
@@ -631,7 +629,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         R_est = reg_p2p[:3, :3]
                         t_est = reg_p2p[:3, 3] * 0.001
                     
-                        '''
                         pose = est_points.reshape((16)).astype(np.int16)
                         bb = b1
 
@@ -695,7 +692,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         cv2.imwrite(name, image+100)
 
                         print('break')
-
+                        '''
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
