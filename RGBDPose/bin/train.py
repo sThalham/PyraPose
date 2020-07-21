@@ -109,20 +109,6 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
     tensorboard_callback = None
 
-    if args.tensorboard_dir:
-        tensorboard_callback = keras.callbacks.TensorBoard(
-            log_dir                = args.tensorboard_dir,
-            histogram_freq         = 0,
-            batch_size             = args.batch_size,
-            write_graph            = True,
-            write_grads            = False,
-            write_images           = False,
-            embeddings_freq        = 0,
-            embeddings_layer_names = None,
-            embeddings_metadata    = None
-        )
-        callbacks.append(tensorboard_callback)
-
     if args.evaluation and validation_generator:
         if args.dataset_type == 'coco':
             from ..callbacks.coco import CocoEval
@@ -313,8 +299,6 @@ def main(args=None):
     args = parse_args(args)
 
     backbone = models.backbone(args.backbone)
-    print('backbone: ', backbone)
-    # should be 2 times resnet50
 
     check_keras_version()
 

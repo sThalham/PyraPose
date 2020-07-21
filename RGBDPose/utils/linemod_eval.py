@@ -364,7 +364,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image_dep, axis=0))#, np.expand_dims(image_dep, axis=0)])
+        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
         print(scores)
         '''
@@ -470,11 +470,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
 
             cls = generator.label_to_inv_label(label)
-            if cls > 5:
-                cls += 2
-            elif cls > 2:
-                cls += 1
-            else: pass
+            #if cls > 5:
+            #    cls += 2
+            #elif cls > 2:
+            #    cls += 1
+            #else: pass
 
             #cls = 1
             #control_points = box3D[(cls - 1), :]

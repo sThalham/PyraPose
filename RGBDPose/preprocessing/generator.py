@@ -232,7 +232,7 @@ class Generator(keras.utils.Sequence):
                 transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
 
             # apply transformation to image
-            image = apply_transform(transform, image, self.transform_parameters)
+            image = apply_transform(transform, image, self.transform_parameters, annotations['cam_params'][0, :])
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()
