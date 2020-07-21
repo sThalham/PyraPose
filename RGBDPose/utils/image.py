@@ -290,10 +290,8 @@ def apply_transform(matrix, image, params, cpara):
     #image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
     #image1 = np.multiply(image1, 255.0/np.nanmax(image1))
     #print(np.nanmax(image1), np.nanmin(image1))
-    image1 = image1 * 0.001
+    #image1 = image1 * 0.001
     image1 = get_normal(image1, cpara[0], cpara[1], cpara[2], cpara[3])
-    print(cpara[0], cpara[1], cpara[2], cpara[3])
-    print(np.nanmax(image1), np.nanmin(image1))
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],
@@ -366,7 +364,16 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     cross = np.nan_to_num(cross)
 
     #cross[depth_refine <= 200] = 0  # 0 and near range cut
-    cross[depth_refine > 2000] = 0  # far range cut
+    #cross[depth_refine > 2000] = 0  # far range cut
+
+    scaDep = 1.0 / np.nanmax(depth_refine)
+    depth_refine = np.multiply(depth_refine, scaDep)
+    cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine - 0.5))  # nearer has higher intensity
+    cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine - 0.5))
+    cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine - 0.5))
+    scaCro = 255.0 / np.nanmax(cross)
+    cross = np.multiply(cross, scaCro)
+    cross = cross.astype(np.uint8)
 
     return cross
 
