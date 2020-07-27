@@ -286,12 +286,11 @@ def apply_transform(matrix, image, params, cpara):
     fy = fy.astype(dtype=np.uint16)
     image1 = image1[fy, fx] + Wz_scaled * VecF2
     image1 = np.where(image1 > 0, image1, 0.0)
-    #image1 = np.where(image1 > 2000.0, 0.0, image1)
-    #image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
-    #image1 = np.multiply(image1, 255.0/np.nanmax(image1))
+    image1 = np.where(image1 > 2000.0, 0.0, image1)
+    image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
+    image1 = np.multiply(image1, 255.0/2000.0)
     #print(np.nanmax(image1), np.nanmin(image1))
-    #image1 = image1 * 0.001
-    image1 = get_normal(image1, cpara[0], cpara[1], cpara[2], cpara[3])
+    #image1 = get_normal(image1, cpara[0], cpara[1], cpara[2], cpara[3])
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],
