@@ -226,13 +226,19 @@ class Generator(keras.utils.Sequence):
     def random_transform_group_entry(self, image, annotations, transform=None):
         """ Randomly transforms image and annotation.
         """
+
         # randomly transform both image and annotations
         if transform is not None or self.transform_generator:
             if transform is None:
                 transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
 
-            # apply transformation to image
-            image = apply_transform(transform, image, self.transform_parameters, annotations['cam_params'][0, :])
+            # apply transformation to image            
+            if annotations['cam_params'].shape[0] > 1:
+                K = annotations['cam_params'][0, :]
+            else:
+                K = [572.4114, 573.57043, 325.26110828, 242.04899594]
+
+            image = apply_transform(transform, image, self.transform_parameters, K)
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()
