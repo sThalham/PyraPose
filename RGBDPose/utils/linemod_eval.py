@@ -26,6 +26,7 @@ import copy
 import cv2
 import open3d
 from ..utils import ply_loader
+from ..utils.image import get_normal
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import time
@@ -155,8 +156,8 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    mesh_path ="/RGBDPose/Meshes/linemod_13/"
-    #mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    #mesh_path ="/RGBDPose/Meshes/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
     #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
@@ -221,8 +222,8 @@ def boxoverlap(a, b):
 def evaluate_linemod(generator, model, threshold=0.05):
     threshold = 0.5
 
-    mesh_info = '/RGBDPose/Meshes/linemod_13/models_info.yml'
-    #mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    #mesh_info = '/RGBDPose/Meshes/linemod_13/models_info.yml'
+    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
     #mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
@@ -323,12 +324,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image, scale = generator.resize_image(image)
 
         image_raw_dep = generator.load_image_dep(index)
-        image_raw_dep = np.multiply(image_raw_dep, 255.0 / np.nanmax(image_raw_dep))
-        image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
+        #image_raw_dep = np.multiply(image_raw_dep, 255.0 / np.nanmax(image_raw_dep))
+        #image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
+        image_raw_dep = get_normal(image_raw_dep, fxkin, fykin, cxkin, cykin)
         image_dep = generator.preprocess_image(image_raw_dep)
         image_dep, scale = generator.resize_image(image_dep)
 
-        raw_dep_path = generator.load_image_dep_raw(index)
+        cv2.imwrite('/home/stefan/RGBDPose_viz/dep_cc.png', image_raw_dep)
 
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
@@ -363,7 +365,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         # run network
         images = []
-        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
+        boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image_dep, axis=0))#, np.expand_dims(image_dep, axis=0)])
+        print(scores[:10])
 
         '''
         print(P3.shape) # 60, 80
@@ -628,6 +631,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                                                model_dia[cls] * 1000.0)
                         R_est = reg_p2p[:3, :3]
                         t_est = reg_p2p[:3, 3] * 0.001
+                        '''
                     
                         pose = est_points.reshape((16)).astype(np.int16)
                         bb = b1
@@ -692,7 +696,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                         cv2.imwrite(name, image+100)
 
                         print('break')
-                        '''
+
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
