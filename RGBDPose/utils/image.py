@@ -377,12 +377,11 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     scaDep = 1.0 / 2000.0
     #scaDep = 1.0 / np.nanmax(depth_refine)
     depth_refine = np.multiply(depth_refine, scaDep)
-    print('depth: ', np.nanmin(depth_refine), np.nanmax(depth_refine))
-    cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine - 0.5))  # nearer has higher intensity
-    cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine - 0.5))
-    cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine - 0.5))
+    print(np.linalg.norm(cross, axis=2))
+    cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine))  # nearer has higher intensity
+    cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine))
+    cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine))
     scaCro = 255.0 / np.nanmax(cross)
-    print('cross: ', np.nanmin(cross), np.nanmax(cross))
     cross = np.multiply(cross, scaCro)
     cross = cross.astype(np.uint8)
 
