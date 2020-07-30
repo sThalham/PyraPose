@@ -226,24 +226,32 @@ def apply_transform(matrix, image, params, cpara):
     N_threads = 4
     perlin = fns.Noise(seed=seed, numWorkers=N_threads)
     drawFreq = random.uniform(0.05, 0.2)  # 0.05 - 0.2
-    # drawFreq = 0.5
+    #drawFreq = 0.5
     perlin.frequency = drawFreq
     perlin.noiseType = fns.NoiseType.SimplexFractal
     perlin.fractal.fractalType = fns.FractalType.FBM
-    drawOct = [4, 8]
+    drawOct = [2, 4, 8]
     freqOct = np.bincount(drawOct)
     rndOct = np.random.choice(np.arange(len(freqOct)), 1, p=freqOct / len(drawOct), replace=False)
     # rndOct = 8
     perlin.fractal.octaves = rndOct
-    perlin.fractal.lacunarity = 2.1
-    perlin.fractal.gain = 0.45
+    #perlin.fractal.lacunarity = 2.1
+    perlin.fractal.lacunarity = random.uniform(1.0, 3.0)
+    perlin.fractal.gain = random.uniform(0.25, 0.75)
+    #perlin.fractal.gain = 0.45
     perlin.perturb.perturbType = fns.PerturbType.NoPerturb
 
-    noiseX = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    noiseY = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    #noiseX = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    #noiseY = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    #noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
+    #Wxy = np.random.randint(1, 5)  # 1 - 5
+    #Wz = np.random.uniform(0.0001, 0.004)  # 0.0001 - 0.004
+
+    noiseX = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    noiseY = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
     noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
-    Wxy = np.random.randint(1, 5)  # 1 - 5
-    Wz = np.random.uniform(0.0001, 0.004)  # 0.0001 - 0.004
+    Wxy = np.random.randint(1, 7)  # 1 - 5
+    Wz = np.random.uniform(0.0001, 0.01)
 
     X, Y = np.meshgrid(np.arange(image[1].shape[1]), np.arange(image[1].shape[0]))
     coords0 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])
@@ -363,14 +371,18 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     cross = np.nan_to_num(cross)
 
     #cross[depth_refine <= 200] = 0  # 0 and near range cut
-    #cross[depth_refine > 2000] = 0  # far range cut
+    cross[depth_refine > 2000] = 0  # far range cut
+    depth_refine[depth_refine > 2000] = 0
 
-    scaDep = 1.0 / np.nanmax(depth_refine)
+    scaDep = 1.0 / 2000.0
+    #scaDep = 1.0 / np.nanmax(depth_refine)
     depth_refine = np.multiply(depth_refine, scaDep)
+    print('depth: ', np.nanmin(depth_refine), np.nanmax(depth_refine))
     cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine - 0.5))  # nearer has higher intensity
     cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine - 0.5))
     cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine - 0.5))
     scaCro = 255.0 / np.nanmax(cross)
+    print('cross: ', np.nanmin(cross), np.nanmax(cross))
     cross = np.multiply(cross, scaCro)
     cross = cross.astype(np.uint8)
 

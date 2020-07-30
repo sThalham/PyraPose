@@ -330,7 +330,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image_dep = generator.preprocess_image(image_raw_dep)
         image_dep, scale = generator.resize_image(image_dep)
 
-        cv2.imwrite('/home/stefan/RGBDPose_viz/dep_cc.png', image_raw_dep)
+        #cv2.imwrite('/home/stefan/RGBDPose_viz/dep_cc.png', image_raw_dep)
 
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
@@ -366,7 +366,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
         # run network
         images = []
         boxes, boxes3D, scores, labels = model.predict_on_batch(np.expand_dims(image_dep, axis=0))#, np.expand_dims(image_dep, axis=0)])
-        print(scores[:10])
 
         '''
         print(P3.shape) # 60, 80
@@ -631,7 +630,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                                                model_dia[cls] * 1000.0)
                         R_est = reg_p2p[:3, :3]
                         t_est = reg_p2p[:3, 3] * 0.001
-                        '''
+                        
                     
                         pose = est_points.reshape((16)).astype(np.int16)
                         bb = b1
@@ -694,9 +693,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                         name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
                         cv2.imwrite(name, image+100)
-
-                        print('break')
-
+                        '''
 
                         if not math.isnan(rd):
                             if rd < 5.0 and xyz < 0.05:
@@ -801,8 +798,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
         print('cat ', ind, ' rec ', detPre[ind], ' pre ', detRec[ind], ' less5 ', less_55[ind], ' repr ',
                   less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind], ' F1 add 0.15d ', F1_add[ind])
 
-    dataset_recall = sum(tp) / (sum(tp) + sum(fp)) * 100.0
-    dataset_precision = sum(tp) / (sum(tp) + sum(fn)) * 100.0
+    dataset_recall = sum(tp) / (sum(tp) + sum(fn)) * 100.0
+    dataset_precision = sum(tp) / (sum(tp) + sum(fp)) * 100.0
     dataset_recall_add = sum(tp_add) / (sum(tp_add) + sum(fp_add)) * 100.0
     dataset_precision_add = sum(tp_add) / (sum(tp_add) + sum(fn_add)) * 100.0
     F1_add_all = 2 * ((dataset_precision_add * dataset_recall_add)/(dataset_precision_add + dataset_recall_add))
