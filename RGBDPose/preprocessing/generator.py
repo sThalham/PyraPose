@@ -32,6 +32,8 @@ from ..utils.config import parse_anchor_parameters
 from ..utils.image import (
     TransformParameters,
     adjust_transform_for_image,
+    adjust_transform_for_mask,
+    apply_transform2mask,
     adjust_pose_annotation,
     apply_transform,
     preprocess_image,
@@ -230,7 +232,12 @@ class Generator(keras.utils.Sequence):
         # randomly transform both image and annotations
         if transform is not None or self.transform_generator:
             if transform is None:
-                transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
+                #transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
+                next_transform = next(self.transform_generator)
+                transform = adjust_transform_for_image(next_transform, image,
+                                                       self.transform_parameters.relative_translation)
+                transform_mask = adjust_transform_for_mask(next_transform, annotations['mask'],
+                                                           self.transform_parameters.relative_translation)
 
             # apply transformation to image            
             if annotations['cam_params'].shape[0] > 1:
@@ -239,6 +246,7 @@ class Generator(keras.utils.Sequence):
                 K = [572.4114, 573.57043, 325.26110828, 242.04899594]
 
             image = apply_transform(transform, image, self.transform_parameters, K)
+            annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters)
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()
@@ -279,8 +287,8 @@ class Generator(keras.utils.Sequence):
         image[1], image_scale1 = self.resize_image(image[1])
 
         # apply resizing to annotations too
-        annotations['bboxes'] *= image_scale0
-        annotations['segmentations'] *= image_scale0
+        #annotations['bboxes'] *= image_scale0
+        #annotations['segmentations'] *= image_scale0
 
         # convert to the wanted keras floatx
         image[0] = keras.backend.cast_to_floatx(image[0])

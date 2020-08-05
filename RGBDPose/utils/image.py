@@ -96,6 +96,26 @@ def adjust_transform_for_image(transform, image, relative_translation):
     return result
 
 
+def adjust_transform_for_mask(transform, image, relative_translation):
+    """ Adjust a transformation for a specific image.
+
+    The translation of the matrix will be scaled with the size of the image.
+    The linear part of the transformation will adjusted so that the origin of the transformation will be at the center of the image.
+    """
+    height, width = image.shape
+
+    result = transform.copy()
+
+    # Scale the translation with the image size if specified.
+    if relative_translation:
+        result[0:2, 2] *= [width, height]
+
+    # Move the origin of transformation.
+    result = change_transform_origin(transform, (0.5 * width, 0.5 * height))
+
+    return result
+
+
 class TransformParameters:
     """ Struct holding parameters determining how to apply a transformation to an image.
 
@@ -294,11 +314,11 @@ def apply_transform(matrix, image, params, cpara):
     fy = fy.astype(dtype=np.uint16)
     image1 = image1[fy, fx] + Wz_scaled * VecF2
     image1 = np.where(image1 > 0, image1, 0.0)
-    #image1 = np.where(image1 > 2000.0, 0.0, image1)
-    #image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
-    #image1 = np.multiply(image1, 255.0/2000.0)
+    image1 = np.where(image1 > 2000.0, 0.0, image1)
+    image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
+    image1 = np.multiply(image1, 255.0/2000.0)
     #print(np.nanmax(image1), np.nanmin(image1))
-    image1 = get_normal(image1, cpara[0], cpara[1], cpara[2], cpara[3])
+    #image1 = get_normal(image1, cpara[0], cpara[1], cpara[2], cpara[3])
     image1 = cv2.warpAffine(
         image1,
         matrix[:2, :],
@@ -377,7 +397,6 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     scaDep = 1.0 / 2000.0
     #scaDep = 1.0 / np.nanmax(depth_refine)
     depth_refine = np.multiply(depth_refine, scaDep)
-    print(np.linalg.norm(cross, axis=2))
     cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine))  # nearer has higher intensity
     cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine))
     cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine))
@@ -386,6 +405,19 @@ def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
     cross = cross.astype(np.uint8)
 
     return cross
+
+
+def apply_transform2mask(matrix, mask, params):
+
+    mask = cv2.warpAffine(
+        mask,
+        matrix[:2, :],
+        dsize=(mask.shape[1], mask.shape[0]),
+        flags=cv2.INTER_NEAREST,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=0,
+    )
+    return [mask]
 
 
 def adjust_pose_annotation(matrix, pose, cpara):

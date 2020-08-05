@@ -18,6 +18,7 @@ import numpy as np
 import keras
 import transforms3d as tf3d
 import cv2
+from PIL import Image
 
 from ..utils.compute_overlap import compute_overlap
 
@@ -91,26 +92,64 @@ def anchor_targets_bbox(
 
     batch_size = len(image_group)
 
-    regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
+    mask_batch  = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
-        #image_dep = image[1]
-        # print(np.nanmin(image_raw), np.nanmax(image_raw))
-        #image_dep = ((image_dep - np.nanmin(image_dep))).astype(np.uint8)
+        mask = annotations['mask'][0]
+        pyramid_levels = [3, 4, 5]
+        anchor_idxs = [0, 4800, 6000]
+        image_shapes = guess_shapes(image[0].shape[:2], pyramid_levels)
+        rind = np.random.randint(0, 1000)
+
+        #VISUALIZATION
+        image_msk = mask * (255.0 / np.nanmax(mask))
+        image_msk = cv2.resize(image_msk, (640, 480), interpolation=cv2.INTER_NEAREST)
+        image_msk = image_msk.astype(np.uint8)
 
         if annotations['bboxes'].shape[0]:
+
+            if annotations['segmentations'].shape[0]:
+                # compute target class labels
+                for anni, cls in enumerate(annotations['labels']):
+
+                    mask_id = annotations['mask_ids'][anni]
+                    cls = int(cls)
+
+                    anchors_spec = []
+                    for idx, reso in enumerate(image_shapes):
+                        # mask_flat = cv2.resize(mask, (reso[1], reso[0]), interpolation=cv2.INTER_NEAREST)
+                        mask_flat = np.asarray(Image.fromarray(mask).resize((reso[1], reso[0]), Image.NEAREST))
+
+                        mask_flat = mask_flat.flatten()
+                        anchors_pyramid = np.where(mask_flat == int(mask_id))
+
+                        anchors_pyramid = np.add(anchors_pyramid, anchor_idxs[idx])
+                        anchors_spec.append(anchors_pyramid[0])
+
+                    anchors_spec = np.concatenate(anchors_spec)
+
+                    if anchors_spec.shape[0] < 1:
+                        continue
+
+                    mask_batch[index, anchors_spec[0], cls] = 1
+                    mask_batch[index, anchors_spec[0], -1] = 1
+
+                    image_cls = np.where(image_msk==int(mask_id), 255, image_msk)
+                    name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_LM.jpg'
+                    cv2.imwrite(name, image_cls)
+
             # obtain indices of gt annotations with the greatest overlap
             positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
 
             labels_batch[index, ignore_indices, -1]       = -1
             labels_batch[index, positive_indices, -1]     = 1
 
-            regression_batch[index, ignore_indices, -1]   = -1
-            regression_batch[index, positive_indices, -1] = 1
+            #regression_batch[index, ignore_indices, -1]   = -1
+            #regression_batch[index, positive_indices, -1] = 1
 
             regression_3D[index, ignore_indices, -1] = -1
             regression_3D[index, positive_indices, -1] = 1
@@ -118,7 +157,7 @@ def anchor_targets_bbox(
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
-            regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
+            #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
             calculated_boxes = np.empty((0, 16))
             for idx, pose in enumerate(annotations['poses']):
@@ -184,8 +223,8 @@ def anchor_targets_bbox(
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image[0]+100)
+            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            cv2.imwrite(name, image[0]+100)
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
             #cv2.imwrite(name, image[1] + 100)
 
@@ -195,11 +234,11 @@ def anchor_targets_bbox(
             indices = np.logical_or(anchors_centers[:, 0] >= image[0].shape[1], anchors_centers[:, 1] >= image[0].shape[0])
 
             labels_batch[index, indices, -1]     = -1
-            regression_batch[index, indices, -1] = -1
+            #regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, -1] = -1
 
     #return regression_batch, regression_3D, labels_batch
-    return regression_3D, labels_batch
+    return regression_3D, labels_batch, mask_batch
 
 
 def compute_gt_annotations(
