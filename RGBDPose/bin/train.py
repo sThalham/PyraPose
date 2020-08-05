@@ -94,7 +94,6 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # compile model
     training_model.compile(
         loss={
-            'bbox'         : losses.smooth_l1(),
             '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
         },
