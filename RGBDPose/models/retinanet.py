@@ -173,6 +173,31 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
 
+def __attention_pnp(
+        num_classes,
+        num_values,
+):
+    if keras.backend.image_data_format() == 'channels_first':
+        inputs = keras.layers.Input(shape=(num_values, None))
+    else:
+        inputs = keras.layers.Input(shape=(None, num_values))
+
+    outputs = inputs
+
+    outputs = keras.layers.Conv1D(filters=128, kernel_size=1, padding="same", activation='relu')(outputs)
+    outputs = keras.layers.Conv1D(filters=128, kernel_size=1, padding="same", activation='relu')(outputs)
+    outputs = keras.layers.Conv1D(filters=128, kernel_size=1, padding="same", activation='relu')(outputs)
+    outputs = keras.layers.GlobalMaxPool1D()(outputs)
+
+    outputs = keras.layers.Dense(512, activation='relu')(outputs)
+    outputs = keras.layers.Dense(256, activation='relu')(outputs)
+    outputs = keras.layers.Dense(num_classes * 7)(outputs)
+
+    cls_outputs = keras.layers.Reshape((num_classes, 7))(outputs)
+
+    return keras.models.Model(inputs=inputs, outputs=cls_outputs, name='poses')
+
+
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
     P5_upsampled = layers.UpsampleLike()([P5, C4])
@@ -384,12 +409,18 @@ def retinanet(
         submodels = default_submodels(num_classes, num_anchors)
         #submodels_2 = default_submodels_2(num_classes, num_anchors)
 
+    attention_pnp = __attention_pnp(num_classes, 16)
+
     b1, b2, b3 = backbone_layers_rgb
     b4, b5, b6 = backbone_layers_dep
 
     # FPN fusion
     features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
     pyramids = __build_pyramid(submodels, features)
+
+    poses = attention_pnp(pyramids[0])
+    pyramids.append(poses)
+    print(pyramids)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -418,37 +449,10 @@ def retinanet_bbox(
     features = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5']]
     anchors = __build_anchors(anchor_params, features)
 
-    #for i in range(len(model.layers)):
-    #    layer = model.layers[i]
-    #    print(i, layer.name, layer.output.shape)
-    #print(model.layers[368].output)
-    #print(model.layers[369].output)
-    #print(model.layers[370].output)
-    #print(model.layers[355].output)
-    #print(model.layers[351].output)
-    #print(model.layers[356].output)
-
-    #print(model.layers[190].output.get_weights())
-    #print(model.layers[191].output)
-    #print(model.layers[192].output)
-
-    #for layer in model.layers:
-    #    if 'conv' not in layer.name:
-    #        continue
-    #    filters, biases = layer.get_weights()
-    #    print(layer.name, filters.shape)
-
-    # we expect the anchors, regression and classification values as first output
-    #intermediate_tensor_function = ([model.inputs], [model.outputs[-1]])
-    #pyramids = intermediate_tensor_function([model.outputs[-1]])[0]
-    #regression = model.outputs[0]
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     mask = model.outputs[2]
-
-    # apply predicted regression to anchors
-    #boxes = layers.RegressBoxes(name='boxes')([anchors, regression])
-    #boxes = layers.ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
+    poses = model.outputs[3]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 

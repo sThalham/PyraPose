@@ -95,6 +95,7 @@ def anchor_targets_bbox(
     mask_batch  = np.zeros((batch_size, 6300, num_classes + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
+    poses_batch = np.zeros((batch_size, num_classes, 7 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
@@ -159,6 +160,14 @@ def anchor_targets_bbox(
 
             calculated_boxes = np.empty((0, 16))
             for idx, pose in enumerate(annotations['poses']):
+
+                cls = int(annotations['labels'][idx])
+                if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
+                    poses_batch[index, cls, -1] = 1
+                    poses_batch[index, cls, :2] = pose[:2] * 0.002
+                    poses_batch[index, cls, 2] = ((pose[2] * 0.001) - 1.0) * 3.0
+                    poses_batch[index, cls, 3:-1] = pose[3:]
+
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = pose[:3]
@@ -216,6 +225,8 @@ def anchor_targets_bbox(
 
                                      5)
                 '''
+            #print(poses_batch[index, :, :3])
+            #print(np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)))
 
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
@@ -236,7 +247,7 @@ def anchor_targets_bbox(
             regression_3D[index, indices, -1] = -1
 
     #return regression_batch, regression_3D, labels_batch
-    return regression_3D, labels_batch, mask_batch
+    return regression_3D, labels_batch, mask_batch, poses_batch
 
 
 def compute_gt_annotations(
