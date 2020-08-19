@@ -245,7 +245,7 @@ def apply_transform(matrix, image, params, cpara):
     seed = np.random.randint(2 ** 31)
     N_threads = 4
     perlin = fns.Noise(seed=seed, numWorkers=N_threads)
-    drawFreq = random.uniform(0.05, 0.2)  # 0.05 - 0.2
+    drawFreq = random.uniform(0.05, 0.5)  # 0.05 - 0.2
     #drawFreq = 0.5
     perlin.frequency = drawFreq
     perlin.noiseType = fns.NoiseType.SimplexFractal
@@ -271,7 +271,7 @@ def apply_transform(matrix, image, params, cpara):
     noiseY = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
     noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
     Wxy = np.random.randint(1, 7)  # 1 - 5
-    Wz = np.random.uniform(0.0001, 0.01)
+    Wz = np.random.uniform(0.0001, 0.007)
 
     X, Y = np.meshgrid(np.arange(image[1].shape[1]), np.arange(image[1].shape[0]))
     coords0 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])

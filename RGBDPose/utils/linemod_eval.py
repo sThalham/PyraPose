@@ -30,6 +30,8 @@ from ..utils.image import get_normal
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import time
+import tensorflow
+from PIL import Image
 
 from matplotlib import pyplot
 
@@ -156,8 +158,8 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    mesh_path ="/RGBDPose/Meshes/linemod_13/"
-    #mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    #mesh_path ="/RGBDPose/Meshes/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
     #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
@@ -221,7 +223,7 @@ def boxoverlap(a, b):
 
 def evaluate_linemod(generator, model, threshold=0.05):
 
-       threshold = 0.5
+    threshold = 0.5
 
     #mesh_info = '/DoublePose/Meshes/linemod_13/models_info.yml'
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -263,8 +265,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
     pc14, mv14, mv14_mm = load_pcd('14')
     pc15, mv15, mv15_mm = load_pcd('15')
 
-    anchors = anchors_for_shape((480, 640))
-
     allPoses = np.zeros((16), dtype=np.uint32)
     truePoses = np.zeros((16), dtype=np.uint32)
     falsePoses = np.zeros((16), dtype=np.uint32)
@@ -281,11 +281,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image_raw_dep = np.where(image_raw_dep > 2000.0, 0.0, image_raw_dep)
         image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
         image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
-        image_dep = generator.preprocess_image(image_raw_dep)
-        image_dep, scale = generator.resize_image(image_dep)
-
-        #cv2.imwrite('/home/stefan/RGBDPose_viz/rgb.png', image_raw)
-        #cv2.imwrite('/home/stefan/RGBDPose_viz/dep.png', image_raw_dep)
+        image_dep, scale = generator.resize_image(image_raw_dep)
 
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
@@ -323,9 +319,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
-
-        #print(anchors.shape)
+        boxes3D, scores, mask = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         for inv_cls in range(scores.shape[2]):
 
@@ -363,9 +357,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #P5_mask = cls_mask[6000:6300][cls_indices[0][cls_indices[0] > 6000]]
 
             # P3 viz
-            #cls_img = np.where(cls_mask > 0.5, 255.0, 80.0)
-            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            #cv2.imwrite('/home/stefan/segPose_viz/cur_img_P3.jpg', cls_img)
+            obj_mask = scores[0, :4800, inv_cls]
+            cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
+            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
             # P4 viz
             #cls_img = np.where(cls_mask[4800:6000] > 0.5, 255.0, 80.0)
             #cls_img = cls_img.reshape((30, 40)).astype(np.uint8)
@@ -534,9 +532,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
             t_gt = np.array(t_tra, dtype=np.float32)
 
-            # print(t_est)
-            # print(t_gt)
-
             t_gt = t_gt * 0.001
             t_est = t_est.T  # * 0.001
 
@@ -551,7 +546,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             print(' ')
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
-            '''
             tDbox = R_gt.dot(ori_points.T).T
             tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
             box3D = toPix_array(tDbox)
@@ -611,7 +605,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
                              5)
             image = cv2.line(image, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              5)
-            
+
+            '''
             idx = 0
             for i in range(k_hyp):
                 image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
@@ -624,10 +619,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
                 idx = idx+8
 
-            name = '/home/stefan/segPose_viz/detection_LM.jpg'
-            cv2.imwrite(name, image)
-            print('break')
             '''
+            name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+            cv2.imwrite(name, image)
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
