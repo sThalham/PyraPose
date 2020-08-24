@@ -452,7 +452,7 @@ def retinanet_bbox(
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     mask = model.outputs[2]
-    poses = model.outputs[3]
+    #poses = model.outputs[3]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 

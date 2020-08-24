@@ -321,6 +321,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images.append(image_dep)
         boxes3D, scores, mask = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
+        print(np.nanmax(scores))
+        print(np.nanmax(mask))
+
         for inv_cls in range(scores.shape[2]):
 
             true_cat = inv_cls + 1
