@@ -418,9 +418,13 @@ def retinanet(
     features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
     pyramids = __build_pyramid(submodels, features)
 
-    poses = attention_pnp(pyramids[0])
+    feature_sizes = [b1, b2, b3]
+    anchors = __build_anchors(AnchorParameters.default, feature_sizes)
+    boxes = pyramids[0]
+    boxes = layers.RegressBoxes3D()([anchors, boxes])
+
+    poses = attention_pnp(boxes)
     pyramids.append(poses)
-    print(pyramids)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
