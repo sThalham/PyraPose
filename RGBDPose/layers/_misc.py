@@ -16,7 +16,7 @@ limitations under the License.
 
 import keras
 from ..backend import resize_images, transpose, shift, bbox_transform_inv, clip_by_value, box3D_transform_inv
-from ..utils import anchors as utils_anchors
+from ..utils import anchors_temp as utils_anchors
 
 import numpy as np
 

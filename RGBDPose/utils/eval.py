@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from .anchors import compute_overlap
+from .anchors_temp import compute_overlap
 from .visualization import draw_detections, draw_annotations
 
 import keras

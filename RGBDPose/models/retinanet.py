@@ -2,7 +2,7 @@ import keras
 import tensorflow as tf
 from .. import initializers
 from .. import layers
-from ..utils.anchors import AnchorParameters
+from ..utils.anchors_temp import AnchorParameters
 from . import assert_training_model
 
 
@@ -390,6 +390,20 @@ def __build_anchors(anchor_parameters, features):
     return keras.layers.Concatenate(axis=1, name='anchors')(anchors)
 
 
+def __build_anchors_pnp(anchor_parameters, features):
+    anchors = [
+        layers.Anchors(
+            size=anchor_parameters.sizes[i],
+            stride=anchor_parameters.strides[i],
+            ratios=anchor_parameters.ratios,
+            scales=anchor_parameters.scales,
+            name='anchors_pnp_{}'.format(i)
+        )(f) for i, f in enumerate(features)
+    ]
+
+    return keras.layers.Concatenate(axis=1, name='anchors_pnp')(anchors)
+
+
 def retinanet(
     inputs,
     backbone_layers_rgb,
@@ -419,7 +433,7 @@ def retinanet(
     pyramids = __build_pyramid(submodels, features)
 
     feature_sizes = [b1, b2, b3]
-    anchors = __build_anchors(AnchorParameters.default, feature_sizes)
+    anchors = __build_anchors_pnp(AnchorParameters.default, feature_sizes)
     boxes = pyramids[0]
     boxes = layers.RegressBoxes3D()([anchors, boxes])
 
@@ -456,7 +470,7 @@ def retinanet_bbox(
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     mask = model.outputs[2]
-    #poses = model.outputs[3]
+    poses = model.outputs[3]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
@@ -468,4 +482,4 @@ def retinanet_bbox(
     #)([boxes, boxes3D, classification] + other)
 
     # construct the model
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, poses], name=name)

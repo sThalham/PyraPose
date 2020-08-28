@@ -38,7 +38,7 @@ from .. import models
 from ..callbacks import RedirectModel
 from ..callbacks.eval import Evaluate
 from ..models.retinanet import retinanet_bbox
-from ..utils.anchors import make_shapes_callback
+from ..utils.anchors_temp import make_shapes_callback
 from ..utils.config import read_config_file, parse_anchor_parameters
 from ..utils.keras_version import check_keras_version
 from ..utils.model import freeze as freeze_model

@@ -319,7 +319,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, mask, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         print(np.nanmax(scores))
         print(np.nanmax(mask))
