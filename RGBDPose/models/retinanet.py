@@ -140,6 +140,55 @@ def default_mask_model(
     return keras.models.Model(inputs=inputs, outputs=outputs, name='mask')
 
 
+def default_mask_decoder(
+        num_classes,
+        num_anchors):
+
+    options3 = {
+        'kernel_size': 3,
+        'strides': 1,
+        'padding': 'same',
+        'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer': 'zeros',
+        'kernel_regularizer' : keras.regularizers.l2(0.001),
+    }
+
+    if keras.backend.image_data_format() == 'channels_first':
+        inputs_P5 = keras.layers.Input(shape=(256, None, None))
+        inputs_P4 = keras.layers.Input(shape=(256, None, None))
+        inputs_P3 = keras.layers.Input(shape=(256, None, None))
+        # inputs_P2 = keras.layers.Input(shape=(64, None, None))
+    else:
+        inputs_P5 = keras.layers.Input(shape=(15, 20, 256))
+        inputs_P4 = keras.layers.Input(shape=(30, 40, 256))
+        inputs_P3 = keras.layers.Input(shape=(60, 80, 256))
+        # inputs_P2 = keras.layers.Input(shape=(None, None, 64))
+
+    inputs = [inputs_P3, inputs_P4, inputs_P5]
+
+    D5 = keras.layers.Conv2D(256, activation='relu', **options3)(inputs_P5)
+    D5 = keras.layers.Conv2D(256, activation='relu', **options3)(D5)
+    D5_up = keras.layers.Conv2DTranspose(256, activation='relu', kernel_size=2, strides=2, padding='valid')(D5)
+    D4 = keras.layers.Add()([D5_up, inputs_P4])
+
+    D4 = keras.layers.Conv2D(256, activation='relu', **options3)(D4)
+    D4 = keras.layers.Conv2D(256, activation='relu', **options3)(D4)
+    D4_up = keras.layers.Conv2DTranspose(256, activation='relu', kernel_size=2, strides=2, padding='valid')(D4)
+    D3 = keras.layers.Add()([D4_up, inputs_P3])
+
+    D3 = keras.layers.Conv2D(128, activation='relu', **options3)(D3)
+    D3 = keras.layers.Conv2D(128, activation='relu', **options3)(D3)
+    outputs = keras.layers.Conv2D(filters=num_classes, **options3)(D3)
+
+    if keras.backend.image_data_format() == 'channels_first':
+        outputs = keras.layers.Permute((2, 3, 1))(outputs)
+    outputs = keras.layers.Reshape((-1, num_classes))(outputs)
+
+    outputs = keras.layers.Activation('sigmoid')(outputs)
+
+    return keras.models.Model(inputs=inputs, outputs=outputs, name='mask')  # , name=name)
+
+
 def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256 , name='3Dregression_submodel'):
     options = {
         'kernel_size'        : 3,
@@ -151,9 +200,9 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     }
 
     if keras.backend.image_data_format() == 'channels_first':
-        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+        inputs  = keras.layers.Input(shape=(pyramid_feature_size, 4800, None))
     else:
-        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
+        inputs  = keras.layers.Input(shape=(None, 4800, pyramid_feature_size))
 
     outputs = inputs
     for i in range(4):
@@ -323,24 +372,25 @@ def __create_BiFPN_noW(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
     return [P3_out, P4_out, P5_out, P6_out, P7_out]
 
 
-def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+#def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+def __create_sparceFPN(P3, P4, P5, feature_size=256):
 
     # only from here for FPN-fusion test 3
-    C3 = keras.layers.Add()([C3_R, C3_D])
-    C4 = keras.layers.Add()([C4_R, C4_D])
-    C5 = keras.layers.Add()([C5_R, C5_D])
+    #C3 = keras.layers.Add()([C3_R, C3_D])
+    #C4 = keras.layers.Add()([C4_R, C4_D])
+    #C5 = keras.layers.Add()([C5_R, C5_D])
 
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
+    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
+    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
+    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
     
     # 3x3 conv for test 4
     #P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
     #P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_D)
     #P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_D)
 
-    P5_upsampled = layers.UpsampleLike()([P5, C4_D])
-    P4_upsampled = layers.UpsampleLike()([P4, C3_D])
+    P5_upsampled = layers.UpsampleLike()([P5, P4])
+    P4_upsampled = layers.UpsampleLike()([P4, P3])
     P4_mid = keras.layers.Add()([P5_upsampled, P4])
     P4_mid = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(P4_mid)    # replace with depthwise and 3x1+1x3
     P3_mid = keras.layers.Add()([P4_upsampled, P3])
@@ -423,18 +473,28 @@ def retinanet(
         submodels = default_submodels(num_classes, num_anchors)
         #submodels_2 = default_submodels_2(num_classes, num_anchors)
 
-    mask_head = default_mask_model(num_classes=num_classes, num_anchors=num_anchors)
+    #mask_head = default_mask_model(num_classes=num_classes, num_anchors=num_anchors)
+    mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     attention_pnp = __attention_pnp(num_classes, 16)
 
     b1, b2, b3 = backbone_layers_rgb
     b4, b5, b6 = backbone_layers_dep
 
+    # feature fusion
+    C3 = keras.layers.Add()([b1, b4])
+    C4 = keras.layers.Add()([b2, b5])
+    C5 = keras.layers.Add()([b3, b6])
+
+    P3 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C3)
+    P4 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C4)
+    P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C5)
+
     # FPN fusion
-    features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
+    #features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
+    features = create_pyramid_features(P3, P4, P5)
     pyramids = __build_pyramid(submodels, features)
 
-    print(features)
-    masks = mask_head(features[0])
+    masks = mask_head([P3, P4, P5])
     pyramids.append(masks)
 
     feature_sizes = [b1, b2, b3]

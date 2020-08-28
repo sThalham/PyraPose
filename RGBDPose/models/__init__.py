@@ -80,6 +80,7 @@ def load_model(filepath, backbone_name='resnet50'):
         'ClipBoxes': layers.ClipBoxes,
         '_smooth_l1': losses.smooth_l1(),
         '_focal': losses.focal(),
+        '_focal_mask': losses.focal_mask(),
         '_cross': losses.cross(),
         '_wMSE': losses.weighted_mse(),
         '_wl1': losses.weighted_l1(),
