@@ -23,7 +23,7 @@ import time
 
 import keras
 
-from ..utils.anchors_temp import (
+from ..utils.anchors import (
     anchor_targets_bbox,
     anchors_for_shape,
     guess_shapes

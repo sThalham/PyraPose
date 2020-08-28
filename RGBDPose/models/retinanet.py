@@ -2,7 +2,7 @@ import keras
 import tensorflow as tf
 from .. import initializers
 from .. import layers
-from ..utils.anchors_temp import AnchorParameters
+from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
 
@@ -137,7 +137,7 @@ def default_mask_model(
     outputs = keras.layers.Reshape((-1, num_classes))(outputs) # , name='pyramid_classification_reshape'
     outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
 
-    return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
+    return keras.models.Model(inputs=inputs, outputs=outputs, name='mask')
 
 
 def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256 , name='3Dregression_submodel'):
@@ -364,7 +364,7 @@ def default_submodels(num_classes, num_anchors):
     return [
         ('3Dbox', default_3Dregression_model(16, num_anchors)),
         ('cls', default_classification_model(num_classes, num_anchors)),
-        ('mask', default_mask_model(num_classes, num_anchors))
+        #('mask', default_mask_model(num_classes, num_anchors))
     ]
 
 
@@ -423,6 +423,7 @@ def retinanet(
         submodels = default_submodels(num_classes, num_anchors)
         #submodels_2 = default_submodels_2(num_classes, num_anchors)
 
+    mask_head = default_mask_model(num_classes=num_classes, num_anchors=num_anchors)
     attention_pnp = __attention_pnp(num_classes, 16)
 
     b1, b2, b3 = backbone_layers_rgb
@@ -432,6 +433,10 @@ def retinanet(
     features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
     pyramids = __build_pyramid(submodels, features)
 
+    print(features)
+    masks = mask_head(features[0])
+    pyramids.append(masks)
+
     feature_sizes = [b1, b2, b3]
     anchors = __build_anchors_pnp(AnchorParameters.default, feature_sizes)
     boxes = pyramids[0]
@@ -439,6 +444,8 @@ def retinanet(
 
     poses = attention_pnp(boxes)
     pyramids.append(poses)
+
+    print(pyramids)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 

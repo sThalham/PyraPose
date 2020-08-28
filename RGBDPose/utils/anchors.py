@@ -108,12 +108,12 @@ def anchor_targets_bbox(
 
     batch_size = len(image_group)
 
-    mask_batch  = np.zeros((batch_size, 6300, num_classes + 1), dtype=keras.backend.floatx())
+    mask_batch  = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
     poses_batch = np.zeros((batch_size, num_classes, 7 + 1), dtype=keras.backend.floatx())
 
-    pyramid_levels = [3, 4, 5]
+    pyramid_levels = [3]
     anchor_idxs = [0, 4800, 6000]
 
     # compute labels and regression targets
@@ -135,20 +135,12 @@ def anchor_targets_bbox(
                 mask_id = annotations['mask_ids'][anni]
                 cls = int(cls)
 
-                anchors_spec = []
-                for idx, reso in enumerate(image_shapes):
-                    # mask_flat = cv2.resize(mask, (reso[1], reso[0]), interpolation=cv2.INTER_NEAREST)
-                    mask_flat = np.asarray(Image.fromarray(mask).resize((reso[1], reso[0]), Image.NEAREST))
+                mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
 
-                    mask_flat = mask_flat.flatten()
-                    anchors_pyramid = np.where(mask_flat == int(mask_id))
-                    #if anchor_idxs[idx] == 0:
-                        #anno_mask[anchors_pyramid[0]] = int(cls * (255/15))
+                mask_flat = mask_flat.flatten()
+                anchors_pyramid = np.where(mask_flat == int(mask_id))
 
-                    anchors_pyramid = np.add(anchors_pyramid, anchor_idxs[idx])
-                    anchors_spec.append(anchors_pyramid[0])
-
-                anchors_spec = np.concatenate(anchors_spec)
+                anchors_spec = anchors_pyramid[0]
 
                 if anchors_spec.shape[0] < 1:
                     continue
