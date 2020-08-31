@@ -322,10 +322,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         print(np.nanmax(scores))
-        print(np.nanmax(mask))
 
         for inv_cls in range(scores.shape[2]):
 
@@ -541,6 +540,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             t_gt = t_gt * 0.001
             t_est = t_est.T  # * 0.001
+
+            print(t_gt)
+            print(t_est)
 
             if cls == 10 or cls == 11:
                 err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])

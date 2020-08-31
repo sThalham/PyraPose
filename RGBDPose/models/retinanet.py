@@ -497,12 +497,12 @@ def retinanet(
     #masks = mask_head([P3, P4, P5])
     #pyramids.append(masks)
 
-    anchors = __build_anchors_pnp(AnchorParameters.default, features)
-    boxes = pyramids[0]
-    boxes = layers.RegressBoxes3D()([anchors, boxes])
+    #anchors = __build_anchors_pnp(AnchorParameters.default, features)
+    #boxes = pyramids[0]
+    #boxes = layers.RegressBoxes3D()([anchors, boxes])
 
-    poses = attention_pnp(boxes)
-    pyramids.append(poses)
+    #poses = attention_pnp(boxes)
+    #pyramids.append(poses)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -534,9 +534,9 @@ def retinanet_bbox(
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     #mask = model.outputs[2]
-    poses = model.outputs[2]
+    #poses = model.outputs[2]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
     # construct the model
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, poses], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification], name=name)

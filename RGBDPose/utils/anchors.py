@@ -242,24 +242,6 @@ def anchor_targets_bbox(
     negative_overlap=0.4,
     positive_overlap=0.5
 ):
-    """ Generate anchor targets for bbox detection.
-
-    Args
-        anchors: np.array of annotations of shape (N, 4) for (x1, y1, x2, y2).
-        image_group: List of BGR images.
-        annotations_group: List of annotations (np.array of shape (N, 5) for (x1, y1, x2, y2, label)).
-        num_classes: Number of classes to predict.
-        mask_shape: If the image is padded with zeros, mask_shape can be used to mark the relevant part of the image.
-        negative_overlap: IoU overlap for negative anchors (all anchors with overlap < negative_overlap are negative).
-        positive_overlap: IoU overlap or positive anchors (all anchors with overlap > positive_overlap are positive).
-
-    Returns
-        labels_batch: batch that contains labels & anchor states (np.array of shape (batch_size, N, num_classes + 1),
-                      where N is the number of anchors for an image and the last column defines the anchor state (-1 for ignore, 0 for bg, 1 for fg).
-        regression_batch: batch that contains bounding-box regression targets for an image & anchor states (np.array of shape (batch_size, N, 4 + 1),
-                      where N is the number of anchors for an image, the first 4 columns define regression targets for (x1, y1, x2, y2) and the
-                      last column defines anchor states (-1 for ignore, 0 for bg, 1 for fg).
-    """
 
     assert(len(image_group) == len(annotations_group)), "The length of the images and annotations need to be equal."
     assert(len(annotations_group) > 0), "No data received to compute anchor targets for."
@@ -273,7 +255,7 @@ def anchor_targets_bbox(
 
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
-    poses_batch = np.zeros((batch_size, num_classes, 7 + 1), dtype=keras.backend.floatx())
+    #poses_batch = np.zeros((batch_size, num_classes, 7 + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
@@ -299,11 +281,11 @@ def anchor_targets_bbox(
             for idx, pose in enumerate(annotations['poses']):
 
                 cls = int(annotations['labels'][idx])
-                if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
-                    poses_batch[index, cls, -1] = 1
-                    poses_batch[index, cls, :2] = pose[:2] * 0.002
-                    poses_batch[index, cls, 2] = ((pose[2] * 0.001) - 1.0) * 3.0
-                    poses_batch[index, cls, 3:-1] = pose[3:]
+                #if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
+                #    poses_batch[index, cls, -1] = 1
+                #    poses_batch[index, cls, :2] = pose[:2] * 0.002
+                #    poses_batch[index, cls, 2] = ((pose[2] * 0.001) - 1.0) * 3.0
+                #    poses_batch[index, cls, 3:-1] = pose[3:]
 
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
@@ -315,6 +297,7 @@ def anchor_targets_bbox(
                 box3D = np.reshape(box3D, (16))
                 calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
 
+                '''
                 pose_viz = box3D.reshape((16)).astype(np.int16)
 
                 image_raw = image[0]
@@ -360,14 +343,14 @@ def anchor_targets_bbox(
                 image_raw = cv2.line(image_raw, tuple(pose_viz[14:16].ravel()), tuple(pose_viz[8:10].ravel()), colEst,
 
                                      5)
-
+                '''
 
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            rind = np.random.randint(0, 1000)
-            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            cv2.imwrite(name, image[0]+100)
+            #rind = np.random.randint(0, 1000)
+            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            #cv2.imwrite(name, image[0]+100)
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
             #cv2.imwrite(name, image[1] + 100)
 
@@ -379,7 +362,7 @@ def anchor_targets_bbox(
             labels_batch[index, indices, -1]     = -1
             regression_3D[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, poses_batch
+    return regression_3D, labels_batch#, poses_batch
 
 
 def compute_gt_annotations(
