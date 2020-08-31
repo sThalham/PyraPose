@@ -255,14 +255,15 @@ def anchor_targets_bbox(
 
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
+    mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
     #poses_batch = np.zeros((batch_size, num_classes, 7 + 1), dtype=keras.backend.floatx())
 
+    pyramid_levels = [3]
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
-        #image_dep = image[1]
-        # print(np.nanmin(image_raw), np.nanmax(image_raw))
-        #image_dep = ((image_dep - np.nanmin(image_dep))).astype(np.uint8)
+        mask = annotations['mask'][0]
+        image_shapes = guess_shapes(image[0].shape[:2], pyramid_levels)
 
         if annotations['bboxes'].shape[0]:
             # obtain indices of gt annotations with the greatest overlap
@@ -280,13 +281,30 @@ def anchor_targets_bbox(
             calculated_boxes = np.empty((0, 16))
             for idx, pose in enumerate(annotations['poses']):
 
+                #mask annotation
+                mask_id = annotations['mask_ids'][idx]
                 cls = int(annotations['labels'][idx])
+
+                mask_flat = np.asarray(
+                        Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
+
+                mask_flat = mask_flat.flatten()
+                anchors_pyramid = np.where(mask_flat == int(mask_id))
+
+                anchors_spec = anchors_pyramid[0]
+
+                if anchors_spec.shape[0] > 1:
+                    mask_batch[index, anchors_spec[0], cls] = 1
+                    mask_batch[index, anchors_spec[0], -1] = 1
+
+                # pnp pose annotation
                 #if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
                 #    poses_batch[index, cls, -1] = 1
                 #    poses_batch[index, cls, :2] = pose[:2] * 0.002
                 #    poses_batch[index, cls, 2] = ((pose[2] * 0.001) - 1.0) * 3.0
                 #    poses_batch[index, cls, 3:-1] = pose[3:]
 
+                # 3Dbox annotation
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = pose[:3]
@@ -362,7 +380,7 @@ def anchor_targets_bbox(
             labels_batch[index, indices, -1]     = -1
             regression_3D[index, indices, -1] = -1
 
-    return regression_3D, labels_batch#, poses_batch
+    return regression_3D, labels_batch, mask_batch
 
 
 def compute_gt_annotations(
