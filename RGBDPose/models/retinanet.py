@@ -541,12 +541,5 @@ def retinanet_bbox(
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
-    # filter detections (apply NMS / score threshold / select top-k)
-    #detections = layers.FilterDetections(
-    #    nms                   = nms,
-    #    class_specific_filter = class_specific_filter,
-    #    name                  = 'filtered_detections'
-    #)([boxes, boxes3D, classification] + other)
-
     # construct the model
     return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, poses], name=name)
