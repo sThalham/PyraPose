@@ -71,7 +71,7 @@ def draw_axis(img, poses):
     return img
 
 
-def anchor_targets_bbox(
+def anchor_targets_bbox_broken(
     anchors,
     image_group,
     annotations_group,
@@ -231,6 +231,155 @@ def anchor_targets_bbox(
 
     #return regression_batch, regression_3D, labels_batch
     return regression_3D, labels_batch, mask_batch, poses_batch
+
+
+
+def anchor_targets_bbox(
+    anchors,
+    image_group,
+    annotations_group,
+    num_classes,
+    negative_overlap=0.4,
+    positive_overlap=0.5
+):
+    """ Generate anchor targets for bbox detection.
+
+    Args
+        anchors: np.array of annotations of shape (N, 4) for (x1, y1, x2, y2).
+        image_group: List of BGR images.
+        annotations_group: List of annotations (np.array of shape (N, 5) for (x1, y1, x2, y2, label)).
+        num_classes: Number of classes to predict.
+        mask_shape: If the image is padded with zeros, mask_shape can be used to mark the relevant part of the image.
+        negative_overlap: IoU overlap for negative anchors (all anchors with overlap < negative_overlap are negative).
+        positive_overlap: IoU overlap or positive anchors (all anchors with overlap > positive_overlap are positive).
+
+    Returns
+        labels_batch: batch that contains labels & anchor states (np.array of shape (batch_size, N, num_classes + 1),
+                      where N is the number of anchors for an image and the last column defines the anchor state (-1 for ignore, 0 for bg, 1 for fg).
+        regression_batch: batch that contains bounding-box regression targets for an image & anchor states (np.array of shape (batch_size, N, 4 + 1),
+                      where N is the number of anchors for an image, the first 4 columns define regression targets for (x1, y1, x2, y2) and the
+                      last column defines anchor states (-1 for ignore, 0 for bg, 1 for fg).
+    """
+
+    assert(len(image_group) == len(annotations_group)), "The length of the images and annotations need to be equal."
+    assert(len(annotations_group) > 0), "No data received to compute anchor targets for."
+    for annotations in annotations_group:
+        assert('bboxes' in annotations), "Annotations should contain bboxes."
+        assert('labels' in annotations), "Annotations should contain labels."
+        assert('poses' in annotations), "Annotations should contain labels."
+        assert('segmentations' in annotations), "Annotations should contain poses"
+
+    batch_size = len(image_group)
+
+    labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
+    regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
+    poses_batch = np.zeros((batch_size, num_classes, 7 + 1), dtype=keras.backend.floatx())
+
+    # compute labels and regression targets
+    for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
+
+        #image_dep = image[1]
+        # print(np.nanmin(image_raw), np.nanmax(image_raw))
+        #image_dep = ((image_dep - np.nanmin(image_dep))).astype(np.uint8)
+
+        if annotations['bboxes'].shape[0]:
+            # obtain indices of gt annotations with the greatest overlap
+            positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
+
+            labels_batch[index, ignore_indices, -1]       = -1
+            labels_batch[index, positive_indices, -1]     = 1
+
+            regression_3D[index, ignore_indices, -1] = -1
+            regression_3D[index, positive_indices, -1] = 1
+
+            # compute target class labels
+            labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
+
+            calculated_boxes = np.empty((0, 16))
+            for idx, pose in enumerate(annotations['poses']):
+
+                cls = int(annotations['labels'][idx])
+                if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
+                    poses_batch[index, cls, -1] = 1
+                    poses_batch[index, cls, :2] = pose[:2] * 0.002
+                    poses_batch[index, cls, 2] = ((pose[2] * 0.001) - 1.0) * 3.0
+                    poses_batch[index, cls, 3:-1] = pose[3:]
+
+                rot = tf3d.quaternions.quat2mat(pose[3:])
+                rot = np.asarray(rot, dtype=np.float32)
+                tra = pose[:3]
+                tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
+                tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
+                box3D = np.reshape(box3D, (16))
+                calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
+
+                pose_viz = box3D.reshape((16)).astype(np.int16)
+
+                image_raw = image[0]
+
+                colEst = (255, 0, 0)
+
+                image_raw = cv2.line(image_raw, tuple(pose_viz[0:2].ravel()), tuple(pose_viz[2:4].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[2:4].ravel()), tuple(pose_viz[4:6].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[4:6].ravel()), tuple(pose_viz[6:8].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[6:8].ravel()), tuple(pose_viz[0:2].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[0:2].ravel()), tuple(pose_viz[8:10].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[2:4].ravel()), tuple(pose_viz[10:12].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[4:6].ravel()), tuple(pose_viz[12:14].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[6:8].ravel()), tuple(pose_viz[14:16].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[8:10].ravel()), tuple(pose_viz[10:12].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[10:12].ravel()), tuple(pose_viz[12:14].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[12:14].ravel()), tuple(pose_viz[14:16].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[14:16].ravel()), tuple(pose_viz[8:10].ravel()), colEst,
+
+                                     5)
+
+                image_raw = image[1]
+
+                colEst = (255, 0, 0)
+
+                image_raw = cv2.line(image_raw, tuple(pose_viz[0:2].ravel()), tuple(pose_viz[2:4].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[2:4].ravel()), tuple(pose_viz[4:6].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[4:6].ravel()), tuple(pose_viz[6:8].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[6:8].ravel()), tuple(pose_viz[0:2].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[0:2].ravel()), tuple(pose_viz[8:10].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[2:4].ravel()), tuple(pose_viz[10:12].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[4:6].ravel()), tuple(pose_viz[12:14].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[6:8].ravel()), tuple(pose_viz[14:16].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[8:10].ravel()), tuple(pose_viz[10:12].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[10:12].ravel()), tuple(pose_viz[12:14].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[12:14].ravel()), tuple(pose_viz[14:16].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose_viz[14:16].ravel()), tuple(pose_viz[8:10].ravel()), colEst,
+
+                                     5)
+
+
+            regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
+            #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
+
+            rind = np.random.randint(0, 1000)
+            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            cv2.imwrite(name, image[0]+100)
+            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
+            #cv2.imwrite(name, image[1] + 100)
+
+        # ignore annotations outside of image
+        if image[0].shape:
+            anchors_centers = np.vstack([(anchors[:, 0] + anchors[:, 2]) / 2, (anchors[:, 1] + anchors[:, 3]) / 2]).T
+            indices = np.logical_or(anchors_centers[:, 0] >= image[0].shape[1], anchors_centers[:, 1] >= image[0].shape[0])
+
+            labels_batch[index, indices, -1]     = -1
+            regression_3D[index, indices, -1] = -1
+
+    return regression_3D, labels_batch, poses_batch
 
 
 def compute_gt_annotations(

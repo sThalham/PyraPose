@@ -372,17 +372,17 @@ def __create_BiFPN_noW(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
     return [P3_out, P4_out, P5_out, P6_out, P7_out]
 
 
-#def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
-def __create_sparceFPN(P3, P4, P5, feature_size=256):
+def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+#def __create_sparceFPN(P3, P4, P5, feature_size=256):
 
     # only from here for FPN-fusion test 3
-    #C3 = keras.layers.Add()([C3_R, C3_D])
-    #C4 = keras.layers.Add()([C4_R, C4_D])
-    #C5 = keras.layers.Add()([C5_R, C5_D])
+    C3 = keras.layers.Add()([C3_R, C3_D])
+    C4 = keras.layers.Add()([C4_R, C4_D])
+    C5 = keras.layers.Add()([C5_R, C5_D])
 
-    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
-    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
-    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
     
     # 3x3 conv for test 4
     #P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_D)
@@ -481,31 +481,28 @@ def retinanet(
     b4, b5, b6 = backbone_layers_dep
 
     # feature fusion
-    C3 = keras.layers.Add()([b1, b4])
-    C4 = keras.layers.Add()([b2, b5])
-    C5 = keras.layers.Add()([b3, b6])
+    #C3 = keras.layers.Add()([b1, b4])
+    #C4 = keras.layers.Add()([b2, b5])
+    #C5 = keras.layers.Add()([b3, b6])
 
-    P3 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C3)
-    P4 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C4)
-    P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C5)
+    #P3 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C3)
+    #P4 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C4)
+    #P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C5)
 
     # FPN fusion
-    #features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
-    features = create_pyramid_features(P3, P4, P5)
+    features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
+    #features = create_pyramid_features(P3, P4, P5)
     pyramids = __build_pyramid(submodels, features)
 
-    masks = mask_head([P3, P4, P5])
-    pyramids.append(masks)
+    #masks = mask_head([P3, P4, P5])
+    #pyramids.append(masks)
 
-    feature_sizes = [b1, b2, b3]
-    anchors = __build_anchors_pnp(AnchorParameters.default, feature_sizes)
+    anchors = __build_anchors_pnp(AnchorParameters.default, features)
     boxes = pyramids[0]
     boxes = layers.RegressBoxes3D()([anchors, boxes])
 
     poses = attention_pnp(boxes)
     pyramids.append(poses)
-
-    print(pyramids)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -536,10 +533,10 @@ def retinanet_bbox(
 
     regression3D = model.outputs[0]
     classification = model.outputs[1]
-    mask = model.outputs[2]
-    poses = model.outputs[3]
+    #mask = model.outputs[2]
+    poses = model.outputs[2]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
     # construct the model
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, poses], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, poses], name=name)
