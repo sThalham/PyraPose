@@ -274,14 +274,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
+        print(image_raw.shape)
         image = generator.preprocess_image(image_raw)
-        image, scale = generator.resize_image(image)
+        #image, scale = generator.resize_image(image)
 
         image_raw_dep = generator.load_image_dep(index)
+        print(image_raw_dep.shape)
+        print(np.nanmin(image_raw_dep), np.nanmax(image_raw_dep))
         image_raw_dep = np.where(image_raw_dep > 2000.0, 0.0, image_raw_dep)
         image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
-        image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
-        image_dep, scale = generator.resize_image(image_raw_dep)
+        image_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
+        #image_dep, scale = generator.resize_image(image_raw_dep)
 
         if keras.backend.image_data_format() == 'channels_first':
             image = image.transpose((2, 0, 1))
@@ -332,7 +335,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #elif true_cat > 2:
             #    cls = true_cat + 1
             #else:
-            cls = true_cat
+            #cls = true_cat
+            cls = generator.label_to_inv_label(inv_cls)
 
             cls_mask = scores[0, :, inv_cls]
 
@@ -433,10 +437,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
             # all hypotheses via pnp
-            pose_votes = boxes3D[0, cls_indices, :]
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            #pose_votes = boxes3D[0, cls_indices, :]
+            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
 
             # all hypotheses via mean/median
             #pose_votes = np.mean(pose_votes, axis=0)
@@ -444,9 +448,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #obj_points = ori_points
 
             # max hypotheses
-            # pose_votes = boxes3D[0, np.argmax(cls_mask), :]
-            # est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
-            # obj_points = ori_points
+            pose_votes = boxes3D[0, np.argmax(cls_mask), :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+            obj_points = ori_points
 
             #########################
             # confidence estimation
@@ -625,6 +629,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             '''
             name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
             cv2.imwrite(name, image)
+            print('pause')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)

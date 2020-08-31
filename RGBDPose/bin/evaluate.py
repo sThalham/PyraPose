@@ -167,7 +167,6 @@ def main(args=None):
 
     # optionally load config parameters
     if args.config:
-        print(args.config)
         args.config = read_config_file(args.config)
 
     # create the generator
