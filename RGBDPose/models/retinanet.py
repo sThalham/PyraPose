@@ -200,9 +200,9 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     }
 
     if keras.backend.image_data_format() == 'channels_first':
-        inputs  = keras.layers.Input(shape=(pyramid_feature_size, 4800, None))
+        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
-        inputs  = keras.layers.Input(shape=(None, 4800, pyramid_feature_size))
+        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
 
     outputs = inputs
     for i in range(4):

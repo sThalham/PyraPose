@@ -206,7 +206,7 @@ def main(args=None):
 
 
     # print model summary
-    #print(model.summary())
+    print(model.summary())
 
     # start evaluation
     if args.dataset_type == 'coco':

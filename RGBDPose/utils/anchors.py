@@ -164,18 +164,18 @@ def anchor_targets_bbox(
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
             calculated_boxes = np.empty((0, 16))
-            for idx, pose in enumerate(annotations['poses']):
+            for idx, pose_raw in enumerate(annotations['poses']):
 
                 cls = int(annotations['labels'][idx])
                 if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
                     poses_batch[index, cls, -1] = 1
-                    poses_batch[index, cls, :2] = pose[:2] * 0.002
-                    poses_batch[index, cls, 2] = ((pose[2] * 0.001) - 1.0) * 3.0
-                    poses_batch[index, cls, 3:-1] = pose[3:]
+                    poses_batch[index, cls, :2] = pose_raw[:2] * 0.002
+                    poses_batch[index, cls, 2] = ((pose_raw[2] * 0.001) - 1.0) * 3.0
+                    poses_batch[index, cls, 3:-1] = pose_raw[3:]
 
-                rot = tf3d.quaternions.quat2mat(pose[3:])
+                rot = tf3d.quaternions.quat2mat(pose_raw[3:])
                 rot = np.asarray(rot, dtype=np.float32)
-                tra = pose[:3]
+                tra = pose_raw[:3]
                 tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
                 tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
@@ -184,7 +184,7 @@ def anchor_targets_bbox(
 
                 calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
 
-                '''
+
                 pose = box3D.reshape((16)).astype(np.int16)
                 image_raw = image[0]
                 colEst = (255, 0, 0)
@@ -204,8 +204,8 @@ def anchor_targets_bbox(
                                  5)
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                                  5)
-                draw_axis(image_raw, annotations['poses'][anni])
-                '''
+                draw_axis(image_raw, pose_raw)
+
 
             #print(calculated_boxes.shape)
             #print(calculated_boxes[argmax_overlaps_inds, :].shape)
@@ -213,9 +213,9 @@ def anchor_targets_bbox(
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :],
                                                            num_classes)
 
-            #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image[0]+100)
+            rind = np.random.randint(0, 1000)
+            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            cv2.imwrite(name, image[0]+100)
             #anno_mask = anno_mask.reshape(60, 80)
             #anno_mask = np.asarray(Image.fromarray(anno_mask).resize((640, 480), Image.NEAREST))
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_MASK.jpg'
