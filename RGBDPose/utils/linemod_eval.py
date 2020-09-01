@@ -274,13 +274,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
-        print(image_raw.shape)
         image = generator.preprocess_image(image_raw)
         #image, scale = generator.resize_image(image)
 
         image_raw_dep = generator.load_image_dep(index)
-        print(image_raw_dep.shape)
-        print(np.nanmin(image_raw_dep), np.nanmax(image_raw_dep))
         image_raw_dep = np.where(image_raw_dep > 2000.0, 0.0, image_raw_dep)
         image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
         image_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
@@ -322,9 +319,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes, boxes3D, scores = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         print(np.nanmax(scores))
+        continue
 
         for inv_cls in range(scores.shape[2]):
 
@@ -363,13 +361,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #P5_mask = cls_mask[6000:6300][cls_indices[0][cls_indices[0] > 6000]]
 
             # P3 viz
-            obj_mask = scores[0, :4800, inv_cls]
-            cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
-            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
-            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            #obj_mask = scores[0, :4800, inv_cls]
+            #cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
+            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            #cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            #cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
             # P4 viz
             #cls_img = np.where(cls_mask[4800:6000] > 0.5, 255.0, 80.0)
             #cls_img = cls_img.reshape((30, 40)).astype(np.uint8)

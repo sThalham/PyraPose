@@ -494,15 +494,15 @@ def retinanet(
     features = create_pyramid_features(P3, P4, P5)
     pyramids = __build_pyramid(submodels, features)
 
-    masks = mask_head([P3, P4, P5])
+    #masks = mask_head([P3, P4, P5])
     pyramids.append(masks)
 
-    #anchors = __build_anchors_pnp(AnchorParameters.default, features)
-    #boxes = pyramids[0]
-    #boxes = layers.RegressBoxes3D()([anchors, boxes])
+    anchors = __build_anchors_pnp(AnchorParameters.default, features)
+    boxes = pyramids[0]
+    boxes = layers.RegressBoxes3D()([anchors, boxes])
 
-    #poses = attention_pnp(boxes)
-    #pyramids.append(poses)
+    poses = attention_pnp(boxes)
+    pyramids.append(poses)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -531,12 +531,16 @@ def retinanet_bbox(
     features = [model.get_layer(p_name).output for p_name in ['P3', 'P4', 'P5']]
     anchors = __build_anchors(anchor_params, features)
 
-    regression3D = model.outputs[0]
-    classification = model.outputs[1]
+    regression = model.outputs[0]
+    regression3D = model.outputs[1]
+    classification = model.outputs[2]
     #mask = model.outputs[2]
     #poses = model.outputs[2]
+
+    boxes = layers.RegressBoxes(name='boxes')([anchors, regression])
+    boxes = layers.ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
     # construct the model
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes, boxes3D, classification], name=name)
