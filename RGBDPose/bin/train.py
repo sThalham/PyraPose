@@ -38,6 +38,7 @@ from .. import models
 from ..callbacks import RedirectModel
 from ..callbacks.eval import Evaluate
 from ..models.retinanet import retinanet_bbox
+from ..utils.anchors import make_shapes_callback
 from ..utils.config import read_config_file, parse_anchor_parameters
 from ..utils.keras_version import check_keras_version
 from ..utils.model import freeze as freeze_model
@@ -93,10 +94,10 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # compile model
     training_model.compile(
         loss={
+            #'bbox'         : losses.smooth_l1(),
             '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
             'mask'         : losses.focal_mask(),
-            #'poses'         : losses.smooth_l1(),
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
     )
@@ -274,7 +275,7 @@ def parse_args(args):
     parser.add_argument('--backbone', help='Backbone model used by retinanet.', default='resnet50', type=str)
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
-    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=50)
+    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')

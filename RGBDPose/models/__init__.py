@@ -21,6 +21,7 @@ class Backbone(object):
             'ClipBoxes'        : layers.ClipBoxes,
             '_smooth_l1'       : losses.smooth_l1(),
             '_focal'           : losses.focal(),
+            '_focal_mask'      : losses.focal_mask(),
             '_cross'           : losses.cross(),
             '_wMSE'            : losses.weighted_mse(),
             '_wl1'            : losses.weighted_l1(),
@@ -28,7 +29,7 @@ class Backbone(object):
             '_smooth_l1_xy'    : losses.smooth_l1_xy(),
             '_orth_l1'         : losses.orthogonal_l1(),
             'swish'            : keras.layers.Activation(retinanet.swish),
-            'RegressBoxes3D': layers.RegressBoxes3D(),
+            'RegressBoxes3D'   : layers.RegressBoxes3D(),
         }
 
         self.backbone = backbone
@@ -58,8 +59,6 @@ def backbone(backbone_name):
         from .efficientnet import EffNetBackbone as b
     elif 'densenet' in backbone_name:
         from .densenet import DenseNetBackbone as b
-    elif 'trunet' in backbone_name:
-        from .trunc_resnet import TruNetBackbone as b
     else:
         raise NotImplementedError('Backbone class for  \'{}\' not implemented.'.format(backbone))
 
@@ -81,7 +80,6 @@ def load_model(filepath, backbone_name='resnet50'):
         'ClipBoxes': layers.ClipBoxes,
         '_smooth_l1': losses.smooth_l1(),
         '_focal': losses.focal(),
-        '_focal_mask': losses.focal_mask(),
         '_cross': losses.cross(),
         '_wMSE': losses.weighted_mse(),
         '_wl1': losses.weighted_l1(),
@@ -89,7 +87,6 @@ def load_model(filepath, backbone_name='resnet50'):
         '_smooth_l1_xy': losses.smooth_l1_xy(),
         '_orth_l1': losses.orthogonal_l1(),
         'swish': keras.layers.Activation(retinanet.swish),
-        'RegressBoxes3D': layers.RegressBoxes3D(),
     }
     return keras.models.load_model(filepath, custom_objects=backbone(backbone_name).custom_objects)
 
@@ -100,7 +97,7 @@ def convert_model(model, nms=True, class_specific_filter=True, anchor_params=Non
 
 
 def assert_training_model(model):
-    assert (all(output in model.output_names for output in ['bbox', '3Dbox', 'cls'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
+    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     #assert (all(output in model.output_names for output in ['out_reshape_0', 'out_reshape_1', 'out_reshape_2'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
 
 

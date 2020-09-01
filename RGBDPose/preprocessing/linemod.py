@@ -22,8 +22,8 @@ import os
 import json
 import numpy as np
 import itertools
-import cv2
 import yaml
+import cv2
 
 
 def _isArrayLike(obj):
@@ -187,14 +187,18 @@ class LinemodGenerator(Generator):
 
         return read_image_dep(path)
 
-    def load_image_info(self, image_index):
+    def load_image_dep_raw(self, image_index):
         """ Load an image at the image_index.
         """
         if _isArrayLike(image_index):
             image_info = (self.image_ann[id] for id in image_index)
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
-        return image_info
+        path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        # path = path[:-4] + '_dep.png'# + path[-4:]
+        path = path[:-4] + '_dep_raw.png'
+
+        return path
 
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.
@@ -216,7 +220,6 @@ class LinemodGenerator(Generator):
         path = path[:-4] + '_mask.png'  # + path[-4:]
         # mask = None
         mask = cv2.imread(path, -1)
-        #mask = cv2.resize(mask, None, fx=1 / 8, fy=1 / 8, interpolation=cv2.INTER_NEAREST)
 
         annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 

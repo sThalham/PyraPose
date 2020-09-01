@@ -108,7 +108,7 @@ def focal_mask(alpha=0.25, gamma=2.0):
         cls_loss = focal_weight * keras.backend.binary_crossentropy(labels, classification)
 
         # compute the normalizer: the number of positive anchors
-        normalizer = backend.where(keras.backend.not_equal(anchor_state, -1))
+        normalizer = backend.where(keras.backend.equal(anchor_state, 1))
         normalizer = keras.backend.cast(keras.backend.shape(normalizer)[0], keras.backend.floatx())
         normalizer = keras.backend.maximum(keras.backend.cast_to_floatx(1.0), normalizer)
 
@@ -190,7 +190,7 @@ def smooth_l1(sigma=3.0):
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
         loss = keras.backend.sum(regression_loss) / normalizer
-        return 0.001 * loss
+        return loss
 
     return _smooth_l1
 

@@ -261,17 +261,17 @@ def apply_transform(matrix, image, params, cpara):
     #perlin.fractal.gain = 0.45
     perlin.perturb.perturbType = fns.PerturbType.NoPerturb
 
-    #noiseX = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    #noiseY = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    #noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
-    #Wxy = np.random.randint(1, 5)  # 1 - 5
-    #Wz = np.random.uniform(0.0001, 0.004)  # 0.0001 - 0.004
-
-    noiseX = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    noiseY = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    noiseX = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    noiseY = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
     noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
-    Wxy = np.random.randint(1, 7)  # 1 - 5
-    Wz = np.random.uniform(0.0001, 0.007)
+    Wxy = np.random.randint(1, 8)  # 1 - 5
+    Wz = np.random.uniform(0.0001, 0.007)  # 0.0001 - 0.004
+
+    #noiseX = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    #noiseY = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
+    #noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
+    #Wxy = np.random.randint(1, 7)  # 1 - 5
+    #Wz = np.random.uniform(0.0001, 0.01)
 
     X, Y = np.meshgrid(np.arange(image[1].shape[1]), np.arange(image[1].shape[0]))
     coords0 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])

@@ -173,10 +173,48 @@ class Generator(keras.utils.Sequence):
                 (annotations['bboxes'][:, 1] < 0) |
                 (annotations['bboxes'][:, 2] > image[0].shape[1]) |
                 (annotations['bboxes'][:, 3] > image[0].shape[0])
+                #(annotations['segmentations'][:, 0] < 0) |
+                #(annotations['segmentations'][:, 0] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 1] < 0) |
+                #(annotations['segmentations'][:, 1] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 2] < 0) |
+                #(annotations['segmentations'][:, 2] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 3] < 0) |
+                #(annotations['segmentations'][:, 3] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 4] < 0) |
+                #(annotations['segmentations'][:, 4] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 5] < 0) |
+                #(annotations['segmentations'][:, 5] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 6] < 0) |
+                #(annotations['segmentations'][:, 6] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 7] < 0) |
+                #(annotations['segmentations'][:, 7] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 8] < 0) |
+                #(annotations['segmentations'][:, 8] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 9] < 0) |
+                #(annotations['segmentations'][:, 9] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 10] < 0) |
+                #(annotations['segmentations'][:, 10] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 11] < 0) |
+                #(annotations['segmentations'][:, 11] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 12] < 0) |
+                #(annotations['segmentations'][:, 12] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 13] < 0) |
+                #(annotations['segmentations'][:, 13] > image[0].shape[0]) |
+                #(annotations['segmentations'][:, 14] < 0) |
+                #(annotations['segmentations'][:, 14] > image[0].shape[1]) |
+                #(annotations['segmentations'][:, 15] < 0) |
+                #(annotations['segmentations'][:, 15] > image[0].shape[0])
             )[0]
 
             # delete invalid indices
             if len(invalid_indices):
+                #warnings.warn('Image with id {} (shape {}) contains the following invalid boxes: {}.'.format(
+                #    group[index],
+                #    image.shape,
+                #    annotations['bboxes'][invalid_indices, :],
+                #    annotations['segmentations'][invalid_indices, :]
+                #))
                 for k in annotations_group[index].keys():
                     annotations_group[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
 
@@ -249,8 +287,8 @@ class Generator(keras.utils.Sequence):
         image[1], image_scale1 = self.resize_image(image[1])
 
         # apply resizing to annotations too
-        #annotations['bboxes'] *= image_scale0
-        #annotations['segmentations'] *= image_scale0
+        annotations['bboxes'] *= image_scale0
+        annotations['segmentations'] *= image_scale0
 
         # convert to the wanted keras floatx
         image[0] = keras.backend.cast_to_floatx(image[0])
@@ -304,7 +342,7 @@ class Generator(keras.utils.Sequence):
         return [image_batch1, image_batch2]
 
     def generate_anchors(self, image_shape):
-        anchor_params=None
+        anchor_params = None
         if self.config and 'anchor_parameters' in self.config:
             anchor_params = parse_anchor_parameters(self.config)
         return anchors_for_shape(image_shape, anchor_params=anchor_params, shapes_callback=self.compute_shapes)
