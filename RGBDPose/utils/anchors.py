@@ -102,9 +102,9 @@ def anchor_targets_bbox(
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
-        mask = annotations['mask'][0]
-        image_shapes = guess_shapes(image[0].shape[:2], pyramid_levels)
-        mask_viz = np.asarray(Image.fromarray(image[0]).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST)).reshape((80*60, 3))
+        #mask = annotations['mask'][0]
+        #image_shapes = guess_shapes(image[0].shape[:2], pyramid_levels)
+        #mask_viz = np.asarray(Image.fromarray(image[0]).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST)).reshape((80*60, 3))
 
         if annotations['bboxes'].shape[0]:
             # obtain indices of gt annotations with the greatest overlap
@@ -130,24 +130,23 @@ def anchor_targets_bbox(
                 mask_id = annotations['mask_ids'][idx]
                 cls = int(annotations['labels'][idx])
 
-                mask_flat = np.asarray(
-                        Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
+                #mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
 
-                mask_flat = mask_flat.flatten()
-                anchors_pyramid = np.where(mask_flat == int(mask_id))
+                #mask_flat = mask_flat.flatten()
+                #anchors_pyramid = np.where(mask_flat == int(mask_id))
 
-                anchors_spec = anchors_pyramid[0]
+                #anchors_spec = anchors_pyramid[0]
 
-                if anchors_spec.shape[0] > 1:
-                    mask_batch[index, anchors_spec[0], cls] = 1
-                    mask_batch[index, anchors_spec[0], -1] = 1
-                    mask_viz[anchors, :] = int(17*cls)
+                #if anchors_spec.shape[0] > 1:
+                #    mask_batch[index, anchors_spec[0], cls] = 1
+                #    mask_batch[index, anchors_spec[0], -1] = 1
+                #    mask_viz[anchors, :] = int(17*cls)
 
-                #if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
-                #    poses_batch[index, cls, -1] = 1
-                #    poses_batch[index, cls, :2] = pose_raw[:2] * 0.002
-                #    poses_batch[index, cls, 2] = ((pose_raw[2] * 0.001) - 1.0) * 3.0
-                #    poses_batch[index, cls, 3:-1] = pose_raw[3:]
+                if cls in np.unique(annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)):
+                    poses_batch[index, cls, -1] = 1
+                    poses_batch[index, cls, :2] = pose[:2] * 0.01
+                    poses_batch[index, cls, 2] = ((pose[2] * 0.001) - 1.0) * 3.0
+                    poses_batch[index, cls, 3:-1] = pose[3:]
 
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
@@ -216,10 +215,10 @@ def anchor_targets_bbox(
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
             #cv2.imwrite(name, image[1] + 100)
 
-            mask_viz = np.asarray(
-                Image.fromarray(mask_viz).resize((640, 480), Image.NEAREST))
-            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_MASK.jpg'
-            cv2.imwrite(name, mask_viz)
+            #mask_viz = np.asarray(
+            #    Image.fromarray(mask_viz).resize((640, 480), Image.NEAREST))
+            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_MASK.jpg'
+            #cv2.imwrite(name, mask_viz)
 
         # ignore annotations outside of image
         if image[0].shape:
@@ -230,7 +229,7 @@ def anchor_targets_bbox(
             regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, -1] = -1
 
-    return regression_batch, regression_3D, labels_batch
+    return regression_3D, labels_batch, poses_batch
 
 
 def compute_gt_annotations(
@@ -500,7 +499,7 @@ def box3D_transform(anchors, gt_boxes, num_classes, mean=None, std=None):
     targets = targets.T
 
     targets = (targets - mean) / std
-    #allTargets = np.repeat(targets[:, np.newaxis, :], num_classes, axis=1)
+    #print(np.mean(gt_boxes, axis=0), np.var(gt_boxes, axis=0))
 
     return targets
 

@@ -307,9 +307,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, masks = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
-
-        print(masks.shape)
+        boxes3D, scores, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         for inv_cls in range(scores.shape[2]):
 
@@ -339,14 +337,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 # print('not enough inlier')
                 continue
 
-            obj_mask = masks[0, :4800, inv_cls]
-            print(np.nanmax(obj_mask))
-            cls_img = np.where(obj_mask > 0.1, 255.0, 80.0)
-            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
-            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            #obj_mask = masks[0, :4800, inv_cls]
+            #print(np.nanmax(obj_mask))
+            #cls_img = np.where(obj_mask > 0.1, 255.0, 80.0)
+            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            #cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            #cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
 
             anno_ind = np.argwhere(anno['labels'] == checkLab)
             t_tra = anno['poses'][anno_ind[0][0]][:3]
@@ -355,7 +353,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             BOP_obj_id = np.asarray([true_cat], dtype=np.uint32)
 
-            #pose = poses[0, inv_cls, :]
+            pose = poses[0, inv_cls, :]
 
             # print(cls)
 
@@ -490,7 +488,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # BOP_score = -1
             #R_est = tf3d.quaternions.quat2mat(pose[3:])
             #t_est = pose[:3]
-            #t_est[:2] = t_est[:2] * 0.1
+            #t_est[:2] = t_est[:2] * 0.5
             #t_est[2] = (t_est[2] / 3 + 1.0)
 
             BOP_R = R_est.flatten().tolist()
@@ -510,6 +508,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             t_gt = t_gt * 0.001
             t_est = t_est.T  # * 0.001
+            #print('pose: ', pose)
+            #print(t_gt)
+            #print(t_est)
 
             if cls == 10 or cls == 11:
                 err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
@@ -521,7 +522,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             print(' ')
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
-            print('break')
 
             '''
             tDbox = R_gt.dot(ori_points.T).T
@@ -531,8 +531,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             tDbox = tDbox.astype(np.uint16)
 
             eDbox = R_est.dot(ori_points.T).T
-            #eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
-            eDbox = eDbox + np.repeat(t_est, 8, axis=0)
+            eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+            #eDbox = eDbox + np.repeat(t_est, 8, axis=0)
             est3D = toPix_array(eDbox)
             eDbox = np.reshape(est3D, (16))
             pose = eDbox.astype(np.uint16)
@@ -583,7 +583,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
                              5)
             image = cv2.line(image, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              5)
-
+            '''
+            '''
             idx = 0
             for i in range(k_hyp):
                 image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
@@ -595,11 +596,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
                 image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
                 idx = idx+8
+            '''
 
-            name = '/home/stefan/segPose_viz/detection_LM.jpg'
+            name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
             cv2.imwrite(name, image)
             print('break')
-            '''
+
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
