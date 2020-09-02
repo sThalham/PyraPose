@@ -307,7 +307,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, mask = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         for inv_cls in range(scores.shape[2]):
 
@@ -337,14 +337,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 # print('not enough inlier')
                 continue
 
-            #obj_mask = masks[0, :4800, inv_cls]
-            #print(np.nanmax(obj_mask))
-            #cls_img = np.where(obj_mask > 0.1, 255.0, 80.0)
-            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
-            #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            #cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            #cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            obj_mask = mask[0, :, inv_cls]
+            print(np.nanmax(obj_mask))
+            cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
+            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
 
             anno_ind = np.argwhere(anno['labels'] == checkLab)
             t_tra = anno['poses'][anno_ind[0][0]][:3]
@@ -353,7 +353,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             BOP_obj_id = np.asarray([true_cat], dtype=np.uint32)
 
-            pose = poses[0, inv_cls, :]
+            #pose = poses[0, inv_cls, :]
 
             # print(cls)
 

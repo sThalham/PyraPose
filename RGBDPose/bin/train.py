@@ -97,7 +97,8 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             #'bbox'         : losses.smooth_l1(),
             '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
-            'poses'         : losses.smooth_l1_pose(),
+            #'poses'         : losses.smooth_l1_pose(),
+            'mask'          : losses.focal_mask(),
         },
         optimizer=keras.optimizers.adam(lr=lr, clipnorm=0.001)
     )

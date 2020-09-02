@@ -358,15 +358,15 @@ def retinanet(
     # features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
     pyramids = __build_pyramid(submodels, features)
 
-    anchors = __build_anchors_pnp(AnchorParameters.default, features)
-    boxes = pyramids[0]
-    boxes = layers.DenormBoxes3D()([anchors, boxes])
+    #anchors = __build_anchors_pnp(AnchorParameters.default, features)
+    #boxes = pyramids[0]
+    #boxes = layers.DenormBoxes3D()([anchors, boxes])
 
-    #masks = mask_head([P3, P4, P5])
-    #pyramids.append(masks)
+    masks = mask_head([P3, P4, P5])
+    pyramids.append(masks)
 
-    poses = attention_pnp(boxes)
-    pyramids.append(poses)
+    #poses = attention_pnp(boxes)
+    #pyramids.append(poses)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
