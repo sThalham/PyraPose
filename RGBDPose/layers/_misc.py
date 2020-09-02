@@ -197,7 +197,7 @@ class RegressBoxes3D(keras.layers.Layer):
         return box3D_transform_inv(anchors, regression, mean=self.mean, std=self.std)
 
     def compute_output_shape(self, input_shape):
-        return input_shape[0]
+        return input_shape[1]
 
     def get_config(self):
         config = super(RegressBoxes3D, self).get_config()
@@ -244,7 +244,7 @@ class DenormBoxes3D(keras.layers.Layer):
         return box3D_denormalization(anchors, regression, mean=self.mean, std=self.std)
 
     def compute_output_shape(self, input_shape):
-        return input_shape[0]
+        return input_shape[1]
 
     def get_config(self):
         config = super(DenormBoxes3D, self).get_config()
