@@ -346,6 +346,33 @@ def evaluate_linemod(generator, model, threshold=0.05):
             cls_img = np.where(cls_img > 254, cls_img, image_raw)
             cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
 
+            '''
+            # mask from anchors
+            pot_mask = scores[0, :, inv_cls]
+            pot_mask_P3 = pot_mask[:43200]
+            pot_mask_P4 = pot_mask[43200:54000]
+            pot_mask_P4 = pot_mask[54000:]
+            print(pot_mask.shape)
+
+            sidx = 0
+            eidx = 0
+            mask_P3 = np.zeros((4800), dtype=np.float32)
+            for idx in range(4800):
+                eidx = eidx + 9
+                mask_P3[idx] = np.sum(pot_mask_P3[sidx:eidx])
+                sidx = eidx
+
+            print(mask_P3.shape)
+            print(np.nanmax(mask_P3))
+            mask_P3 = np.where(mask_P3 > 0.5 * (np.nanmax(mask_P3)), 255, 0)
+            cls_img = mask_P3.reshape((60, 80)).astype(np.uint8)
+            cls_img = cv2.resize(cls_img, (640, 480), interpolation=cv2.INTER_NEAREST)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pot_mask.jpg', cls_img)
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            '''
+
             anno_ind = np.argwhere(anno['labels'] == checkLab)
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
@@ -601,7 +628,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
             cv2.imwrite(name, image)
             print('break')
-
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
