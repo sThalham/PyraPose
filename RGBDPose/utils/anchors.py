@@ -107,6 +107,14 @@ def anchor_targets_bbox(
         image_shapes = guess_shapes(image[0].shape[:2], pyramid_levels)
         #mask_viz = cv2.resize(image[0], (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
 
+        image_raw = image[0]
+        # image_raw[..., 0] += 103.939
+        # image_raw[..., 1] += 116.779
+        # image_raw[..., 2] += 123.68
+        sca = 256.0 / (np.nanmax(image_raw) - np.nanmin(image_raw))
+        image_raw -= np.nanmin(image_raw)
+        image_raw = (image_raw * sca).astype(np.uint8)
+
         if annotations['bboxes'].shape[0]:
             # obtain indices of gt annotations with the greatest overlap
             positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
@@ -207,12 +215,24 @@ def anchor_targets_bbox(
                                      5)
                 '''
 
+
+                #for jdx in range(true_an.shape[0]):
+                #    bb = true_an[jdx, :]
+                #    cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                #                  (255, 255, 255), 2)
+                #    cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                #                  (0, 0, 0), 1)
+
+                #rind = np.random.randint(0, 1000)
+                #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+                #cv2.imwrite(name, image_raw)
+
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            rind = np.random.randint(0, 1000)
+            #rind = np.random.randint(0, 1000)
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image[0]+100)
+            #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
             #cv2.imwrite(name, image[1] + 100)
 
