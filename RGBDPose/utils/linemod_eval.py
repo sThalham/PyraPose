@@ -24,6 +24,7 @@ import open3d
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
+
 from PIL import Image
 
 from matplotlib import pyplot
@@ -307,7 +308,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         for inv_cls in range(scores.shape[2]):
 
@@ -337,14 +338,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 # print('not enough inlier')
                 continue
 
-            obj_mask = mask[0, :, inv_cls]
-            print(np.nanmax(obj_mask))
-            cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
-            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
-            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            #obj_mask = mask[0, :, inv_cls]
+            #print(np.nanmax(obj_mask))
+            #cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
+            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            #cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            #cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
 
             '''
             # mask from anchors
@@ -379,8 +380,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # print(t_rot)
 
             BOP_obj_id = np.asarray([true_cat], dtype=np.uint32)
-
-            #pose = poses[0, inv_cls, :]
 
             # print(cls)
 
@@ -428,95 +427,36 @@ def evaluate_linemod(generator, model, threshold=0.05):
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
-            # all hypotheses via pnp
+            ##############################
+            # pnp
             pose_votes = boxes3D[0, cls_indices, :]
             est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
             obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
             obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            #retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+            #                                                   imagePoints=est_points, cameraMatrix=K,
+            #                                                   distCoeffs=None, rvec=None, tvec=None,
+            #                                                   useExtrinsicGuess=False, iterationsCount=300,
+            #                                                   reprojectionError=5.0, confidence=0.99,
+            #                                                   flags=cv2.SOLVEPNP_ITERATIVE)
+            #R_est, _ = cv2.Rodrigues(orvec)
+            #t_est = otvec
 
-            # all hypotheses via mean/median
-            # pose_votes = np.mean(pose_votes, axis=0)
-            # est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
-            # obj_points = ori_points
-
-            # max hypotheses
-            # pose_votes = boxes3D[0, np.argmax(cls_mask), :]
-            # est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
-            # obj_points = ori_points
-
-            #########################
-            # confidence estimation
-
-            # pose_votes = boxes3D[0, cls_indices, inv_cls, :]
-            # confidence = confs[0, cls_indices, inv_cls, 16:]
-
-            '''
+            ##############################
+            # pnp
             pose_votes = boxes3D[0, cls_indices, :]
-            confidence = confs[0, cls_indices, 16:]
-            top_k = 10
-            confs_0 = np.argsort(confidence[0, :, 0])[-top_k:]
-            confs_1 = np.argsort(confidence[0, :, 1])[-top_k:]
-            confs_2 = np.argsort(confidence[0, :, 2])[-top_k:]
-            confs_3 = np.argsort(confidence[0, :, 3])[-top_k:]
-            confs_4 = np.argsort(confidence[0, :, 4])[-top_k:]
-            confs_5 = np.argsort(confidence[0, :, 5])[-top_k:]
-            confs_6 = np.argsort(confidence[0, :, 6])[-top_k:]
-            confs_7 = np.argsort(confidence[0, :, 7])[-top_k:]
-            pt_scores = []
-            pt_scores.append(np.sort(confidence[0, :, 0])[-top_k:])
-            pt_scores.append(np.sort(confidence[0, :, 1])[-top_k:])
-            pt_scores.append(np.sort(confidence[0, :, 2])[-top_k:])
-            pt_scores.append(np.sort(confidence[0, :, 3])[-top_k:])
-            pt_scores.append(np.sort(confidence[0, :, 4])[-top_k:])
-            pt_scores.append(np.sort(confidence[0, :, 5])[-top_k:])
-            pt_scores.append(np.sort(confidence[0, :, 6])[-top_k:])
-            pt_scores.append(np.sort(confidence[0, :, 7])[-top_k:])
-            print(np.sort(confidence[0, :, 0])[-top_k:])
-            BOP_score = np.asarray([np.mean(np.asarray(pt_scores))], dtype=np.float32)
-            p0_x = pose_votes[0, confs_0, 0]
-            p0_y = pose_votes[0, confs_0, 1]
-            p1_x = pose_votes[0, confs_1, 2]
-            p1_y = pose_votes[0, confs_1, 3]
-            p2_x = pose_votes[0, confs_2, 4]
-            p2_y = pose_votes[0, confs_2, 5]
-            p3_x = pose_votes[0, confs_3, 6]
-            p3_y = pose_votes[0, confs_3, 7]
-            p4_x = pose_votes[0, confs_4, 8]
-            p4_y = pose_votes[0, confs_4, 9]
-            p5_x = pose_votes[0, confs_5, 10]
-            p5_y = pose_votes[0, confs_5, 11]
-            p6_x = pose_votes[0, confs_6, 12]
-            p6_y = pose_votes[0, confs_6, 13]
-            p7_x = pose_votes[0, confs_7, 14]
-            p7_y = pose_votes[0, confs_7, 15]
-            xes = np.stack([p0_x, p1_x, p2_x, p3_x, p4_x, p5_x, p6_x, p7_x], axis=0).reshape((int(top_k * 8)))
-            yes = np.stack([p0_y, p1_y, p2_y, p3_y, p4_y, p5_y, p6_y, p7_y], axis=0).reshape((int(top_k * 8)))
-            pose_votes = np.stack([xes, yes], axis=1)
-            # print(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, p4_x, p4_y, p5_x, p5_y, p6_x, p6_y, p7_x, p7_y)
-            # pose_votes = np.stack([p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, p4_x, p4_y, p5_x, p5_y, p6_x, p6_y, p7_x, p7_y], axis=1).T
-            # pose_mean = np.mean(pose_votes, axis=0)
-            # print(pose_mean.shape)
-            # est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(top_k * 8), 1, 2))
-            obj_points = np.repeat(ori_points, top_k, axis=0)
-            '''
-            ####################
-            # method independent eval here
+            pose_weights = scores[0, cls_indices, :]
+            print(pose_votes.shape)
+            print(pose_weights.shape)
+            print(ori_points.shape)
 
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                               imagePoints=est_points, cameraMatrix=K,
-                                                               distCoeffs=None, rvec=None, tvec=None,
-                                                               useExtrinsicGuess=False, iterationsCount=300,
-                                                               reprojectionError=5.0, confidence=0.99,
-                                                               flags=cv2.SOLVEPNP_ITERATIVE)
-            R_est, _ = cv2.Rodrigues(orvec)
-            t_est = otvec
+            Rt = uncertainty_pnp(pose_votes, pose_weights, ori_points, K)
 
             # BOP_score = -1
-            #R_est = tf3d.quaternions.quat2mat(pose[3:])
-            #t_est = pose[:3]
-            #t_est[:2] = t_est[:2] * 0.5
-            #t_est[2] = (t_est[2] / 3 + 1.0)
+            R_est = tf3d.quaternions.quat2mat(pose[3:])
+            t_est = pose[:3]
+            t_est[:2] = t_est[:2] * 0.5
+            t_est[2] = (t_est[2] / 3 + 1.0)
 
             BOP_R = R_est.flatten().tolist()
             BOP_t = t_est.flatten().tolist()

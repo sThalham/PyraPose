@@ -215,7 +215,7 @@ def apply_transform(matrix, image, params, cpara):
         # iaa.Sometimes(p=0.5, iaa.JpegCompression((0, 30)), None),
     ], random_order=True)
     image0 = seq.augment_image(image[0])
-    image0 = image[0]
+    #image0 = image[0]
     image0 = cv2.warpAffine(
         image0,
         matrix[:2, :],

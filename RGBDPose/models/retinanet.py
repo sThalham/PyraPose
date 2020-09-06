@@ -134,7 +134,7 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
 
-def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256, name='3Dregression_submodel'):
+def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=512, name='3Dregression_submodel'):
     options = {
         'kernel_size'        : 3,
         'strides'            : 1,
@@ -389,7 +389,7 @@ def retinanet(
 
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     mask_head = default_mask_model(num_classes=num_classes)
-    attention_pnp = default_attention_pnp(num_classes, 16)
+    #attention_pnp = default_attention_pnp(num_classes, 16)
 
     b1, b2, b3 = backbone_layers_rgb
     b4, b5, b6 = backbone_layers_dep
@@ -407,14 +407,9 @@ def retinanet(
     features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
     pyramids = __build_pyramid(submodels, features)
 
-    #anchors = __build_anchors_pnp(AnchorParameters.default, features)
-    #boxes = pyramids[0]
-    #boxes = layers.DenormBoxes3D()([anchors, boxes])
-
     masks = mask_head(features[0])
     pyramids.append(masks)
 
-    #poses = attention_pnp(boxes)
     #pyramids.append(poses)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
