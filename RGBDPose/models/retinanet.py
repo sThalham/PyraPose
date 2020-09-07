@@ -82,56 +82,20 @@ def default_mask_model(
             **options
         )(outputs)
 
-    print(outputs)
-
     outputs = keras.layers.Conv2D(
         filters=num_classes,
         kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
         bias_initializer=initializers.PriorProbability(probability=prior_probability),
         **options
     )(outputs)
-    print(outputs)
 
     # reshape output and apply sigmoid
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) #, name='pyramid_classification_permute'
     outputs = keras.layers.Reshape((-1, num_classes))(outputs) # , name='pyramid_classification_reshape'
-    print(outputs)
     outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name='mask')
-
-
-def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=256, name='regression_submodel'):
-    options = {
-        'kernel_size'        : 3,
-        'strides'            : 1,
-        'padding'            : 'same',
-        'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
-        'bias_initializer'   : 'zeros'
-    }
-
-    if keras.backend.image_data_format() == 'channels_first':
-        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
-    else:
-        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
-
-    outputs = inputs
-    for i in range(4):
-        outputs = keras.layers.Conv2D(
-        #outputs = keras.layers.SeparableConv2D(
-            filters=regression_feature_size,
-            activation='relu',
-            #name='pyramid_regression_{}'.format(i),
-            **options
-        )(outputs)
-
-    outputs = keras.layers.Conv2D(num_anchors * num_values, **options)(outputs) #, name='pyramid_regression'
-    if keras.backend.image_data_format() == 'channels_first':
-        outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression_permute'
-    outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression_reshape'
-
-    return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
 
 def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=512, name='3Dregression_submodel'):
@@ -165,80 +129,6 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
 
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
-
-
-def default_mask_decoder(
-        num_classes,
-        num_anchors):
-
-    options3 = {
-        'kernel_size': 3,
-        'strides': 1,
-        'padding': 'same',
-        'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
-        'bias_initializer': 'zeros',
-        'kernel_regularizer' : keras.regularizers.l2(0.001),
-    }
-
-    if keras.backend.image_data_format() == 'channels_first':
-        inputs_P5 = keras.layers.Input(shape=(256, None, None))
-        inputs_P4 = keras.layers.Input(shape=(256, None, None))
-        inputs_P3 = keras.layers.Input(shape=(256, None, None))
-        # inputs_P2 = keras.layers.Input(shape=(64, None, None))
-    else:
-        inputs_P5 = keras.layers.Input(shape=(15, 20, 256))
-        inputs_P4 = keras.layers.Input(shape=(30, 40, 256))
-        inputs_P3 = keras.layers.Input(shape=(60, 80, 256))
-        # inputs_P2 = keras.layers.Input(shape=(None, None, 64))
-
-    inputs = [inputs_P3, inputs_P4, inputs_P5]
-
-    D5 = keras.layers.Conv2D(256, activation='relu', **options3)(inputs_P5)
-    D5 = keras.layers.Conv2D(256, activation='relu', **options3)(D5)
-    D5_up = keras.layers.Conv2DTranspose(256, activation='relu', kernel_size=2, strides=2, padding='valid')(D5)
-    D4 = keras.layers.Add()([D5_up, inputs_P4])
-
-    D4 = keras.layers.Conv2D(256, activation='relu', **options3)(D4)
-    D4 = keras.layers.Conv2D(256, activation='relu', **options3)(D4)
-    D4_up = keras.layers.Conv2DTranspose(256, activation='relu', kernel_size=2, strides=2, padding='valid')(D4)
-    D3 = keras.layers.Add()([D4_up, inputs_P3])
-
-    D3 = keras.layers.Conv2D(128, activation='relu', **options3)(D3)
-    D3 = keras.layers.Conv2D(128, activation='relu', **options3)(D3)
-    outputs = keras.layers.Conv2D(filters=num_classes, **options3)(D3)
-
-    if keras.backend.image_data_format() == 'channels_first':
-        outputs = keras.layers.Permute((2, 3, 1))(outputs)
-    outputs = keras.layers.Reshape((-1, num_classes))(outputs)
-
-    outputs = keras.layers.Activation('sigmoid')(outputs)
-
-    return keras.models.Model(inputs=inputs, outputs=outputs, name='mask')  # , name=name)
-
-
-def default_attention_pnp(
-        num_classes,
-        num_values,
-):
-    if keras.backend.image_data_format() == 'channels_first':
-        inputs = keras.layers.Input(shape=(num_values, None))
-    else:
-        inputs = keras.layers.Input(shape=(None, num_values))
-
-    outputs = inputs
-
-    outputs = keras.layers.Conv1D(filters=128, kernel_size=1, padding="same", activation='relu')(outputs)
-    outputs = keras.layers.Conv1D(filters=128, kernel_size=1, padding="same", activation='relu')(outputs)
-    outputs = keras.layers.Conv1D(filters=128, kernel_size=1, padding="same", activation='relu')(outputs)
-    outputs = keras.layers.GlobalMaxPool1D()(outputs)
-
-    outputs = keras.layers.Dense(512, activation='relu')(outputs)
-    outputs = keras.layers.Dense(256, activation='relu')(outputs)
-    outputs = keras.layers.Dense(num_classes * 7)(outputs)
-
-    cls_outputs = keras.layers.Reshape((num_classes, 7))(outputs)
-
-    return keras.models.Model(inputs=inputs, outputs=cls_outputs, name='poses')
 
 
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
@@ -326,7 +216,6 @@ def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
 
 def default_submodels(num_classes, num_anchors):
     return [
-        #('bbox', default_regression_model(4, num_anchors)),
         ('3Dbox', default_3Dregression_model(16, num_anchors)),
         ('cls', default_classification_model(num_classes, num_anchors))
     ]

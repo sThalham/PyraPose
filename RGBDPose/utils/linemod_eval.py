@@ -308,7 +308,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, poses = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, mask = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         for inv_cls in range(scores.shape[2]):
 
@@ -345,7 +345,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
             #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
             #cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            #cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            #cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
 
             '''
             # mask from anchors
@@ -433,30 +433,30 @@ def evaluate_linemod(generator, model, threshold=0.05):
             est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
             obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
             obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
-            #retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-            #                                                   imagePoints=est_points, cameraMatrix=K,
-            #                                                   distCoeffs=None, rvec=None, tvec=None,
-            #                                                   useExtrinsicGuess=False, iterationsCount=300,
-            #                                                   reprojectionError=5.0, confidence=0.99,
-            #                                                   flags=cv2.SOLVEPNP_ITERATIVE)
-            #R_est, _ = cv2.Rodrigues(orvec)
-            #t_est = otvec
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                               imagePoints=est_points, cameraMatrix=K,
+                                                               distCoeffs=None, rvec=None, tvec=None,
+                                                               useExtrinsicGuess=False, iterationsCount=300,
+                                                               reprojectionError=5.0, confidence=0.99,
+                                                               flags=cv2.SOLVEPNP_ITERATIVE)
+            R_est, _ = cv2.Rodrigues(orvec)
+            t_est = otvec
 
             ##############################
             # pnp
-            pose_votes = boxes3D[0, cls_indices, :]
-            pose_weights = scores[0, cls_indices, :]
-            print(pose_votes.shape)
-            print(pose_weights.shape)
-            print(ori_points.shape)
+            #pose_votes = boxes3D[0, cls_indices, :]
+            #pose_weights = scores[0, cls_indices, :]
+            #print(pose_votes.shape)
+            #print(pose_weights.shape)
+            #print(ori_points.shape)
 
-            Rt = uncertainty_pnp(pose_votes, pose_weights, ori_points, K)
+            #Rt = uncertainty_pnp(pose_votes, pose_weights, ori_points, K)
 
             # BOP_score = -1
-            R_est = tf3d.quaternions.quat2mat(pose[3:])
-            t_est = pose[:3]
-            t_est[:2] = t_est[:2] * 0.5
-            t_est[2] = (t_est[2] / 3 + 1.0)
+            #R_est = tf3d.quaternions.quat2mat(pose[3:])
+            #t_est = pose[:3]
+            #t_est[:2] = t_est[:2] * 0.5
+            #t_est[2] = (t_est[2] / 3 + 1.0)
 
             BOP_R = R_est.flatten().tolist()
             BOP_t = t_est.flatten().tolist()
@@ -565,9 +565,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 idx = idx+8
             '''
 
-            name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
-            cv2.imwrite(name, image)
-            print('break')
+            #name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+            #cv2.imwrite(name, image)
+            #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)

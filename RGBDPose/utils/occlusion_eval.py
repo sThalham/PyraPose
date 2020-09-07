@@ -204,9 +204,9 @@ def boxoverlap(a, b):
 def evaluate_occlusion(generator, model, threshold=0.05):
     threshold = 0.5
 
-    #mesh_info = '/RGBDPose/linemod_13/models_info.yml'
-    #mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
-    mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
+    # mesh_info = '/RGBDPose/Meshes/linemod_13/models_info.yml'
+    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    # mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
@@ -220,143 +220,19 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         y_plus = value['size_y'] * fac + y_minus
         z_plus = value['size_z'] * fac + z_minus
         three_box_solo = np.array([[x_plus, y_plus, z_plus],
-                                  [x_plus, y_plus, z_minus],
-                                  [x_plus, y_minus, z_minus],
-                                  [x_plus, y_minus, z_plus],
-                                  [x_minus, y_plus, z_plus],
-                                  [x_minus, y_plus, z_minus],
-                                  [x_minus, y_minus, z_minus],
-                                  [x_minus, y_minus, z_plus]])
+                                   [x_plus, y_plus, z_minus],
+                                   [x_plus, y_minus, z_minus],
+                                   [x_plus, y_minus, z_plus],
+                                   [x_minus, y_plus, z_plus],
+                                   [x_minus, y_plus, z_minus],
+                                   [x_minus, y_minus, z_minus],
+                                   [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
 
-    # start collecting results
-    results = []
-    image_ids = []
-    image_indices = []
-    idx = 0
-
-    tp = np.zeros((16), dtype=np.uint32)
-    fp = np.zeros((16), dtype=np.uint32)
-    fn = np.zeros((16), dtype=np.uint32)
-
-    # interlude
-    tp05 = np.zeros((16), dtype=np.uint32)
-    fp05 = np.zeros((16), dtype=np.uint32)
-    fn05 = np.zeros((16), dtype=np.uint32)
-
-    tp10 = np.zeros((16), dtype=np.uint32)
-    fp10 = np.zeros((16), dtype=np.uint32)
-    fn10 = np.zeros((16), dtype=np.uint32)
-
-    tp15 = np.zeros((16), dtype=np.uint32)
-    fp15 = np.zeros((16), dtype=np.uint32)
-    fn15 = np.zeros((16), dtype=np.uint32)
-
-    tp20 = np.zeros((16), dtype=np.uint32)
-    fp20 = np.zeros((16), dtype=np.uint32)
-    fn20 = np.zeros((16), dtype=np.uint32)
-
-    tp25 = np.zeros((16), dtype=np.uint32)
-    fp25 = np.zeros((16), dtype=np.uint32)
-    fn25 = np.zeros((16), dtype=np.uint32)
-
-    tp30 = np.zeros((16), dtype=np.uint32)
-    fp30 = np.zeros((16), dtype=np.uint32)
-    fn30 = np.zeros((16), dtype=np.uint32)
-
-    tp35 = np.zeros((16), dtype=np.uint32)
-    fp35 = np.zeros((16), dtype=np.uint32)
-    fn35 = np.zeros((16), dtype=np.uint32)
-
-    tp40 = np.zeros((16), dtype=np.uint32)
-    fp40 = np.zeros((16), dtype=np.uint32)
-    fn40 = np.zeros((16), dtype=np.uint32)
-
-    tp45 = np.zeros((16), dtype=np.uint32)
-    fp45 = np.zeros((16), dtype=np.uint32)
-    fn45 = np.zeros((16), dtype=np.uint32)
-
-    tp55 = np.zeros((16), dtype=np.uint32)
-    fp55 = np.zeros((16), dtype=np.uint32)
-    fn55 = np.zeros((16), dtype=np.uint32)
-
-    tp6 = np.zeros((16), dtype=np.uint32)
-    fp6 = np.zeros((16), dtype=np.uint32)
-    fn6 = np.zeros((16), dtype=np.uint32)
-
-    tp65 = np.zeros((16), dtype=np.uint32)
-    fp65 = np.zeros((16), dtype=np.uint32)
-    fn65 = np.zeros((16), dtype=np.uint32)
-
-    tp7 = np.zeros((16), dtype=np.uint32)
-    fp7 = np.zeros((16), dtype=np.uint32)
-    fn7 = np.zeros((16), dtype=np.uint32)
-
-    tp75 = np.zeros((16), dtype=np.uint32)
-    fp75 = np.zeros((16), dtype=np.uint32)
-    fn75 = np.zeros((16), dtype=np.uint32)
-
-    tp8 = np.zeros((16), dtype=np.uint32)
-    fp8 = np.zeros((16), dtype=np.uint32)
-    fn8 = np.zeros((16), dtype=np.uint32)
-
-    tp85 = np.zeros((16), dtype=np.uint32)
-    fp85 = np.zeros((16), dtype=np.uint32)
-    fn85 = np.zeros((16), dtype=np.uint32)
-
-    tp9 = np.zeros((16), dtype=np.uint32)
-    fp9 = np.zeros((16), dtype=np.uint32)
-    fn9 = np.zeros((16), dtype=np.uint32)
-
-    tp925 = np.zeros((16), dtype=np.uint32)
-    fp925 = np.zeros((16), dtype=np.uint32)
-    fn925 = np.zeros((16), dtype=np.uint32)
-
-    tp95 = np.zeros((16), dtype=np.uint32)
-    fp95 = np.zeros((16), dtype=np.uint32)
-    fn95 = np.zeros((16), dtype=np.uint32)
-
-    tp975 = np.zeros((16), dtype=np.uint32)
-    fp975 = np.zeros((16), dtype=np.uint32)
-    fn975 = np.zeros((16), dtype=np.uint32)
-    # interlude end
-
-    tp_add = np.zeros((16), dtype=np.uint32)
-    fp_add = np.zeros((16), dtype=np.uint32)
-    fn_add = np.zeros((16), dtype=np.uint32)
-
-    rotD = np.zeros((16), dtype=np.uint32)
-    less5 = np.zeros((16), dtype=np.uint32)
-    rep_e = np.zeros((16), dtype=np.uint32)
-    rep_less5 = np.zeros((16), dtype=np.uint32)
-    add_e = np.zeros((16), dtype=np.uint32)
-    add_less_d = np.zeros((16), dtype=np.uint32)
-    vsd_e = np.zeros((16), dtype=np.uint32)
-    vsd_less_t = np.zeros((16), dtype=np.uint32)
-
-    add_less_d005 = np.zeros((16), dtype=np.uint32)
-    add_less_d015 = np.zeros((16), dtype=np.uint32)
-    add_less_d02 = np.zeros((16), dtype=np.uint32)
-    add_less_d025 = np.zeros((16), dtype=np.uint32)
-    add_less_d03 = np.zeros((16), dtype=np.uint32)
-    add_less_d035 = np.zeros((16), dtype=np.uint32)
-    add_less_d04 = np.zeros((16), dtype=np.uint32)
-    add_less_d045 = np.zeros((16), dtype=np.uint32)
-    add_less_d05 = np.zeros((16), dtype=np.uint32)
-    add_less_d055 = np.zeros((16), dtype=np.uint32)
-    add_less_d06 = np.zeros((16), dtype=np.uint32)
-    add_less_d065 = np.zeros((16), dtype=np.uint32)
-    add_less_d07 = np.zeros((16), dtype=np.uint32)
-    add_less_d075 = np.zeros((16), dtype=np.uint32)
-    add_less_d08 = np.zeros((16), dtype=np.uint32)
-    add_less_d085 = np.zeros((16), dtype=np.uint32)
-    add_less_d09 = np.zeros((16), dtype=np.uint32)
-    add_less_d095 = np.zeros((16), dtype=np.uint32)
-    add_less_d1 = np.zeros((16), dtype=np.uint32)
-    
-    # target annotation
     pc1, mv1, mv1_mm = load_pcd('01')
+    pc2, mv2, mv2_mm = load_pcd('02')
+    pc4, mv4, mv4_mm = load_pcd('04')
     pc5, mv5, mv5_mm = load_pcd('05')
     pc6, mv6, mv6_mm = load_pcd('06')
     pc8, mv8, mv8_mm = load_pcd('08')
@@ -364,6 +240,13 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     pc10, mv10, mv10_mm = load_pcd('10')
     pc11, mv11, mv11_mm = load_pcd('11')
     pc12, mv12, mv12_mm = load_pcd('12')
+    pc13, mv13, mv13_mm = load_pcd('13')
+    pc14, mv14, mv14_mm = load_pcd('14')
+    pc15, mv15, mv15_mm = load_pcd('15')
+
+    allPoses = np.zeros((16), dtype=np.uint32)
+    truePoses = np.zeros((16), dtype=np.uint32)
+    falsePoses = np.zeros((16), dtype=np.uint32)
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
@@ -371,769 +254,329 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         image, scale = generator.resize_image(image)
 
         image_raw_dep = generator.load_image_dep(index)
+        image_raw_dep = np.where(image_raw_dep > 0, image_raw_dep, 0.0)
+        image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
+        image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
+        # image_raw_dep = get_normal(image_raw_dep, fxkin, fykin, cxkin, cykin)
         image_dep = generator.preprocess_image(image_raw_dep)
         image_dep, scale = generator.resize_image(image_dep)
 
-        raw_dep_path = generator.load_image_dep_raw(index)
-
-        load_viz_path = raw_dep_path[:-17] + raw_dep_path[-17:-12] + '_rgb.jpg'
-        image_viz = cv2.imread(load_viz_path)
-
-        if keras.backend.image_data_format() == 'channels_first':
-            image = image.transpose((2, 0, 1))
-
         anno = generator.load_annotations(index)
 
-        #print(anno['labels'])
-        t_cat = anno['labels'].astype(np.int8) + 1
-        obj_name = []
-        for idx, obj_temp in enumerate(t_cat):
-            if obj_temp < 10:
-                obj_name.append('0' + str(obj_temp))
-            else:
-                obj_name.append(str(obj_temp))
-        t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)
-        gt_poses = anno['poses']
-
-        # run network
-        boxes, boxes3D, scores, labels = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
-
-        #print(scores)
-        #print(labels)
-
-        # correct boxes for image scale
-        boxes /= scale
-
-        # change to (x, y, w, h) (MS COCO standard)
-        boxes[:, :, 2] -= boxes[:, :, 0]
-        boxes[:, :, 3] -= boxes[:, :, 1]
-
-        rotD[t_cat] += 1
-        rep_e[t_cat] += 1
-        add_e[t_cat] += 1
-        vsd_e[t_cat] += 1
-        fn05[t_cat] += 1
-        fn10[t_cat] += 1
-        fn15[t_cat] += 1
-        fn20[t_cat] += 1
-        fn25[t_cat] += 1
-        fn30[t_cat] += 1
-        fn35[t_cat] += 1
-        fn40[t_cat] += 1
-        fn45[t_cat] += 1
-        fn[t_cat] += 1
-        fn55[t_cat] += 1
-        fn6[t_cat] += 1
-        fn65[t_cat] += 1
-        fn7[t_cat] += 1
-        fn75[t_cat] += 1
-        fn8[t_cat] += 1
-        fn85[t_cat] += 1
-        fn9[t_cat] += 1
-        fn925[t_cat] += 1
-        fn95[t_cat] += 1
-        fn975[t_cat] += 1
-
-        # end interlude
-        fn_add[t_cat] += 1
-        fnit = np.ones((16), dtype=np.bool)
-
-        # compute predicted labels and scores
-        for box, box3D, score, label in zip(boxes[0], boxes3D[0], scores[0], labels[0]):
-            # scores are sorted, so we can break
-            if score < threshold:
-                continue
-
-            if label < 0:
-                continue
-
-            if label == 1:
-                continue
-
-
-
-            cls = generator.label_to_inv_label(label)
-            if cls > 5:
-                cls += 2
-            elif cls > 2:
-                cls += 1
-            else: pass
-            #cls = 1
-            #control_points = box3D[(cls - 1), :]
-            control_points = box3D
-            #control_points = box3D[0, :]
-
-            # append detection for each positively labeled class
-            image_result = {
-                'image_id'    : generator.image_ids[index],
-                'category_id' : generator.label_to_inv_label(label),
-                'score'       : float(score),
-                'bbox'        : box.tolist(),
-                'pose'        : control_points.tolist()
-            }
-
-            # append detection to results
-            results.append(image_result)
-
-            if cls in t_cat:
-                b1 = np.array([box[0], box[1], box[0] + box[2], box[1] + box[3]])
-                odx = np.where(t_cat==cls)
-                b2 = np.array([t_bbox[odx[0]][0][0], t_bbox[odx[0]][0][1], t_bbox[odx[0]][0][2], t_bbox[odx[0]][0][3]])
-
-                IoU = boxoverlap(b1, b2)
-                # occurences of 2 or more instances not possible in LINEMOD
-                #print(cls, IoU)
-                if IoU > 0.5:
-                    if fnit[cls] == True:
-                        # interlude
-                        '''
-                        if IoU > 0.55:
-                            tp55[cls] += 1
-                            fn55[cls] -= 1
-                        else:
-                            fp55[cls] += 1
-                        if IoU > 0.6:
-                            tp6[cls] += 1
-                            fn6[cls] -= 1
-                        else:
-                            fp6[cls] += 1
-                        if IoU > 0.65:
-                            tp65[cls] += 1
-                            fn65[cls] -= 1
-                        else:
-                            fp65[cls] += 1
-                        if IoU > 0.7:
-                            tp7[cls] += 1
-                            fn7[cls] -= 1
-                        else:
-                            fp7[cls] += 1
-                        if IoU > 0.75:
-                            tp75[cls] += 1
-                            fn75[cls] -= 1
-                        else:
-                            fp75[cls] += 1
-                        if IoU > 0.8:
-                            tp8[cls] += 1
-                            fn8[cls] -= 1
-                        else:
-                            fp8[cls] += 1
-                        if IoU > 0.85:
-                            tp85[cls] += 1
-                            fn85[cls] -= 1
-                        else:
-                            fp85[cls] += 1
-                        if IoU > 0.9:
-                            tp9[cls] += 1
-                            fn9[cls] -= 1
-                        else:
-                            fp9[cls] += 1
-                        if IoU > 0.925:
-                            tp925[cls] += 1
-                            fn925[cls] -= 1
-                        else:
-                            fp925[cls] += 1
-                        if IoU > 0.95:
-                            tp95[cls] += 1
-                            fn95[cls] -= 1
-                        else:
-                            fp95[cls] += 1
-                        if IoU > 0.975:
-                            tp975[cls] += 1
-                            fn975[cls] -= 1
-                        else:
-                            fp975[cls] += 1
-
-                        # interlude end
-
-                        tp[cls] += 1
-                        fn[cls] -= 1
-                        '''
-                        if IoU > 0.05:
-                            tp05[t_cat[odx[0]]] += 1
-                            fn05[t_cat[odx[0]]] -= 1
-                        else:
-                            fp05[t_cat[odx[0]]] += 1
-                        if IoU > 0.1:
-                            tp10[t_cat[odx[0]]] += 1
-                            fn10[t_cat[odx[0]]] -= 1
-                        else:
-                            fp10[t_cat[odx[0]]] += 1
-                        if IoU > 0.15:
-                            tp15[t_cat[odx[0]]] += 1
-                            fn15[t_cat[odx[0]]] -= 1
-                        else:
-                            fp15[t_cat[odx[0]]] += 1
-                        if IoU > 0.2:
-                            tp20[t_cat[odx[0]]] += 1
-                            fn20[t_cat[odx[0]]] -= 1
-                        else:
-                            fp20[t_cat[odx[0]]] += 1
-                        if IoU > 0.25:
-                            tp25[t_cat[odx[0]]] += 1
-                            fn25[t_cat[odx[0]]] -= 1
-                        else:
-                            fp25[t_cat[odx[0]]] += 1
-                        if IoU > 0.3:
-                            tp30[t_cat[odx[0]]] += 1
-                            fn30[t_cat[odx[0]]] -= 1
-                        else:
-                            fp30[t_cat[odx[0]]] += 1
-                        if IoU > 0.35:
-                            tp35[t_cat[odx[0]]] += 1
-                            fn35[t_cat[odx[0]]] -= 1
-                        else:
-                            fp35[t_cat[odx[0]]] += 1
-                        if IoU > 0.4:
-                            tp40[t_cat[odx[0]]] += 1
-                            fn40[t_cat[odx[0]]] -= 1
-                        else:
-                            fp40[t_cat[odx[0]]] += 1
-                        if IoU > 0.45:
-                            tp45[t_cat[odx[0]]] += 1
-                            fn45[t_cat[odx[0]]] -= 1
-                        else:
-                            fp45[t_cat[odx[0]]] += 1
-                        if IoU > 0.55:
-                            tp55[t_cat[odx[0]]] += 1
-                            fn55[t_cat[odx[0]]] -= 1
-                        else:
-                            fp55[t_cat[odx[0]]] += 1
-                        if IoU > 0.6:
-                            tp6[t_cat[odx[0]]] += 1
-                            fn6[t_cat[odx[0]]] -= 1
-                        else:
-                            fp6[t_cat[odx[0]]] += 1
-                        if IoU > 0.65:
-                            tp65[t_cat[odx[0]]] += 1
-                            fn65[t_cat[odx[0]]] -= 1
-                        else:
-                            fp65[t_cat[odx[0]]] += 1
-                        if IoU > 0.7:
-                            tp7[t_cat[odx[0]]] += 1
-                            fn7[t_cat[odx[0]]] -= 1
-                        else:
-                            fp7[t_cat[odx[0]]] += 1
-                        if IoU > 0.75:
-                            tp75[t_cat[odx[0]]] += 1
-                            fn75[t_cat[odx[0]]] -= 1
-                        else:
-                            fp75[t_cat[odx[0]]] += 1
-                        if IoU > 0.8:
-                            tp8[t_cat[odx[0]]] += 1
-                            fn8[t_cat[odx[0]]] -= 1
-                        else:
-                            fp8[t_cat[odx[0]]] += 1
-                        if IoU > 0.85:
-                            tp85[t_cat[odx[0]]] += 1
-                            fn85[t_cat[odx[0]]] -= 1
-                        else:
-                            fp85[t_cat[odx[0]]] += 1
-                        if IoU > 0.9:
-                            tp9[t_cat[odx[0]]] += 1
-                            fn9[t_cat[odx[0]]] -= 1
-                        else:
-                            fp9[t_cat[odx[0]]] += 1
-                        if IoU > 0.925:
-                            tp925[t_cat[odx[0]]] += 1
-                            fn925[t_cat[odx[0]]] -= 1
-                        else:
-                            fp925[t_cat[odx[0]]] += 1
-                        if IoU > 0.95:
-                            tp95[t_cat[odx[0]]] += 1
-                            fn95[t_cat[odx[0]]] -= 1
-                        else:
-                            fp95[t_cat[odx[0]]] += 1
-                        if IoU > 0.975:
-                            tp975[t_cat[odx[0]]] += 1
-                            fn975[t_cat[odx[0]]] -= 1
-                        else:
-                            fp975[t_cat[odx[0]]] += 1
-
-                        # interlude end
-
-                        tp[t_cat[odx[0]]] += 1
-                        fn[t_cat[odx[0]]] -= 1
-                        fnit[cls] = False
-
-                        obj_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32) #.reshape((8, 1, 3))
-                        est_points = np.ascontiguousarray(control_points.T, dtype=np.float32).reshape((8, 1, 2))
-
-                        K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
-
-                        #retval, orvec, otvec = cv2.solvePnP(obj_points, est_points, K, None, None, None, False, cv2.SOLVEPNP_ITERATIVE)
-                        retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                                           imagePoints=est_points, cameraMatrix=K,
-                                                                           distCoeffs=None, rvec=None, tvec=None,
-                                                                           useExtrinsicGuess=False, iterationsCount=100,
-                                                                           reprojectionError=5.0, confidence=0.99,
-                                                                           flags=cv2.SOLVEPNP_ITERATIVE)
-
-                        R_est, _ = cv2.Rodrigues(orvec)
-                        t_est = otvec
-                        #print(t_est)
-
-                        cur_pose = gt_poses[odx[0]]
-                        t_rot = cur_pose[0][3:]
-                        t_tra = cur_pose[0][:3]
-
-                        t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
-                        R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
-                        t_gt = np.array(t_tra, dtype=np.float32) * 0.001
-
-                        rd = re(R_gt, R_est)
-                        xyz = te(t_gt, t_est.T)
-                        #print(control_points)
-
-
-                        '''
-                        font = cv2.FONT_HERSHEY_COMPLEX
-                        bottomLeftCornerOfText = (int(bb[0]) + 5, int(bb[1]) + int(bb[3]) - 5)
-                        fontScale = 0.5
-                        fontColor = (25, 215, 250)
-                        fontthickness = 2
-                        lineType = 2
-                        if detCats[i] == 1:
-                            cate = 'Ape'
-                        elif detCats[i] == 2:
-                            cate = 'Benchvise'
-                        elif detCats[i] == 3:
-                            cate = 'Bowl'
-                        elif detCats[i] == 4:
-                            cate = 'Camera'
-                        elif detCats[i] == 5:
-                            cate = 'Can'
-                        elif detCats[i] == 6:
-                            cate = 'Cat'
-                        elif detCats[i] == 7:
-                            cate = 'Cup'
-                        elif detCats[i] == 8:
-                            cate = 'Driller'
-                        elif detCats[i] == 9:
-                            cate = 'Duck'
-                        elif detCats[i] == 10:
-                            cate = 'Eggbox'
-                        elif detCats[i] == 11:
-                            cate = 'Glue'
-                        elif detCats[i] == 12:
-                            cate = 'Holepuncher'
-                        elif detCats[i] == 13:
-                            cate = 'Iron'
-                        elif detCats[i] == 14:
-                            cate = 'Lamp'
-                        elif detCats[i] == 15:
-                            cate = 'Phone'
-                        gtText = cate
-                        # gtText = cate + " / " + str(detSco[i])
-                        fontColor2 = (0, 0, 0)
-                        fontthickness2 = 4
-                        cv2.putText(img, gtText,
-                            bottomLeftCornerOfText,
-                            font,
-                            fontScale,
-                            fontColor2,
-                            fontthickness2,
-                            lineType)
-                        cv2.putText(img, gtText,
-                            bottomLeftCornerOfText,
-                            font,
-                            fontScale,
-                            fontColor,
-                            fontthickness,
-                            lineType)
-                        name = '/home/sthalham/visTests/detected.jpg'
-                        img_con = np.concatenate((img, img_gt), axis=1)
-                        cv2.imwrite(name, img_con)
-                        '''
-
-                        if cls == 1:
-                            model_vsd = mv1
-                            point_cloud = pc1
-                        elif cls == 5:
-                            model_vsd = mv5
-                            point_cloud = pc5
-                        elif cls == 6:
-                            model_vsd = mv6
-                            point_cloud = pc6
-                        elif cls == 8:
-                            model_vsd = mv8
-                            point_cloud = pc8
-                        elif cls == 9:
-                            model_vsd = mv9
-                            point_cloud = pc9
-                        elif cls == 10:
-                            model_vsd = mv10
-                            point_cloud = pc10
-                        elif cls == 11:
-                            model_vsd = mv11
-                            point_cloud = pc11
-                        elif cls == 12:
-                            model_vsd = mv12
-                            point_cloud = pc12
-
-                        #print('--------------------- ICP refinement -------------------')
-                        '''
-                        image_dep = cv2.imread(raw_dep_path, cv2.IMREAD_UNCHANGED)
-                        # image_icp = np.multiply(image_dep, 0.1)
-                        image_icp = image_dep
-                        # print(np.nanmax(image_icp))
-
-                        pcd_img = create_point_cloud(image_icp, fxkin, fykin, cxkin, cykin, 1.0)
-                        pcd_img = pcd_img.reshape((480, 640, 3))[int(b1[1]):int(b1[3]), int(b1[0]):int(b1[2]), :]
-                        pcd_img = pcd_img.reshape((pcd_img.shape[0] * pcd_img.shape[1], 3))
-                        todel = []
-
-                        for i in range(len(pcd_img[:, 2])):
-                            if pcd_img[i, 2] < 300:
-                                todel.append(i)
-                        pcd_img = np.delete(pcd_img, todel, axis=0)
-                        # print(pcd_img)
-
-                        pcd_crop = open3d.PointCloud()
-                        pcd_crop.points = open3d.Vector3dVector(pcd_img)
-                        # open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(
-                        #     radius=2.0, max_nn=30))
-
-                        # pcd_crop.paint_uniform_color(np.array([0.99, 0.0, 0.00]))
-                        # open3d.draw_geometries([pcd_crop])
-
-                        guess = np.zeros((4, 4), dtype=np.float32)
-                        guess[:3, :3] = R_est
-                        guess[:3, 3] = t_est.T * 1000.0
-                        guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
-
-                        pcd_model = open3d.geometry.voxel_down_sample(point_cloud, voxel_size=5.0)
-                        pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=5.0)
-
-                        # open3d.draw_geometries([pcd_crop, pcd_model])
-                        reg_p2p, _, _, _ = get_evaluation_kiru(pcd_model, pcd_crop, 50, guess, 5,
-                                                               model_dia[cls] * 1000.0)
-                        R_est = reg_p2p[:3, :3]
-                        t_est = reg_p2p[:3, 3] * 0.001
-                        '''
-
-                        # ----- Visualization
-                        '''
-
-                        tDbox = R_gt.dot(obj_points.T).T
-                        tDbox = tDbox + np.repeat(t_gt[np.newaxis, :], 8, axis=0)
-                        box3D = toPix_array(tDbox)
-                        tDbox = np.reshape(box3D, (16))
-                        tDbox = tDbox.astype(np.uint16)
-
-                        eDbox = R_est.dot(obj_points.T).T
-                        eDbox = eDbox + np.repeat(t_est[np.newaxis, :], 8, axis=0)
-                        ebox3D = toPix_array(eDbox)
-                        eDbox = np.reshape(ebox3D, (16))
-                        eDbox = eDbox.astype(np.uint16)
-
-                        colGT = (0, 223, 255)
-                        colEst = (255, 112, 132)
-
-                        #cv2.rectangle(image, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                        #              (255, 255, 255), 2)
-
-
-                        image_viz = cv2.line(image_viz, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
-                                         colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
-                                         colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
-                                         colGT,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
-                                         colGT,
-                                         2)
-
-                        image_viz = cv2.line(image_viz, tuple(eDbox[0:2].ravel()), tuple(eDbox[2:4].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[2:4].ravel()), tuple(eDbox[4:6].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[4:6].ravel()), tuple(eDbox[6:8].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[6:8].ravel()), tuple(eDbox[0:2].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[0:2].ravel()), tuple(eDbox[8:10].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[2:4].ravel()), tuple(eDbox[10:12].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[4:6].ravel()), tuple(eDbox[12:14].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[6:8].ravel()), tuple(eDbox[14:16].ravel()), colEst, 2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[8:10].ravel()), tuple(eDbox[10:12].ravel()), colEst,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[10:12].ravel()), tuple(eDbox[12:14].ravel()), colEst,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[12:14].ravel()), tuple(eDbox[14:16].ravel()), colEst,
-                                         2)
-                        image_viz = cv2.line(image_viz, tuple(eDbox[14:16].ravel()), tuple(eDbox[8:10].ravel()), colEst,
-                                         2)
-
-                        '''
-                        if not math.isnan(rd):
-                            if rd < 5.0 and xyz < 0.05:
-                                less5[cls - 1] += 1
-
-                        err_repr = reproj(K, R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-
-                        if not math.isnan(err_repr):
-                            if err_repr < 5.0:
-                                rep_less5[cls - 1] += 1
-
-                        if cls == 3 or cls == 7 or cls == 10 or cls == 11:
-                            err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                        else:
-                            err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-
-                        print(' ')
-                        print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
-
-                        if not math.isnan(err_add):
-                            if err_add < (model_dia[cls - 1] * 0.05):
-                                add_less_d005[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.1):
-                                add_less_d[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.15):
-                                add_less_d015[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.2):
-                                add_less_d02[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.25):
-                                add_less_d025[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.3):
-                                add_less_d03[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.35):
-                                add_less_d035[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.4):
-                                add_less_d04[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.45):
-                                add_less_d045[cls - 1] += 1
-                            if err_add < (model_dia[cls - 1] * 0.5):
-                                add_less_d05[cls - 1] += 1
-
-                        if not math.isnan(err_add):
-                            if err_add < (model_dia[cls - 1] * 0.15):
-                                tp_add[cls - 1] += 1
-                                fn_add[cls - 1] -= 1
-                    else:
-                        fp[cls] += 1
-                        fp_add[cls] += 1
-
-                        fp05[cls] += 1
-                        fp10[cls] += 1
-                        fp15[cls] += 1
-                        fp20[cls] += 1
-                        fp25[cls] += 1
-                        fp30[cls] += 1
-                        fp35[cls] += 1
-                        fp40[cls] += 1
-                        fp45[cls] += 1
-                        fp55[cls] += 1
-                        fp6[cls] += 1
-                        fp65[cls] += 1
-                        fp7[cls] += 1
-                        fp75[cls] += 1
-                        fp8[cls] += 1
-                        fp85[cls] += 1
-                        fp9[cls] += 1
-                        fp925[cls] += 1
-                        fp95[cls] += 1
-                        fp975[cls] += 1
-                else:
-                    fp[cls] += 1
-                    fp_add[cls] += 1
-
-                    fp05[cls] += 1
-                    fp10[cls] += 1
-                    fp15[cls] += 1
-                    fp20[cls] += 1
-                    fp25[cls] += 1
-                    fp30[cls] += 1
-                    fp35[cls] += 1
-                    fp40[cls] += 1
-                    fp45[cls] += 1
-                    fp55[cls] += 1
-                    fp6[cls] += 1
-                    fp65[cls] += 1
-                    fp7[cls] += 1
-                    fp75[cls] += 1
-                    fp8[cls] += 1
-                    fp85[cls] += 1
-                    fp9[cls] += 1
-                    fp925[cls] += 1
-                    fp95[cls] += 1
-                    fp975[cls] += 1
-
-        #print(raw_dep_path)
-        vis_name='/home/sthalham/occlusion_viz/' + raw_dep_path[-17:-12] + '.jpg'
-        name_est = '/home/sthalham/visTests/detected_est.jpg'
-        cv2.imwrite(vis_name, image_viz)
-        print('Stop')
-
-        # append image to list of processed images
-        image_ids.append(generator.image_ids[index])
-        image_indices.append(index)
-        idx += 1
-
-    print(len(image_ids))
-
-    if not len(results):
-        return
-
-    # write output
-    json.dump(results, open('{}_bbox_results.json'.format(generator.set_name), 'w'), indent=4)
-    #json.dump(image_ids, open('{}_processed_image_ids.json'.format(generator.set_name), 'w'), indent=4)
-
-    detPre = [0.0] * 16
-    detRec = [0.0] * 16
-    detPre_add = [0.0] * 16
-    detRec_add = [0.0] * 16
-    F1_add = [0.0] * 16
-    less_55 = [0.0] * 16
-    less_repr_5 = [0.0] * 16
-    less_add_d = [0.0] * 16
-    less_vsd_t = [0.0] * 16
-
-    less_add_d005 = [0.0] * 16
-    less_add_d015 = [0.0] * 16
-    less_add_d02 = [0.0] * 16
-    less_add_d025 = [0.0] * 16
-    less_add_d03 = [0.0] * 16
-    less_add_d035 = [0.0] * 16
-    less_add_d04 = [0.0] * 16
-    less_add_d045 = [0.0] * 16
-    less_add_d05 = [0.0] * 16
-    less_add_d055 = [0.0] * 16
-    less_add_d06 = [0.0] * 16
-    less_add_d065 = [0.0] * 16
-    less_add_d07 = [0.0] * 16
-    less_add_d075 = [0.0] * 16
-    less_add_d08 = [0.0] * 16
-    less_add_d085 = [0.0] * 16
-    less_add_d09 = [0.0] * 16
-    less_add_d095 = [0.0] * 16
-    less_add_d1 = [0.0] * 16
-    np.set_printoptions(precision=2)
-    print('')
-    for ind in range(1, 16):
-        if ind == 0:
+        if len(anno['labels']) < 1:
             continue
 
-        if ind == 2 or ind == 3 or ind == 4 or ind == 7 or ind == 13 or ind == 14 or ind == 15:
-        #if tp[ind] == 0:
-            detPre[ind] = 0.0
-            detRec[ind] = 0.0
-            detPre_add[ind] = 0.0
-            detRec_add[ind] = 0.0
-            less_55[ind] = 0.0
-            less_repr_5[ind] = 0.0
-            less_add_d[ind] = 0.0
-            less_vsd_t[ind] = 0.0
-        else:
-            detRec[ind] = tp[ind] / (tp[ind] + fn[ind]) * 100.0
-            detPre[ind] = tp[ind] / (tp[ind] + fp[ind]) * 100.0
-            detRec_add[ind] = tp_add[ind] / (tp_add[ind] + fn_add[ind]) * 100.0
-            detPre_add[ind] = tp_add[ind] / (tp_add[ind] + fp_add[ind]) * 100.0
-            F1_add[ind] = 2 * ((detPre_add[ind] * detRec_add[ind])/(detPre_add[ind] + detRec_add[ind]))
-            less_55[ind] = (less5[ind]) / (rotD[ind]) * 100.0
-            less_repr_5[ind] = (rep_less5[ind]) / (rep_e[ind]) * 100.0
-            less_add_d[ind] = (add_less_d[ind]) / (add_e[ind]) * 100.0
-            less_vsd_t[ind] = (vsd_less_t[ind]) / (vsd_e[ind]) * 100.0
+        checkLab = anno['labels']  # +1 to real_class
+        translations = []
+        rotations = []
+        for idx, lab in enumerate(checkLab):
+            allPoses[int(lab) + 1] += 1
+            t_tra = anno['poses'][idx][0][:3]
+            t_rot = anno['poses'][idx][0][3:]
 
-            less_add_d005[ind] = (add_less_d005[ind]) / (add_e[ind]) * 100.0
-            less_add_d015[ind] = (add_less_d015[ind]) / (add_e[ind]) * 100.0
-            less_add_d02[ind] = (add_less_d02[ind]) / (add_e[ind]) * 100.0
-            less_add_d025[ind] = (add_less_d025[ind]) / (add_e[ind]) * 100.0
-            less_add_d03[ind] = (add_less_d03[ind]) / (add_e[ind]) * 100.0
-            less_add_d035[ind] = (add_less_d035[ind]) / (add_e[ind]) * 100.0
-            less_add_d04[ind] = (add_less_d04[ind]) / (add_e[ind]) * 100.0
-            less_add_d045[ind] = (add_less_d045[ind]) / (add_e[ind]) * 100.0
-            less_add_d05[ind] = (add_less_d05[ind]) / (add_e[ind]) * 100.0
-            less_add_d055[ind] = (add_less_d055[ind]) / (add_e[ind]) * 100.0
-            less_add_d06[ind] = (add_less_d06[ind]) / (add_e[ind]) * 100.0
-            less_add_d065[ind] = (add_less_d065[ind]) / (add_e[ind]) * 100.0
-            less_add_d07[ind] = (add_less_d07[ind]) / (add_e[ind]) * 100.0
-            less_add_d075[ind] = (add_less_d075[ind]) / (add_e[ind]) * 100.0
-            less_add_d08[ind] = (add_less_d08[ind]) / (add_e[ind]) * 100.0
-            less_add_d085[ind] = (add_less_d085[ind]) / (add_e[ind]) * 100.0
-            less_add_d09[ind] = (add_less_d09[ind]) / (add_e[ind]) * 100.0
-            less_add_d095[ind] = (add_less_d095[ind]) / (add_e[ind]) * 100.0
-            less_add_d1[ind] = (add_less_d1[ind]) / (add_e[ind]) * 100.0
+        # if len(anno['labels']) > 1:
+        #    t_cat = 2
+        #    obj_name = '02'
+        #    ent = np.where(anno['labels'] == 1.0)
+        #    t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[ent][0]
+        #    t_tra = anno['poses'][ent][0][:3]
+        #    t_rot = anno['poses'][ent][0][3:]
 
-            print('cat', ind)
-            print('add < 0.05: ', less_add_d005[ind])
-            print('add < 0.1: ', less_add_d[ind])
-            print('add < 0.15: ', less_add_d015[ind])
-            print('add < 0.2: ', less_add_d02[ind])
-            print('add < 0.25: ', less_add_d025[ind])
-            print('add < 0.3: ', less_add_d03[ind])
-            print('add < 0.35: ', less_add_d035[ind])
-            print('add < 0.4: ', less_add_d04[ind])
-            print('add < 0.45: ', less_add_d045[ind])
-            print('add < 0.5: ', less_add_d05[ind])
-            print('add < 0.55: ', less_add_d055[ind])
-            print('add < 0.6: ', less_add_d06[ind])
-            print('add < 0.65: ', less_add_d065[ind])
-            print('add < 0.7: ', less_add_d07[ind])
-            print('add < 0.75: ', less_add_d075[ind])
-            print('add < 0.8: ', less_add_d08[ind])
-            print('add < 0.85: ', less_add_d085[ind])
-            print('add < 0.9: ', less_add_d09[ind])
-            print('add < 0.95: ', less_add_d095[ind])
-            print('add < 1: ', less_add_d1[ind])
+        # else:
+        #    t_cat = int(anno['labels']) + 1
+        #    obj_name = str(t_cat)
+        #    if len(obj_name) < 2:
+        #        obj_name = '0' + obj_name
+        #    t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
+        #    t_tra = anno['poses'][0][:3]
+        #    t_rot = anno['poses'][0][3:]
 
-        print('cat', ind)
-        print('add < 0.05: ', less_add_d005[ind])
-        print('add < 0.1: ', less_add_d[ind])
-        print('add < 0.15: ', less_add_d015[ind])
-        print('add < 0.2: ', less_add_d02[ind])
-        print('add < 0.25: ', less_add_d025[ind])
-        print('add < 0.3: ', less_add_d03[ind])
-        print('add < 0.35: ', less_add_d035[ind])
-        print('add < 0.4: ', less_add_d04[ind])
-        print('add < 0.45: ', less_add_d045[ind])
-        print('add < 0.5: ', less_add_d05[ind])
+        # if t_cat != 2:
+        #    continue
 
-        print('cat ', ind, ' rec ', detPre[ind], ' pre ', detRec[ind], ' less5 ', less_55[ind], ' repr ',
-                  less_repr_5[ind], ' add ', less_add_d[ind], ' vsd ', less_vsd_t[ind], ' F1 add 0.15d ', F1_add[ind])
+        # run network
+        images = []
+        images.append(image)
+        images.append(image_dep)
+        boxes3D, scores, mask = model.predict_on_batch(
+            [np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
-    dataset_recall = sum(tp) / (sum(tp) + sum(fp)) * 100.0
-    dataset_precision = sum(tp) / (sum(tp) + sum(fn)) * 100.0
-    dataset_recall_add = sum(tp_add) / (sum(tp_add) + sum(fp_add)) * 100.0
-    dataset_precision_add = sum(tp_add) / (sum(tp_add) + sum(fn_add)) * 100.0
-    F1_add_all = 2 * ((dataset_precision_add * dataset_recall_add)/(dataset_precision_add + dataset_recall_add))
-    less_55 = sum(less5) / sum(rotD) * 100.0
-    less_repr_5 = sum(rep_less5) / sum(rep_e) * 100.0
-    less_add_d = sum(add_less_d) / sum(add_e) * 100.0
-    less_vsd_t = sum(vsd_less_t) / sum(vsd_e) * 100.0
+        for inv_cls in range(scores.shape[2]):
 
-    print('IoU 005: ', sum(tp05) / (sum(tp05) + sum(fp05)) * 100.0, sum(tp05) / (sum(tp05) + sum(fn05)) * 100.0)
-    print('IoU 010: ', sum(tp10) / (sum(tp10) + sum(fp10)) * 100.0, sum(tp10) / (sum(tp10) + sum(fn10)) * 100.0)
-    print('IoU 015: ', sum(tp15) / (sum(tp15) + sum(fp15)) * 100.0, sum(tp15) / (sum(tp15) + sum(fn15)) * 100.0)
-    print('IoU 020: ', sum(tp20) / (sum(tp20) + sum(fp20)) * 100.0, sum(tp20) / (sum(tp20) + sum(fn20)) * 100.0)
-    print('IoU 025: ', sum(tp25) / (sum(tp25) + sum(fp25)) * 100.0, sum(tp25) / (sum(tp25) + sum(fn25)) * 100.0)
-    print('IoU 030: ', sum(tp30) / (sum(tp30) + sum(fp30)) * 100.0, sum(tp30) / (sum(tp30) + sum(fn30)) * 100.0)
-    print('IoU 035: ', sum(tp35) / (sum(tp35) + sum(fp35)) * 100.0, sum(tp35) / (sum(tp35) + sum(fn35)) * 100.0)
-    print('IoU 040: ', sum(tp40) / (sum(tp40) + sum(fp40)) * 100.0, sum(tp40) / (sum(tp40) + sum(fn40)) * 100.0)
-    print('IoU 045: ', sum(tp45) / (sum(tp45) + sum(fp45)) * 100.0, sum(tp45) / (sum(tp45) + sum(fn45)) * 100.0)
-    print('IoU 05: ', sum(tp) / (sum(tp) + sum(fp)) * 100.0, sum(tp) / (sum(tp) + sum(fn)) * 100.0)
-    print('IoU 055: ', sum(tp55) / (sum(tp55) + sum(fp55)) * 100.0, sum(tp55) / (sum(tp55) + sum(fn55)) * 100.0)
-    print('IoU 06: ', sum(tp6) / (sum(tp6) + sum(fp6)) * 100.0, sum(tp6) / (sum(tp6) + sum(fn6)) * 100.0)
-    print('IoU 065: ', sum(tp65) / (sum(tp65) + sum(fp65)) * 100.0, sum(tp65) / (sum(tp65) + sum(fn65)) * 100.0)
-    print('IoU 07: ', sum(tp7) / (sum(tp7) + sum(fp7)) * 100.0, sum(tp7) / (sum(tp7) + sum(fn7)) * 100.0)
-    print('IoU 075: ', sum(tp75) / (sum(tp75) + sum(fp75)) * 100.0, sum(tp75) / (sum(tp75) + sum(fn75)) * 100.0)
-    print('IoU 08: ', sum(tp8) / (sum(tp8) + sum(fp8)) * 100.0, sum(tp8) / (sum(tp8) + sum(fn8)) * 100.0)
-    print('IoU 085: ', sum(tp85) / (sum(tp85) + sum(fp85)) * 100.0, sum(tp85) / (sum(tp85) + sum(fn85)) * 100.0)
-    print('IoU 09: ', sum(tp9) / (sum(tp9) + sum(fp9)) * 100.0, sum(tp9) / (sum(tp9) + sum(fn9)) * 100.0)
-    print('IoU 0975: ', sum(tp925) / (sum(tp925) + sum(fp925)) * 100.0, sum(tp925) / (sum(tp925) + sum(fn925)) * 100.0)
-    print('IoU 095: ', sum(tp95) / (sum(tp95) + sum(fp95)) * 100.0, sum(tp95) / (sum(tp95) + sum(fn95)) * 100.0)
-    print('IoU 0975: ', sum(tp975) / (sum(tp975) + sum(fp975)) * 100.0, sum(tp975) / (sum(tp975) + sum(fn975)) * 100.0)
+            true_cat = inv_cls + 1
+            # if true_cat > 5:
+            #    cls = true_cat + 2
+            # elif true_cat > 2:
+            #    cls = true_cat + 1
+            # else:
+            cls = true_cat
 
-    return dataset_recall, dataset_precision, less_55, less_vsd_t, less_repr_5, less_add_d, F1_add_all
+            cls_mask = scores[0, :, inv_cls]
+
+            cls_indices = np.where(cls_mask > threshold)
+            # print(' ')
+            # print('true cat: ', checkLab)
+            # print('query cat: ', true_cat)
+            # print(len(cls_indices[0]))
+            # print(cls_mask[cls_indices])
+            # print(len(cls_mask[cls_indices]))
+
+            if cls != (checkLab + 1):
+                # falsePoses[int(cls)] += 1
+                continue
+
+            if len(cls_indices[0]) < 10:
+                # print('not enough inlier')
+                continue
+
+            # obj_mask = mask[0, :, inv_cls]
+            # print(np.nanmax(obj_mask))
+            # cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
+            # cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            # cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            # cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            # cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            # cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
+
+            '''
+            # mask from anchors
+            pot_mask = scores[0, :, inv_cls]
+            pot_mask_P3 = pot_mask[:43200]
+            pot_mask_P4 = pot_mask[43200:54000]
+            pot_mask_P4 = pot_mask[54000:]
+            print(pot_mask.shape)
+
+            sidx = 0
+            eidx = 0
+            mask_P3 = np.zeros((4800), dtype=np.float32)
+            for idx in range(4800):
+                eidx = eidx + 9
+                mask_P3[idx] = np.sum(pot_mask_P3[sidx:eidx])
+                sidx = eidx
+
+            print(mask_P3.shape)
+            print(np.nanmax(mask_P3))
+            mask_P3 = np.where(mask_P3 > 0.5 * (np.nanmax(mask_P3)), 255, 0)
+            cls_img = mask_P3.reshape((60, 80)).astype(np.uint8)
+            cls_img = cv2.resize(cls_img, (640, 480), interpolation=cv2.INTER_NEAREST)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pot_mask.jpg', cls_img)
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            '''
+
+            anno_ind = np.argwhere(anno['labels'] == checkLab)
+            t_tra = anno['poses'][anno_ind[0][0]][:3]
+            t_rot = anno['poses'][anno_ind[0][0]][3:]
+            # print(t_rot)
+
+            BOP_obj_id = np.asarray([true_cat], dtype=np.uint32)
+
+            # print(cls)
+
+            if cls == 1:
+                model_vsd = mv1
+                model_vsd_mm = mv1_mm
+            elif cls == 2:
+                model_vsd = mv2
+                model_vsd_mm = mv2_mm
+            elif cls == 4:
+                model_vsd = mv4
+                model_vsd_mm = mv4_mm
+            elif cls == 5:
+                model_vsd = mv5
+                model_vsd_mm = mv5_mm
+            elif cls == 6:
+                model_vsd = mv6
+                model_vsd_mm = mv6_mm
+            elif cls == 8:
+                model_vsd = mv8
+                model_vsd_mm = mv8_mm
+            elif cls == 9:
+                model_vsd = mv9
+                model_vsd_mm = mv9_mm
+            elif cls == 10:
+                model_vsd = mv10
+                model_vsd_mm = mv10_mm
+            elif cls == 11:
+                model_vsd = mv11
+                model_vsd_mm = mv11_mm
+            elif cls == 12:
+                model_vsd = mv12
+                model_vsd_mm = mv12_mm
+            elif cls == 13:
+                model_vsd = mv13
+                model_vsd_mm = mv13_mm
+            elif cls == 14:
+                model_vsd = mv14
+                model_vsd_mm = mv14_mm
+            elif cls == 15:
+                model_vsd = mv15
+                model_vsd_mm = mv15_mm
+
+            k_hyp = len(cls_indices[0])
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+            ##############################
+            # pnp
+            pose_votes = boxes3D[0, cls_indices, :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                               imagePoints=est_points, cameraMatrix=K,
+                                                               distCoeffs=None, rvec=None, tvec=None,
+                                                               useExtrinsicGuess=False, iterationsCount=300,
+                                                               reprojectionError=5.0, confidence=0.99,
+                                                               flags=cv2.SOLVEPNP_ITERATIVE)
+            R_est, _ = cv2.Rodrigues(orvec)
+            t_est = otvec
+
+            ##############################
+            # pnp
+            # pose_votes = boxes3D[0, cls_indices, :]
+            # pose_weights = scores[0, cls_indices, :]
+            # print(pose_votes.shape)
+            # print(pose_weights.shape)
+            # print(ori_points.shape)
+
+            # Rt = uncertainty_pnp(pose_votes, pose_weights, ori_points, K)
+
+            # BOP_score = -1
+            # R_est = tf3d.quaternions.quat2mat(pose[3:])
+            # t_est = pose[:3]
+            # t_est[:2] = t_est[:2] * 0.5
+            # t_est[2] = (t_est[2] / 3 + 1.0)
+
+            BOP_R = R_est.flatten().tolist()
+            BOP_t = t_est.flatten().tolist()
+
+            # result = [int(BOP_scene_id), int(BOP_im_id), int(BOP_obj_id), float(BOP_score), BOP_R[0], BOP_R[1], BOP_R[2], BOP_R[3], BOP_R[4], BOP_R[5], BOP_R[6], BOP_R[7], BOP_R[8], BOP_t[0], BOP_t[1], BOP_t[2]]
+            # result = [int(BOP_scene_id), int(BOP_im_id), int(BOP_obj_id), float(BOP_score), BOP_R, BOP_t]
+            # results_image.append(result)
+
+            # t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
+            t_rot = tf3d.quaternions.quat2mat(t_rot)
+            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+            t_gt = np.array(t_tra, dtype=np.float32)
+
+            # print(t_est)
+            # print(t_gt)
+
+            t_gt = t_gt * 0.001
+            t_est = t_est.T  # * 0.001
+            # print('pose: ', pose)
+            # print(t_gt)
+            # print(t_est)
+
+            if cls == 10 or cls == 11:
+                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+            else:
+                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+            if err_add < model_dia[true_cat] * 0.1:
+                truePoses[int(true_cat)] += 1
+
+            print(' ')
+            print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+
+            '''
+            tDbox = R_gt.dot(ori_points.T).T
+            tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
+            box3D = toPix_array(tDbox)
+            tDbox = np.reshape(box3D, (16))
+            tDbox = tDbox.astype(np.uint16)
+
+            eDbox = R_est.dot(ori_points.T).T
+            eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+            #eDbox = eDbox + np.repeat(t_est, 8, axis=0)
+            est3D = toPix_array(eDbox)
+            eDbox = np.reshape(est3D, (16))
+            pose = eDbox.astype(np.uint16)
+
+            colGT = (0, 128, 0)
+            colEst = (255, 0, 0)
+
+            image = cv2.line(image, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 3)
+            image = cv2.line(image, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 3)
+            image = cv2.line(image, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
+                             colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
+                             colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
+                             colGT,
+                             3)
+            image = cv2.line(image, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
+                             colGT,
+                             3)
+
+            image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 5)
+            image = cv2.line(image, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                             5)
+            image = cv2.line(image, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                             5)
+            image = cv2.line(image, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                             5)
+            image = cv2.line(image, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+                             5)
+            '''
+            '''
+            idx = 0
+            for i in range(k_hyp):
+                image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
+                image = cv2.circle(image, (est_points[idx+1, 0, 0], est_points[idx+1, 0, 1]), 3, (251, 194, 213), -2)
+                image = cv2.circle(image, (est_points[idx+2, 0, 0], est_points[idx+2, 0, 1]), 3, (222, 243, 41), -2)
+                image = cv2.circle(image, (est_points[idx+3, 0, 0], est_points[idx+3, 0, 1]), 3, (209, 31, 201), -2)
+                image = cv2.circle(image, (est_points[idx+4, 0, 0], est_points[idx+4, 0, 1]), 3, (8, 62, 53), -2)
+                image = cv2.circle(image, (est_points[idx+5, 0, 0], est_points[idx+5, 0, 1]), 3, (13, 243, 207), -2)
+                image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
+                image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
+                idx = idx+8
+            '''
+
+            # name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+            # cv2.imwrite(name, image)
+            # print('break')
+
+    recall = np.zeros((16), dtype=np.float32)
+    precision = np.zeros((16), dtype=np.float32)
+    for i in range(1, (allPoses.shape[0])):
+        recall[i] = truePoses[i] / allPoses[i]
+        precision[i] = truePoses[i] / (truePoses[i] + falsePoses[i])
+
+        if np.isnan(recall[i]):
+            recall[i] = 0.0
+        if np.isnan(precision[i]):
+            precision[i] = 0.0
+
+        print('CLS: ', i)
+        print('recall: ', recall[i])
+        print('precision: ', precision[i])
+
+    recall_all = np.sum(recall[1:]) / 13.0
+    precision_all = np.sum(precision[1:]) / 13.0
+    print('ALL: ')
+    print('recall: ', recall_all)
+    print('precision: ', precision_all)
