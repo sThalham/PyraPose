@@ -1,14 +1,8 @@
 
 #from pycocotools.cocoeval import COCOeval
 
-import keras
 import numpy as np
-import json
-import pyquaternion
-import math
 import transforms3d as tf3d
-import geometry
-import os
 import copy
 import cv2
 import open3d
@@ -139,8 +133,9 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    #mesh_path = "/home/stefan/data/val_linemod_cc_rgb/models_ply/"
+    #mesh_path ="/RGBDPose/Meshes/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -231,8 +226,6 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         model_dia[int(key)] = value['diameter'] * fac
 
     pc1, mv1, mv1_mm = load_pcd('01')
-    pc2, mv2, mv2_mm = load_pcd('02')
-    pc4, mv4, mv4_mm = load_pcd('04')
     pc5, mv5, mv5_mm = load_pcd('05')
     pc6, mv6, mv6_mm = load_pcd('06')
     pc8, mv8, mv8_mm = load_pcd('08')
@@ -240,11 +233,10 @@ def evaluate_occlusion(generator, model, threshold=0.05):
     pc10, mv10, mv10_mm = load_pcd('10')
     pc11, mv11, mv11_mm = load_pcd('11')
     pc12, mv12, mv12_mm = load_pcd('12')
-    pc13, mv13, mv13_mm = load_pcd('13')
-    pc14, mv14, mv14_mm = load_pcd('14')
-    pc15, mv15, mv15_mm = load_pcd('15')
 
     allPoses = np.zeros((16), dtype=np.uint32)
+    trueDets = np.zeros((16), dtype=np.uint32)
+    falseDets = np.zeros((16), dtype=np.uint32)
     truePoses = np.zeros((16), dtype=np.uint32)
     falsePoses = np.zeros((16), dtype=np.uint32)
 
@@ -267,32 +259,9 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             continue
 
         checkLab = anno['labels']  # +1 to real_class
-        translations = []
-        rotations = []
         for idx, lab in enumerate(checkLab):
             allPoses[int(lab) + 1] += 1
-            t_tra = anno['poses'][idx][0][:3]
-            t_rot = anno['poses'][idx][0][3:]
-
-        # if len(anno['labels']) > 1:
-        #    t_cat = 2
-        #    obj_name = '02'
-        #    ent = np.where(anno['labels'] == 1.0)
-        #    t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[ent][0]
-        #    t_tra = anno['poses'][ent][0][:3]
-        #    t_rot = anno['poses'][ent][0][3:]
-
-        # else:
-        #    t_cat = int(anno['labels']) + 1
-        #    obj_name = str(t_cat)
-        #    if len(obj_name) < 2:
-        #        obj_name = '0' + obj_name
-        #    t_bbox = np.asarray(anno['bboxes'], dtype=np.float32)[0]
-        #    t_tra = anno['poses'][0][:3]
-        #    t_rot = anno['poses'][0][3:]
-
-        # if t_cat != 2:
-        #    continue
+            checkLab[idx] += 1
 
         # run network
         images = []
@@ -321,13 +290,14 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             # print(cls_mask[cls_indices])
             # print(len(cls_mask[cls_indices]))
 
-            if cls != (checkLab + 1):
+            if cls not in checkLab:
                 # falsePoses[int(cls)] += 1
                 continue
 
             if len(cls_indices[0]) < 10:
                 # print('not enough inlier')
                 continue
+            trueDets[int(cls)] += 1
 
             # obj_mask = mask[0, :, inv_cls]
             # print(np.nanmax(obj_mask))
@@ -365,7 +335,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
             '''
 
-            anno_ind = np.argwhere(anno['labels'] == checkLab)
+            anno_ind = np.argwhere(anno['labels'] == cls)
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
             # print(t_rot)
@@ -377,12 +347,6 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             if cls == 1:
                 model_vsd = mv1
                 model_vsd_mm = mv1_mm
-            elif cls == 2:
-                model_vsd = mv2
-                model_vsd_mm = mv2_mm
-            elif cls == 4:
-                model_vsd = mv4
-                model_vsd_mm = mv4_mm
             elif cls == 5:
                 model_vsd = mv5
                 model_vsd_mm = mv5_mm
@@ -404,15 +368,6 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             elif cls == 12:
                 model_vsd = mv12
                 model_vsd_mm = mv12_mm
-            elif cls == 13:
-                model_vsd = mv13
-                model_vsd_mm = mv13_mm
-            elif cls == 14:
-                model_vsd = mv14
-                model_vsd_mm = mv14_mm
-            elif cls == 15:
-                model_vsd = mv15
-                model_vsd_mm = mv15_mm
 
             k_hyp = len(cls_indices[0])
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -562,9 +517,11 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
+    detections = np.zeros((16), dtype=np.float32)
     for i in range(1, (allPoses.shape[0])):
         recall[i] = truePoses[i] / allPoses[i]
         precision[i] = truePoses[i] / (truePoses[i] + falsePoses[i])
+        detections[i] = trueDets[i] / allPoses[i]
 
         if np.isnan(recall[i]):
             recall[i] = 0.0
@@ -572,11 +529,14 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             precision[i] = 0.0
 
         print('CLS: ', i)
+        print('true detections: ', detections[i])
         print('recall: ', recall[i])
         print('precision: ', precision[i])
 
-    recall_all = np.sum(recall[1:]) / 13.0
-    precision_all = np.sum(precision[1:]) / 13.0
+    recall_all = np.sum(recall[1:]) / 8.0
+    precision_all = np.sum(precision[1:]) / 8.0
+    detections_all = np.sum(detections[1:]) / 8.0
     print('ALL: ')
+    print('true detections: ', detections_all)
     print('recall: ', recall_all)
     print('precision: ', precision_all)
