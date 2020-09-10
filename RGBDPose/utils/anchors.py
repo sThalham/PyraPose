@@ -107,11 +107,11 @@ def anchor_targets_bbox(
         image_shapes = guess_shapes(image[0].shape[:2], pyramid_levels)
         #mask_viz = cv2.resize(image[0], (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
 
-        #image_raw = image[0]
-        #sca = 256.0 / (np.nanmax(image_raw) - np.nanmin(image_raw))
-        #image_raw -= np.nanmin(image_raw)
-        #image_raw = (image_raw * sca).astype(np.uint8)
-        #rind = np.random.randint(0, 1000)
+        image_raw = image[0]
+        sca = 256.0 / (np.nanmax(image_raw) - np.nanmin(image_raw))
+        image_raw -= np.nanmin(image_raw)
+        image_raw = (image_raw * sca).astype(np.uint8)
+        rind = np.random.randint(0, 1000)
 
         if annotations['bboxes'].shape[0]:
             # obtain indices of gt annotations with the greatest overlap
@@ -211,34 +211,48 @@ def anchor_targets_bbox(
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
 
                                      5)
+                '''
                 
-                cls_ind = np.argwhere(annotations['labels']==1)
-                print(annotations['labels'])
-                print(cls_ind)
-                if cls_ind.shape[0] > 0:
-                    ov_laps = argmax_overlaps_inds[:43200]
-                    cls_ancs = annotations['labels'][ov_laps[positive_indices[43200]]].astype(int)
-                    print(cls_ancs)
-                    cls_true = np.argwhere(cls_ancs == cls_ind)[0]
+            cls_ind = np.where(annotations['labels']==1) # index of cls
+            #print(annotations['labels'])
+            #print(cls_ind[0])
+            if len(cls_ind) > 0:
+                ov_laps = argmax_overlaps_inds[:43200] #cls index overlap per anchor location?
+                am_laps = positive_indices[:43200]
+                ov_true = np.argwhere(ov_laps==cls_ind)[:, 1]
+                print(ov_true.shape)
+                #print(ov_true)
 
-                    joint = anchors[:43200, :][positive_indices[:43200]]
-                    joint = joint[cls_true]
-                    print(joint.shape)
+                joint = anchors[:43200, :][ov_true]
+                argmax_cls = am_laps[ov_true]
+                print(argmax_cls)
+                print(np.sum(argmax_cls))
+                    #print(np.argwhere(positive_indices[:43200]==True), np.argwhere(positive_indices[:43200]==True).shape)
+                #cls_ancs = ov_laps[positive_indices[:43200]]
+                    #for i in cls_ancs:
+                    #    print(ov_laps[i])
+                    #cls_true = np.argwhere(cls_ancs == cls_ind)
+                    #print(cls_true)
 
-                    for jdx in range(joint.shape[0]):
-                        bb = joint[jdx, :]
-                        print(bb)
-                        cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                joint = anchors[:43200, :][ov_true]
+                #print(joint.shape)
+                    #joint = joint[cls_true]
+                    #print(joint.shape)
+
+                for jdx in range(joint.shape[0]):
+                    bb = joint[jdx, :]
+                        #print(bb)
+                    cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
                                    (255, 255, 255), 2)
-                        cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                    cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
                                   (0, 0, 0), 1)
                     #image_crop = image_raw[int(bb[1]):int(bb[3]), int(bb[0]):int(bb[2]), :]
-                    #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(jdk) + '_crop.jpg'
+                    #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(jdx) + '_crop.jpg'
                     #cv2.imwrite(name, image_crop)
-                '''
 
-            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image_raw)
+
+            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            cv2.imwrite(name, image_raw)
 
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1

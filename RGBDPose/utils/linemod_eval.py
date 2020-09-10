@@ -24,10 +24,10 @@ import open3d
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
+import sys
 
-from PIL import Image
+from ..uncertainty_pnp import un_pnp_utils
 
-from matplotlib import pyplot
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."

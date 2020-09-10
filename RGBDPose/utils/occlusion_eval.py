@@ -10,6 +10,8 @@ from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 
+from PIL import Image
+
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
 
@@ -271,6 +273,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             [np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
 
         image = image_raw
+        image_mask = copy.deepcopy(image_raw)
 
         for idx, lab in enumerate(checkLab):
             t_tra = anno['poses'][idx][:3]
@@ -340,14 +343,29 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                 continue
             trueDets[int(cls)] += 1
 
-            # obj_mask = mask[0, :, inv_cls]
-            # print(np.nanmax(obj_mask))
-            # cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
-            # cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            # cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
-            # cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            # cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            # cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
+            obj_mask = mask[0, :, inv_cls]
+            #print(np.nanmax(obj_mask))
+            if inv_cls == 0:
+                obj_col = 150
+            elif inv_cls == 4:
+                obj_col = 165
+            elif inv_cls == 5:
+                obj_col = 180
+            elif inv_cls == 7:
+                obj_col = 195
+            elif inv_cls == 8:
+                obj_col = 210
+            elif inv_cls == 9:
+                obj_col = 225
+            elif inv_cls == 10:
+                obj_col = 240
+            elif inv_cls == 11:
+                obj_col = 255
+            cls_img = np.where(obj_mask > 0.5, obj_col, 00.0)
+            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            image_mask = np.where(cls_img > 1, cls_img, image_mask)
 
             '''
             # mask from anchors
@@ -521,6 +539,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
         name = '/home/stefan/occ_viz/img_' + str(index) + '.jpg'
         cv2.imwrite(name, image)
+        cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
         #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
