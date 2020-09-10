@@ -224,8 +224,8 @@ class OcclusionGenerator(Generator):
         annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
         for idx, a in enumerate(anns):
-            if a['feature_visibility'] < 0.5:
-                continue
+            #if a['feature_visibility'] < 0.5:
+            #    continue
 
             annotations['labels'] = np.concatenate([annotations['labels'], [self.inv_label_to_label(a['category_id'])]], axis=0)
             annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[
