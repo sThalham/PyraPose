@@ -189,15 +189,15 @@ def create_BB(rgb):
 if __name__ == "__main__":
 
     dataset = 'linemod'
-    root = "/home/stefan/data/datasets/LMO_BOP_test/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/occlusion_RGBD_test/'
-    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    root = "/home/stefan/data/datasets/YCBV_BOP_train/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/ycbv_PBR_BOP/'
+    mesh_info = '/home/stefan/data/Meshes/ycb_video/models/models_info.json'
     # print(root)
     visu = False
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
 
-    for key, value in yaml.load(open(mesh_info)).items():
+    for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
         x_minus = value['min_x']
         y_minus = value['min_y']
@@ -265,7 +265,6 @@ if __name__ == "__main__":
             rgbImgPath = rgbPath + samp
             depImgPath = depPath + samp[:-4] + '.png'
             visImgPath = visPath + samp[:-4] + '.png'
-            print(rgbImgPath)
 
             if samp.startswith('00000'):
                 samp = samp[5:]
@@ -313,7 +312,7 @@ if __name__ == "__main__":
             camT_vis = []
             # if rnd == 1:
 
-            fileName = target + 'images/val/' + imgNam[:-4] + '_dep.png'
+            fileName = target + 'images/train/' + imgNam[:-4] + '_dep.png'
             myFile = Path(fileName)
             if myFile.exists():
                 print('File exists, skip encoding, ', fileName)
@@ -474,7 +473,7 @@ if __name__ == "__main__":
 
                 print('STOP')
 
-    catsInt = range(1, 16)
+    catsInt = range(1, 22)
 
     for s in catsInt:
         objName = str(s)
@@ -485,7 +484,7 @@ if __name__ == "__main__":
         }
         dict["categories"].append(tempC)
 
-    valAnno = target + 'annotations/instances_val.json'
+    valAnno = target + 'annotations/instances_train.json'
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)
