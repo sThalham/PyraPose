@@ -429,10 +429,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             ##############################
             # pnp
-            #pose_votes = boxes3D[0, cls_indices, :]
-            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            pose_votes = boxes3D[0, cls_indices, :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
 
             ###############################
             # weighted mean
@@ -474,12 +474,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             ############################
             # top n hypotheses
-            top_n = 10
-            vote_scores = np.argsort(cls_mask[cls_indices])[-top_n:]
-            pose_votes = boxes3D[0, cls_indices, :][0, vote_scores, :]
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(top_n * 8), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], top_n, axis=0)
-            obj_points = obj_points.reshape((int(top_n * 8), 1, 3))
+            #top_n = 10
+            #vote_scores = np.argsort(cls_mask[cls_indices])[-top_n:]
+            #pose_votes = boxes3D[0, cls_indices, :][0, vote_scores, :]
+            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(top_n * 8), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], top_n, axis=0)
+            #obj_points = obj_points.reshape((int(top_n * 8), 1, 3))
 
             retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
                                                                imagePoints=est_points, cameraMatrix=K,

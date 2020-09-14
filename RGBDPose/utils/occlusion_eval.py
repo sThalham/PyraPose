@@ -346,26 +346,31 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             obj_mask = mask[0, :, inv_cls]
             #print(np.nanmax(obj_mask))
             if inv_cls == 0:
-                obj_col = 150
+                obj_col = [1, 255, 255]
             elif inv_cls == 4:
-                obj_col = 165
+                obj_col = [1, 1, 128]
             elif inv_cls == 5:
-                obj_col = 180
+                obj_col = [255, 255, 1]
             elif inv_cls == 7:
-                obj_col = 195
+                obj_col = [220, 245, 245]
             elif inv_cls == 8:
-                obj_col = 210
+                obj_col = [128, 1, 1]
             elif inv_cls == 9:
-                obj_col = 225
+                obj_col = [30, 105, 210]
             elif inv_cls == 10:
-                obj_col = 240
+                obj_col = [107, 142, 35]
             elif inv_cls == 11:
-                obj_col = 255
-            cls_img = np.where(obj_mask > 0.5, obj_col, 00.0)
+                obj_col = [1, 255, 1]
+            cls_img = np.where(obj_mask > 0.5, 1, 0)
             cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
             cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
             cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            image_mask = np.where(cls_img > 1, cls_img, image_mask)
+            cls_img = cls_img.astype(np.uint8)
+            cls_img[:, :, 0] *= obj_col[0]
+            cls_img[:, :, 1] *= obj_col[1]
+            cls_img[:, :, 2] *= obj_col[2]
+            image_mask = np.where(cls_img > 0
+                                  , cls_img, image_mask)
 
             '''
             # mask from anchors
@@ -537,8 +542,8 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                 idx = idx+8
             '''
 
-        name = '/home/stefan/occ_viz/img_' + str(index) + '.jpg'
-        cv2.imwrite(name, image)
+        #name = '/home/stefan/occ_viz/img_' + str(index) + '.jpg'
+        #cv2.imwrite(name, image)
         cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
         #print('break')
 
