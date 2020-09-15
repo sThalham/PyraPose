@@ -259,6 +259,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
     allPoses = np.zeros((16), dtype=np.uint32)
     truePoses = np.zeros((16), dtype=np.uint32)
     falsePoses = np.zeros((16), dtype=np.uint32)
+    trueDets = np.zeros((16), dtype=np.uint32)
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
@@ -337,6 +338,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             if len(cls_indices[0]) < 10:
                 # print('not enough inlier')
                 continue
+            trueDets[int(cls)] += 1
 
             #obj_mask = mask[0, :, inv_cls]
             #print(np.nanmax(obj_mask))
@@ -643,9 +645,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
+    detections = np.zeros((16), dtype=np.float32)
     for i in range(1, (allPoses.shape[0])):
         recall[i] = truePoses[i] / allPoses[i]
         precision[i] = truePoses[i] / (truePoses[i] + falsePoses[i])
+        detections[i] = trueDets[i] / allPoses[i]
 
         if np.isnan(recall[i]):
             recall[i] = 0.0
@@ -653,11 +657,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
             precision[i] = 0.0
 
         print('CLS: ', i)
+        print('true detections: ', detections[i])
         print('recall: ', recall[i])
         print('precision: ', precision[i])
 
     recall_all = np.sum(recall[1:]) / 13.0
     precision_all = np.sum(precision[1:]) / 13.0
+    detections_all = np.sum(detections[1:]) / 13.0
     print('ALL: ')
+    print('true detections: ', detections_all)
     print('recall: ', recall_all)
     print('precision: ', precision_all)

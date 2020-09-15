@@ -178,20 +178,20 @@ def create_generators(args, preprocess_image):
             max_scaling=(1.2, 1.2),
         )
 
-    if args.dataset_type == 'coco':
+    if args.dataset_type == 'ycbv':
         # import here to prevent unnecessary dependency on cocoapi
-        from ..preprocessing.coco import CocoGenerator
+        from ..preprocessing.ycbv import YCBvGenerator
 
-        train_generator = CocoGenerator(
-            args.coco_path,
-            'train2017',
+        train_generator = YCBvGenerator(
+            args.ycbv_path,
+            'train',
             transform_generator=transform_generator,
             **common_args
         )
 
-        validation_generator = CocoGenerator(
-            args.coco_path,
-            'val2017',
+        validation_generator = YCBvGenerator(
+            args.ycbv_path,
+            'val',
             **common_args
         )
     elif args.dataset_type == 'linemod':
@@ -257,6 +257,9 @@ def parse_args(args):
     parser     = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network with object pose estimation.')
     subparsers = parser.add_subparsers(help='Arguments for specific dataset types.', dest='dataset_type')
     subparsers.required = True
+
+    ycbv_parser = subparsers.add_parser('ycbv')
+    ycbv_parser.add_argument('ycbv_path', help='Path to dataset directory (ie. /tmp/ycbv).')
 
     linemod_parser = subparsers.add_parser('linemod')
     linemod_parser.add_argument('linemod_path', help='Path to dataset directory (ie. /tmp/linemod).')

@@ -201,18 +201,6 @@ def apply_transform(matrix, image, params, cpara):
             iaa.LogContrast(gain=(0.75, 1), per_channel=0.5),
             iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
         ]),
-        # arithmetic
-        #iaa.SomeOf((0, 3), [
-        #    iaa.AdditiveGaussianNoise(scale=(0, 0.05), per_channel=0.5),
-        #    iaa.AdditiveLaplaceNoise(scale=(0, 0.05), per_channel=0.5),
-        #    iaa.AdditivePoissonNoise(lam=(0, 8), per_channel=0.5),
-        #    iaa.Dropout(p=(0, 0.05), per_channel=0.5),
-        #    iaa.ImpulseNoise(p=(0, 0.05)),
-        #    iaa.SaltAndPepper(p=(0, 0.05)),
-        #    iaa.Salt(p=(0, 0.05)),
-        #    iaa.Pepper(p=(0, 0.05))
-        #]),
-        # iaa.Sometimes(p=0.5, iaa.JpegCompression((0, 30)), None),
     ], random_order=True)
     image0 = seq.augment_image(image[0])
     #image0 = image[0]
