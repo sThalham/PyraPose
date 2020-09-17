@@ -343,8 +343,8 @@ if __name__ == "__main__":
 
                 gtPose = scenejson.get(str(samp))
                 obj_id = gtPose[i]['obj_id']
-                if obj_id == 7 or obj_id == 3:
-                    continue
+                #if obj_id == 7 or obj_id == 3:
+                #    continue
 
                 R = gtPose[i]["cam_R_m2c"]
                 T = gtPose[i]["cam_t_m2c"]

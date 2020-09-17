@@ -83,9 +83,9 @@ def create_generator(args):
         )
     elif args.dataset_type == 'ycbv':
         # import here to prevent unnecessary dependency on cocoapi
-        from ..preprocessing.occlusion import OcclusionGenerator
+        from ..preprocessing.ycbv import YCBvGenerator
 
-        validation_generator = OcclusionGenerator(
+        validation_generator = YCBvGenerator(
             args.ycbv_path,
             'val',
             image_min_side=args.image_min_side,
