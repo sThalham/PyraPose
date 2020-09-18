@@ -103,6 +103,17 @@ def create_generator(args):
             image_max_side=args.image_max_side,
             config=args.config
         )
+    elif args.dataset_type == 'homebrewed':
+        # import here to prevent unnecessary dependency on cocoapi
+        from ..preprocessing.homebrewed import HomebrewedGenerator
+
+        validation_generator = HomebrewedGenerator(
+            args.homebrewed_path,
+            'val',
+            image_min_side=args.image_min_side,
+            image_max_side=args.image_max_side,
+            config=args.config
+        )
 
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
@@ -117,9 +128,6 @@ def parse_args(args):
     subparsers = parser.add_subparsers(help='Arguments for specific dataset types.', dest='dataset_type')
     subparsers.required = True
 
-    coco_parser = subparsers.add_parser('coco')
-    coco_parser.add_argument('coco_path', help='Path to dataset directory (ie. /tmp/COCO).')
-
     linemod_parser = subparsers.add_parser('linemod')
     linemod_parser.add_argument('linemod_path', help='Path to dataset directory (ie. /tmp/LineMOD).')
 
@@ -131,6 +139,9 @@ def parse_args(args):
 
     tless_parser = subparsers.add_parser('tless')
     tless_parser.add_argument('tless_path', help='Path to dataset directory (ie. /tmp/Tless).')
+
+    tless_parser = subparsers.add_parser('homebrewed')
+    tless_parser.add_argument('homebrewed_path', help='Path to dataset directory (ie. /tmp/Homebrewed).')
 
     parser.add_argument('model',              help='Path to RetinaNet model.')
     parser.add_argument('--convert-model',    help='Convert the model to an inference model (ie. the input is a training model).', action='store_true')
@@ -209,82 +220,29 @@ def main(args=None):
     print(model.summary())
 
     # start evaluation
-    if args.dataset_type == 'coco':
-        from ..utils.coco_eval import evaluate_coco
-        evaluate_coco(generator, model, args.score_threshold)
-    elif args.dataset_type == 'linemod':
+
+    if args.dataset_type == 'linemod':
         from ..utils.linemod_eval import evaluate_linemod
-        dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_linemod(generator, model, args.score_threshold)
-        print('RESULTS LINEMOD')
-        print('dataset recall:              ', dataset_recall, '%')
-        print('dataset precision:           ', dataset_precision, '%')
-        print('poses below 5cm and 5°:      ', less55, '%')
-        print('VSD below tau 0.02m:         ', less_vsd_t, '%')
-        print('reprojection below 5 pixel:  ', less_repr_5, '%')
-        print('ADD below model diameter:    ', less_add_d, '%')
-        print('F1 ADD < 0.15d:              ', F1_add_015, '%')
+        evaluate_linemod(generator, model, args.score_threshold)
 
     elif args.dataset_type == 'occlusion':
         from ..utils.occlusion_eval import evaluate_occlusion
-        dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_occlusion(generator, model, args.score_threshold)
-        print('RESULTS LINEMOD')
-        print('dataset recall:              ', dataset_recall, '%')
-        print('dataset precision:           ', dataset_precision, '%')
-        print('poses below 5cm and 5°:      ', less55, '%')
-        print('VSD below tau 0.02m:         ', less_vsd_t, '%')
-        print('reprojection below 5 pixel:  ', less_repr_5, '%')
-        print('ADD below model diameter:    ', less_add_d, '%')
-        print('F1 ADD < 0.15d:              ', F1_add_015, '%')
+        evaluate_occlusion(generator, model, args.score_threshold)
 
     elif args.dataset_type == 'ycbv':
         from ..utils.ycbv_eval import evaluate_ycbv
-        dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_ycbv(generator, model, args.score_threshold)
-        print('RESULTS YCB_video')
-        print('dataset recall:              ', dataset_recall, '%')
-        print('dataset precision:           ', dataset_precision, '%')
-        print('poses below 5cm and 5°:      ', less55, '%')
-        print('VSD below tau 0.02m:         ', less_vsd_t, '%')
-        print('reprojection below 5 pixel:  ', less_repr_5, '%')
-        print('ADD below model diameter:    ', less_add_d, '%')
-        print('F1 ADD < 0.15d:              ', F1_add_015, '%')
+        evaluate_ycbv(generator, model, args.score_threshold)
 
     elif args.dataset_type == 'tless':
         from ..utils.tless_eval import evaluate_tless
-        dataset_recall, dataset_precision, less55, less_vsd_t, less_repr_5, less_add_d, F1_add_015 = evaluate_tless(generator, model, args.score_threshold)
-        print('RESULTS LINEMOD')
-        print('dataset recall:              ', dataset_recall, '%')
-        print('dataset precision:           ', dataset_precision, '%')
-        print('poses below 5cm and 5°:      ', less55, '%')
-        print('VSD below tau 0.02m:         ', less_vsd_t, '%')
-        print('reprojection below 5 pixel:  ', less_repr_5, '%')
-        print('ADD below model diameter:    ', less_add_d, '%')
-        print('F1 ADD < 0.15d:              ', F1_add_015, '%')
+        evaluate_tless(generator, model, args.score_threshold)
+
+    elif args.dataset_type == 'homebrewed':
+        from ..utils.homebrewed_eval import evaluate_homebrewed
+        evaluate_homebrewed(generator, model, args.score_threshold)
 
     else:
-         average_precisions = evaluate(
-            generator,
-            model,
-            iou_threshold=args.iou_threshold,
-            score_threshold=args.score_threshold,
-            max_detections=args.max_detections,
-            save_path=args.save_path
-        )
-
-        # print evaluation
-        #total_instances = []
-        #precisions = []
-        #for label, (average_precision, num_annotations) in average_precisions.items():
-        #    print('{:.0f} instances of class'.format(num_annotations),
-        #          generator.label_to_name(label), 'with average precision: {:.4f}'.format(average_precision))
-        #    total_instances.append(num_annotations)
-        #    precisions.append(average_precision)
-
-        #if sum(total_instances) == 0:
-        #    print('No test instances found.')
-        #    return
-
-        #print('mAP using the weighted average of precisions among classes: {:.4f}'.format(sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)))
-        #print('mAP: {:.4f}'.format(sum(precisions) / sum(x > 0 for x in total_instances)))
+         print('unknown dataset: ', args.dataset_type)
 
 
 if __name__ == '__main__':

@@ -189,13 +189,13 @@ def create_BB(rgb):
 if __name__ == "__main__":
 
     dataset = 'linemod'
-    root = "/home/stefan/data/datasets/YCBV_BOP_train/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/ycbv_PBR_BOP/'
-    mesh_info = '/home/stefan/data/Meshes/ycb_video/models/models_info.json'
+    root = "/home/stefan/data/datasets/HB_BOP_val_seq2/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/hb_RGBD_test_2/'
+    mesh_info = '/home/stefan/data/Meshes/homebrewedDB/models_eval/models_info.json'
     # print(root)
     visu = False
 
-    threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
+    threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
 
     for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
@@ -312,7 +312,7 @@ if __name__ == "__main__":
             camT_vis = []
             # if rnd == 1:
 
-            fileName = target + 'images/train/' + imgNam[:-4] + '_dep.png'
+            fileName = target + 'images/val/' + imgNam[:-4] + '_dep.png'
             myFile = Path(fileName)
             if myFile.exists():
                 print('File exists, skip encoding, ', fileName)
@@ -473,7 +473,7 @@ if __name__ == "__main__":
 
                 print('STOP')
 
-    catsInt = range(1, 22)
+    catsInt = range(1, 34)
 
     for s in catsInt:
         objName = str(s)
@@ -484,7 +484,7 @@ if __name__ == "__main__":
         }
         dict["categories"].append(tempC)
 
-    valAnno = target + 'annotations/instances_train.json'
+    valAnno = target + 'annotations/instances_val.json'
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)

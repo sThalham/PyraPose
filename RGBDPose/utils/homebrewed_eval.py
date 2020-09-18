@@ -17,10 +17,10 @@ assert(callable(progressbar.progressbar)), "Using wrong progressbar module, inst
 
 
 # LineMOD
-fxkin = 572.41140
-fykin = 573.57043
-cxkin = 325.26110
-cykin = 242.04899
+fxkin = 537.4799
+fykin = 536.1447
+cxkin = 318.8965
+cykin = 238.3781
 
 
 def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
@@ -136,7 +136,7 @@ def toPix_array(translation):
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
-    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/homebrewed_hacked/"
     #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
@@ -198,15 +198,15 @@ def boxoverlap(a, b):
     return ovlap
 
 
-def evaluate_occlusion(generator, model, threshold=0.05):
+def evaluate_homebrewed(generator, model, threshold=0.05):
     threshold = 0.5
 
     # mesh_info = '/RGBDPose/Meshes/linemod_13/models_info.yml'
-    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    mesh_info = '/home/stefan/data/Meshes/homebrewed_hacked/models_info.yml'
     # mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
 
-    threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
-    model_dia = np.zeros((31), dtype=np.float32)
+    threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
+    model_dia = np.zeros((34), dtype=np.float32)
 
     for key, value in yaml.load(open(mesh_info)).items():
         fac = 0.001
@@ -227,14 +227,9 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
 
-    pc1, mv1, mv1_mm = load_pcd('01')
-    pc5, mv5, mv5_mm = load_pcd('05')
-    pc6, mv6, mv6_mm = load_pcd('06')
+    pc2, mv2, mv2_mm = load_pcd('02')
     pc8, mv8, mv8_mm = load_pcd('08')
-    pc9, mv9, mv9_mm = load_pcd('09')
-    pc10, mv10, mv10_mm = load_pcd('10')
-    pc11, mv11, mv11_mm = load_pcd('11')
-    pc12, mv12, mv12_mm = load_pcd('12')
+    pc15, mv15, mv15_mm = load_pcd('15')
 
     allPoses = np.zeros((16), dtype=np.uint32)
     trueDets = np.zeros((16), dtype=np.uint32)
@@ -261,16 +256,24 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             continue
 
         checkLab = anno['labels']  # +1 to real_class
+        new_Lab = []
         for idx, lab in enumerate(checkLab):
-            allPoses[int(lab) + 1] += 1
-            checkLab[idx] += 1
+            if int(lab) == 1:
+                lm_cat = 2
+            elif int(lab) == 6:
+                lm_cat = 8
+            elif int(lab) == 20:
+                lm_cat = 15
+            allPoses[lm_cat] += 1
+            new_Lab.append(lm_cat)
+            #checkLab[idx] += 1
+        checkLab = new_Lab
 
         # run network
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask = model.predict_on_batch(
-            [np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
         image = image_raw
         image_mask = copy.deepcopy(image_raw)
@@ -282,6 +285,22 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
             t_gt = np.array(t_tra, dtype=np.float32)
             t_gt = t_gt * 0.001
+
+            torad = 0.0174533
+            if lab == 2:
+                R_rel = tf3d.euler.euler2mat(0.0, -16.0 * torad, 87.0 * torad, 'sxyz')
+                t_rel = [0.013, -0.016, 0.0]
+            elif lab == 8:
+                R_rel = tf3d.euler.euler2mat(-6.0*torad, 2.0*torad, 91.0*torad, 'sxyz')
+                t_rel = [-0.005, -0.005, 0.0]
+            elif lab == 15:
+                R_rel = tf3d.euler.euler2mat(0.0, 5.0*torad, 0.0, 'sxyz')
+                t_rel = [0.01, 0.0, 0.0]
+
+            R_rel = np.array(R_rel, dtype=np.float32).reshape(3, 3)
+            #R_rel = np.linalg.inv(R_rel)
+            R_gt = np.matmul(R_gt, R_rel)
+            t_gt = t_gt + t_rel
 
             ori_points = np.ascontiguousarray(threeD_boxes[int(lab), :, :], dtype=np.float32)
             colGT = (255, 0, 0)
@@ -343,6 +362,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                 continue
             trueDets[int(cls)] += 1
 
+            '''
             obj_mask = mask[0, :, inv_cls]
             #print(np.nanmax(obj_mask))
             if inv_cls == 0:
@@ -373,6 +393,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                                   , cls_img, image_mask)
 
             '''
+            '''
             # mask from anchors
             pot_mask = scores[0, :, inv_cls]
             pot_mask_P3 = pot_mask[:43200]
@@ -399,39 +420,49 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
             '''
 
-            anno_ind = np.argwhere(anno['labels'] == cls)
+            #map to homebreweddb
+            torad = 0.0174533
+            if cls == 2:
+                clsHB = 1
+                R_rel = tf3d.euler.euler2mat(0.0, -16.0 * torad, 87.0 * torad, 'sxyz')
+                t_rel = [0.013, -0.016, 0.0]
+            elif cls == 8:
+                clsHB = 6
+                R_rel = tf3d.euler.euler2mat(-6.0 * torad, 2.0 * torad, 91.0 * torad, 'sxyz')
+                t_rel = [-0.005, -0.005, 0.0]
+            elif cls == 15:
+                clsHB = 20
+                R_rel = tf3d.euler.euler2mat(0.0, 5.0 * torad, 0.0, 'sxyz')
+                t_rel = [0.01, 0.0, 0.0]
+
+            anno_ind = np.argwhere(anno['labels'] == clsHB)
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
-            # print(t_rot)
+
+            t_rot = tf3d.quaternions.quat2mat(t_rot)
+            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+            t_gt = np.array(t_tra, dtype=np.float32)
+            t_gt = t_gt * 0.001
+
+            R_rel = np.array(R_rel, dtype=np.float32).reshape(3, 3)
+            #R_rel = np.linalg.inv(R_rel)
+            R_gt = np.matmul(R_gt, R_rel)
+
+            t_gt = t_gt + t_rel
 
             BOP_obj_id = np.asarray([true_cat], dtype=np.uint32)
 
             # print(cls)
 
-            if cls == 1:
-                model_vsd = mv1
-                model_vsd_mm = mv1_mm
-            elif cls == 5:
-                model_vsd = mv5
-                model_vsd_mm = mv5_mm
-            elif cls == 6:
-                model_vsd = mv6
-                model_vsd_mm = mv6_mm
+            if cls == 2:
+                model_vsd = mv2
+                model_vsd_mm = mv2_mm
             elif cls == 8:
                 model_vsd = mv8
                 model_vsd_mm = mv8_mm
-            elif cls == 9:
-                model_vsd = mv9
-                model_vsd_mm = mv9_mm
-            elif cls == 10:
-                model_vsd = mv10
-                model_vsd_mm = mv10_mm
-            elif cls == 11:
-                model_vsd = mv11
-                model_vsd_mm = mv11_mm
-            elif cls == 12:
-                model_vsd = mv12
-                model_vsd_mm = mv12_mm
+            elif cls == 15:
+                model_vsd = mv15
+                model_vsd_mm = mv15_mm
 
             k_hyp = len(cls_indices[0])
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -452,22 +483,6 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             R_est, _ = cv2.Rodrigues(orvec)
             t_est = otvec
 
-            ##############################
-            # pnp
-            # pose_votes = boxes3D[0, cls_indices, :]
-            # pose_weights = scores[0, cls_indices, :]
-            # print(pose_votes.shape)
-            # print(pose_weights.shape)
-            # print(ori_points.shape)
-
-            # Rt = uncertainty_pnp(pose_votes, pose_weights, ori_points, K)
-
-            # BOP_score = -1
-            # R_est = tf3d.quaternions.quat2mat(pose[3:])
-            # t_est = pose[:3]
-            # t_est[:2] = t_est[:2] * 0.5
-            # t_est[2] = (t_est[2] / 3 + 1.0)
-
             BOP_R = R_est.flatten().tolist()
             BOP_t = t_est.flatten().tolist()
 
@@ -476,23 +491,11 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             # results_image.append(result)
 
             # t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
-            t_rot = tf3d.quaternions.quat2mat(t_rot)
-            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
-            t_gt = np.array(t_tra, dtype=np.float32)
 
-            # print(t_est)
-            # print(t_gt)
-
-            t_gt = t_gt * 0.001
+            t_gt = t_gt
             t_est = t_est.T  # * 0.001
-            # print('pose: ', pose)
-            # print(t_gt)
-            # print(t_est)
 
-            if cls == 10 or cls == 11:
-                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-            else:
-                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+            err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
@@ -511,7 +514,6 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                 colEst = (0, 204, 0)
             else:
                 colEst = (0, 0, 255)
-
 
             image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
             image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
@@ -546,9 +548,9 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                 idx = idx+8
             '''
 
-        #name = '/home/stefan/occ_viz/img_' + str(index) + '.jpg'
-        #cv2.imwrite(name, image)
-        cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
+        name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
+        cv2.imwrite(name, image)
+        #cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
         #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
