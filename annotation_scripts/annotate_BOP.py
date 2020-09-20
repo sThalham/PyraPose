@@ -14,8 +14,6 @@ import copy
 import transforms3d as tf3d
 import time
 from pathlib import Path
-import geometry
-from shutil import copyfile
 
 depSca = 1.0
 resX = 640
@@ -27,7 +25,69 @@ cykin = 242.04899
 depthCut = 2000.0
 
 
-def draw_axis(img, cam_R, cam_T):
+def matang(A, B):
+
+    r_oa_t = np.transpose(A)
+    r_ab = np.multiply(r_oa_t, B)
+
+    thetrace = (np.trace(r_ab) -1) / 2
+    #if thetrace < 0.0:
+    #    thetrace *= -1
+    if thetrace < 0.0:
+        while thetrace < 1:
+            thetrace += 1
+    if thetrace > 0.0:
+        while thetrace > 1:
+            thetrace -= 1
+    return np.rad2deg(np.arccos(thetrace))
+
+
+def get_cont_sympose(rota, sym):
+
+    rot_pose = np.eye((4), dtype=np.float32)
+    rot_pose[:3, :3] = tf3d.quaternions.quat2mat(rota[3:])
+    rot_pose[:3, 3] = rota[:3]
+
+    cam_in_obj = np.dot(np.linalg.inv(rot_pose), (0, 0, 0, 1))
+    if sym[0] == 1:
+        alpha = math.atan2(cam_in_obj[2], cam_in_obj[1])
+        rot_pose[:3, :3] = np.dot(rot_pose[:3, :3], tf3d.euler.euler2mat(alpha, 0.0, 0.0, 'sxyz'))
+    elif sym[1] == 1:
+        alpha = math.atan2(cam_in_obj[0], cam_in_obj[2])
+        rot_pose[:3, :3] = np.dot(rot_pose[:3, :3], tf3d.euler.euler2mat(0.0, alpha, 0.0, 'sxyz'))
+    elif sym[2] == 1:
+        alpha = math.atan2(cam_in_obj[1], cam_in_obj[0])
+        rot_pose[:3, :3] = np.dot(rot_pose[:3, :3], tf3d.euler.euler2mat(0.0, 0.0, alpha, 'sxyz'))
+
+    rota[3:] = tf3d.quaternions.mat2quat(rot_pose[:3, :3])
+    rota[:3] = rot_pose[:3, 3]
+
+    return rota
+
+
+def get_disc_sympose(rota, sym):
+
+    rot_pose = np.eye((4), dtype=np.float32)
+    rot_pose[:3, :3] = tf3d.quaternions.quat2mat(rota[3:])
+    rot_pose[:3, 3] = rota[:3]
+    #print('rot_pose: ', rot_pose)
+
+    rot_sym = np.dot(rot_pose, sym)
+    base_dir = np.dot(sym[:3, :3], (0, 0, 1))
+    pose_dir = np.dot(rot_sym[:3, :3], (0, 0, 1))
+
+    ang2z = np.arccos(np.dot(pose_dir, base_dir))
+
+    if ang2z > math.pi * 0.5:
+        rot_pose = rot_sym
+
+    rota[3:] = tf3d.quaternions.mat2quat(rot_pose[:3, :3])
+    rota[:3] = rot_pose[:3, 3]
+
+    return rota
+
+
+def draw_axis(img, cam_R, cam_T, K):
     # unit is mm
     points = np.float32([[100, 0, 0], [0, 100, 0], [0, 0, 100], [0, 0, 0]]).reshape(-1, 3)
 
@@ -36,7 +96,8 @@ def draw_axis(img, cam_R, cam_T):
 
     tra = cam_T
 
-    K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3,3)
+    #K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3,3)
+    K = np.float32(K).reshape(3,3)
 
     axisPoints, _ = cv2.projectPoints(points, rot, tra, K, (0, 0, 0, 0))
     img = cv2.line(img, tuple(axisPoints[3].ravel()), tuple(axisPoints[0].ravel()), (255,0,0), 3)
@@ -83,82 +144,6 @@ def create_point_cloud(depth, fx, fy, cx, cy, ds):
     return cloud_final
 
 
-def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
-    res_y = depth_refine.shape[0]
-    res_x = depth_refine.shape[1]
-
-    # inpainting
-    scaleOri = np.amax(depth_refine)
-
-    inPaiMa = np.where(depth_refine == 0.0, 255, 0)
-    inPaiMa = inPaiMa.astype(np.uint8)
-    inPaiDia = 5.0
-    depth_refine = depth_refine.astype(np.float32)
-    depPaint = cv2.inpaint(depth_refine, inPaiMa, inPaiDia, cv2.INPAINT_NS)
-
-    depNorm = depPaint - np.amin(depPaint)
-    rangeD = np.amax(depNorm)
-    depNorm = np.divide(depNorm, rangeD)
-    depth_refine = np.multiply(depNorm, scaleOri)
-
-    depth_inp = copy.deepcopy(depth_refine)
-
-    centerX = cx
-    centerY = cy
-
-    constant = 1 / fx
-    uv_table = np.zeros((res_y, res_x, 2), dtype=np.int16)
-    column = np.arange(0, res_y)
-
-    uv_table[:, :, 1] = np.arange(0, res_x) - centerX  # x-c_x (u)
-    uv_table[:, :, 0] = column[:, np.newaxis] - centerY  # y-c_y (v)
-    uv_table_sign = np.copy(uv_table)
-    uv_table = np.abs(uv_table)
-
-    # kernel = np.ones((5, 5), np.uint8)
-    # depth_refine = cv2.dilate(depth_refine, kernel, iterations=1)
-    # depth_refine = cv2.medianBlur(depth_refine, 5 )
-    depth_refine = ndimage.gaussian_filter(depth_refine, 2)  # sigma=3)
-    # depth_refine = ndimage.uniform_filter(depth_refine, size=11)
-
-    # very_blurred = ndimage.gaussian_filter(face, sigma=5)
-    v_x = np.zeros((res_y, res_x, 3))
-    v_y = np.zeros((res_y, res_x, 3))
-    normals = np.zeros((res_y, res_x, 3))
-
-    dig = np.gradient(depth_refine, 2, edge_order=2)
-    v_y[:, :, 0] = uv_table_sign[:, :, 1] * constant * dig[0]
-    v_y[:, :, 1] = depth_refine * constant + (uv_table_sign[:, :, 0] * constant) * dig[0]
-    v_y[:, :, 2] = dig[0]
-
-    v_x[:, :, 0] = depth_refine * constant + uv_table_sign[:, :, 1] * constant * dig[1]
-    v_x[:, :, 1] = uv_table_sign[:, :, 0] * constant * dig[1]
-    v_x[:, :, 2] = dig[1]
-
-    cross = np.cross(v_x.reshape(-1, 3), v_y.reshape(-1, 3))
-    norm = np.expand_dims(np.linalg.norm(cross, axis=1), axis=1)
-    # norm[norm == 0] = 1
-
-    cross = cross / norm
-    cross = cross.reshape(res_y, res_x, 3)
-    cross = np.abs(cross)
-    cross = np.nan_to_num(cross)
-
-    #cross[depth_refine <= 200] = 0  # 0 and near range cut
-    cross[depth_refine > depthCut] = 0  # far range cut
-    if not for_vis:
-        scaDep = 1.0 / np.nanmax(depth_refine)
-        depth_refine = np.multiply(depth_refine, scaDep)
-        cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine - 0.5))  # nearer has higher intensity
-        cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine - 0.5))
-        cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine - 0.5))
-        scaCro = 255.0 / np.nanmax(cross)
-        cross = np.multiply(cross, scaCro)
-        cross = cross.astype(np.uint8)
-
-    return cross, depth_refine, depth_inp
-
-
 def create_BB(rgb):
 
     imgray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
@@ -188,14 +173,29 @@ def create_BB(rgb):
 
 if __name__ == "__main__":
 
-    dataset = 'linemod'
-    root = "/home/stefan/data/datasets/HB_BOP_val_seq2/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/hb_RGBD_test_2/'
-    mesh_info = '/home/stefan/data/Meshes/homebrewedDB/models_eval/models_info.json'
-    # print(root)
-    visu = False
+    dataset = 'ycbv'
+    traintestval = 'train'
+    visu = True
+
+    root = "/home/stefan/data/datasets/ycbv_PBR_train/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/ycbv_PBR_BOP/'
+
+    if dataset == 'linemod':
+        mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    elif dataset == 'occlusion':
+        mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    elif dataset == 'ycbv':
+        mesh_info = '/home/stefan/data/Meshes/ycb_video/models/models_info.json'
+    elif dataset == 'tless':
+        mesh_info = '/home/stefan/data/Meshes/tless_30/models_eval/models_info.json'
+    elif dataset == 'homebrewed':
+        mesh_info = '/home/stefan/data/Meshes/homebrewedDB/models_eval/models_info.json'
+    else:
+        print('unknown dataset')
 
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
+    sym_cont = np.ndarray((34, 3), dtype=np.float32)
+    sym_disc = np.ndarray((34, 4, 4), dtype=np.float32)
 
     for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
@@ -215,13 +215,31 @@ if __name__ == "__main__":
                                    [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
 
+        if "symmetries_continuous" in value:
+            sym_cont[int(key), :] = np.asarray(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
+        elif "symmetries_discrete" in value:
+            syms = value['symmetries_discrete']
+            # Obj 27 has 3 planes of symmetry
+            if len(syms) > 1:
+                if dataset == 'ycbv' and int(key) == 16:
+                    pass
+                elif dataset == 'tless' and int(key) == 27:
+                    #sym_disc[int(key), :, :] = np.asarray(syms[0], dtype=np.float32).reshape((4, 4))
+                    #sym_disc[31, :, :] = np.asarray(syms[1], dtype=np.float32).reshape((4, 4))
+                    #sym_disc[32, :, :] = np.asarray(syms[2], dtype=np.float32).reshape((4, 4))
+                    pass
+            else:
+                sym_disc[int(key), :, :] = np.asarray(syms[0], dtype=np.float32).reshape((4, 4))
+        else:
+            pass
+
     sub = os.listdir(root)
 
     now = datetime.datetime.now()
     dateT = str(now)
 
     dict = {"info": {
-                "description": "tless",
+                "description": dataset,
                 "url": "cmp.felk.cvut.cz/t-less/",
                 "version": "1.0",
                 "year": 2018,
@@ -310,9 +328,10 @@ if __name__ == "__main__":
             cat_vis = []
             camR_vis = []
             camT_vis = []
+            calib_K = []
             # if rnd == 1:
 
-            fileName = target + 'images/val/' + imgNam[:-4] + '_dep.png'
+            fileName = target + 'images/' + traintestval + '/' + imgNam[:-4] + '_dep.png'
             myFile = Path(fileName)
             if myFile.exists():
                 print('File exists, skip encoding, ', fileName)
@@ -343,8 +362,9 @@ if __name__ == "__main__":
 
                 gtPose = scenejson.get(str(samp))
                 obj_id = gtPose[i]['obj_id']
-                #if obj_id == 7 or obj_id == 3:
-                #    continue
+                if dataset == 'linemod':
+                    if obj_id == 7 or obj_id == 3:
+                        continue
 
                 R = gtPose[i]["cam_R_m2c"]
                 T = gtPose[i]["cam_t_m2c"]
@@ -357,19 +377,27 @@ if __name__ == "__main__":
                 tra = np.asarray(T, dtype=np.float32)
                 pose = [np.asscalar(tra[0]), np.asscalar(tra[1]), np.asscalar(tra[2]),
                         np.asscalar(rot[0]), np.asscalar(rot[1]), np.asscalar(rot[2]), np.asscalar(rot[3])]
-                camR_vis.append([np.asscalar(rot[0]), np.asscalar(rot[1]), np.asscalar(rot[2])])
-                camT_vis.append(tra)
+
+                if dataset == 'ycbv':
+                    if obj_id in [13, 18]:
+                        #print('sym adjustment')
+                        pose = get_cont_sympose(pose, sym_cont[obj_id, :])
+                    elif obj_id in [1, 19, 20, 21]:
+                        pose = get_disc_sympose(pose, sym_disc[obj_id, :, :])
+                elif dataset == 'tless':
+                    if obj_id in [1, 2, 3, 4, 13, 14, 15, 16, 17, 24, 30]:
+                        pose = get_cont_sympose(pose, sym_cont[obj_id, :])
+                    elif obj_id in [5, 6, 7, 8, 9, 10, 11, 12, 19, 20, 23, 25, 26, 28, 29]:
+                        pose = get_disc_sympose(pose, sym_disc[obj_id, :, :])
+
+                #elif objID == 27:
+                #    rot = get_disc_sympose(pose, [sym_disc[27, :, :], sym_disc[31, :, :], sym_disc[32, :, :]], objID)
 
                 visib_fract = float(curlist["visib_fract"])
-
-                # if tra[2] > max_obj_dist:
-                #    max_obj_dist = tra[2]
-                # if tra[2] < min_obj_dist:
-                #    min_obj_dist = tra[2]
-
                 area = obj_bb[2] * obj_bb[3]
 
-                trans = np.asarray(T)
+                trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
+                R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
                 tDbox = R.reshape(3, 3).dot(threeD_boxes[obj_id, :, :].T).T
                 tDbox = tDbox + np.repeat(trans[np.newaxis, :], 8, axis=0)
                 box3D = toPix_array(tDbox, fx=fxca, fy=fyca, cx=cxca, cy=cyca)
@@ -382,7 +410,12 @@ if __name__ == "__main__":
                 # fea3D = np.reshape(fea3D, (16))
                 # fea3D = fea3D.tolist()
 
-                bbvis.append(box3D)
+                #if obj_id in [1, 19, 20, 21]:
+                #    bbox_vis.append(obj_bb)
+                #    bbvis.append(box3D)
+                #    camR_vis.append(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+                #    camT_vis.append(np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32))
+                #    calib_K.append(K)
 
                 nx1 = obj_bb[0]
                 ny1 = obj_bb[1]
@@ -409,7 +442,7 @@ if __name__ == "__main__":
                 count = count + 1
 
             tempTL = {
-                "url": "cmp.felk.cvut.cz/t-less/",
+                "url": "https://bop.felk.cvut.cz/home/",
                 "id": img_id,
                 "name": iname,
             }
@@ -421,7 +454,7 @@ if __name__ == "__main__":
 
             tempTV = {
                 "license": 2,
-                "url": "cmp.felk.cvut.cz/t-less/",
+                "url": "https://bop.felk.cvut.cz/home/",
                 "file_name": iname,
                 "height": resY,
                 "width": resX,
@@ -469,11 +502,22 @@ if __name__ == "__main__":
                         img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
                                        (colR, colG, colB), 2)
 
+                #print(camR_vis[i], camT_vis[i])
+                draw_axis(img, camR_vis[i], camT_vis[i], K)
                 cv2.imwrite(rgb_name, img)
 
                 print('STOP')
 
-    catsInt = range(1, 34)
+    if dataset == 'linemod':
+        catsInt = range(1, 16)
+    elif dataset == 'occlusion':
+        catsInt = range(1, 9)
+    elif dataset == 'ycbv':
+        catsInt = range(1, 22)
+    elif dataset == 'tless':
+        catsInt = range(1, 31)
+    elif dataset == 'homebrewed':
+        catsInt = range(1, 34)
 
     for s in catsInt:
         objName = str(s)
@@ -484,7 +528,7 @@ if __name__ == "__main__":
         }
         dict["categories"].append(tempC)
 
-    valAnno = target + 'annotations/instances_val.json'
+    valAnno = target + 'annotations/instances_' + traintestval + '.json'
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)
