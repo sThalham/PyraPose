@@ -175,10 +175,12 @@ if __name__ == "__main__":
 
     dataset = 'ycbv'
     traintestval = 'train'
-    visu = True
+    visu = False
+    specific_object_set = True
+    spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/ycbv_PBR_train/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/ycbv_PBR_BOP/'
+    root = "/home/stefan/data/datasets/YCBV_BOP_train/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/ycbv_PBR_BOP_graspa/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -304,6 +306,20 @@ if __name__ == "__main__":
             cxca = K[2]
             cyca = K[5]
 
+            # GraspA intermezzo
+            gtPose = scenejson.get(str(samp))
+            gtImg = gtjson.get(str(samp))
+
+            if specific_object_set == True:
+                no_vis = True
+                for anno_idx in range(len(gtPose)):
+                    if gtPose[anno_idx]['obj_id'] in spec_objs:
+                        curlist = gtImg[anno_idx]
+                        if float(curlist["visib_fract"]) > 0.5:
+                            no_vis = False
+                if no_vis == True:
+                    continue
+
             #########################
             # Prepare the stuff
             #########################
@@ -362,6 +378,10 @@ if __name__ == "__main__":
 
                 gtPose = scenejson.get(str(samp))
                 obj_id = gtPose[i]['obj_id']
+
+                if specific_object_set == True:
+                    if obj_id not in spec_objs:
+                        continue
                 if dataset == 'linemod':
                     if obj_id == 7 or obj_id == 3:
                         continue
@@ -375,8 +395,7 @@ if __name__ == "__main__":
                 rot = tf3d.quaternions.mat2quat(R.reshape(3, 3))
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = np.asarray(T, dtype=np.float32)
-                pose = [np.asscalar(tra[0]), np.asscalar(tra[1]), np.asscalar(tra[2]),
-                        np.asscalar(rot[0]), np.asscalar(rot[1]), np.asscalar(rot[2]), np.asscalar(rot[3])]
+                pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
 
                 if dataset == 'ycbv':
                     if obj_id in [13, 18]:
@@ -404,18 +423,15 @@ if __name__ == "__main__":
                 box3D = np.reshape(box3D, (16))
                 box3D = box3D.tolist()
 
-                # tDfea = rot[:3, :3].dot(threeD_feats[cls, :, :].T).T
-                # tDfea = tDfea + np.repeat(poses[i, np.newaxis, 0:3], 8, axis=0)
-                # fea3D = toPix_array(tDfea, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin)
-                # fea3D = np.reshape(fea3D, (16))
-                # fea3D = fea3D.tolist()
+                pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
+                        np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
 
-                #if obj_id in [1, 19, 20, 21]:
-                #    bbox_vis.append(obj_bb)
-                #    bbvis.append(box3D)
-                #    camR_vis.append(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
-                #    camT_vis.append(np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32))
-                #    calib_K.append(K)
+                #if obj_id in [13]:
+                bbox_vis.append(obj_bb)
+                bbvis.append(box3D)
+                camR_vis.append(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+                camT_vis.append(np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32))
+                calib_K.append(K)
 
                 nx1 = obj_bb[0]
                 ny1 = obj_bb[1]
@@ -503,7 +519,7 @@ if __name__ == "__main__":
                                        (colR, colG, colB), 2)
 
                 #print(camR_vis[i], camT_vis[i])
-                draw_axis(img, camR_vis[i], camT_vis[i], K)
+                #draw_axis(img, camR_vis[i], camT_vis[i], K)
                 cv2.imwrite(rgb_name, img)
 
                 print('STOP')
