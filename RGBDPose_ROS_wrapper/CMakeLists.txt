@@ -111,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES RetNetPose
+  LIBRARIES PyraPose
   CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs sensor_msgs visualization_msgs message_runtime ar_track_alvar_msgs
   DEPENDS system_lib
 )
