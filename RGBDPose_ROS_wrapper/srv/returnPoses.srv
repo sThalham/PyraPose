@@ -1,3 +1,2 @@
-sensor_msgs/Image image
 ---
-AlvarMarkers markers
+PoseWithConfidence[] poses

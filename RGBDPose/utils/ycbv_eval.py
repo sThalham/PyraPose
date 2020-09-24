@@ -121,7 +121,7 @@ def toPix_array(translation):
 def load_pcd(cat):
     # load meshes
     #mesh_path = "/home/sthalham/data/LINEMOD/models/"
-    mesh_path = "/home/stefan/data/Meshes/ycb_video_st/models/"
+    mesh_path = "/home/stefan/data/Meshes/ycb_video/models/"
     template = '000000'
     lencat = len(cat)
     cat = template[:-lencat] + cat
@@ -188,7 +188,7 @@ def boxoverlap(a, b):
 def evaluate_ycbv(generator, model, threshold=0.05):
     threshold = 0.5
 
-    mesh_info = '/home/stefan/data/Meshes/ycb_video_st/models/models_info.json'
+    mesh_info = '/home/stefan/data/Meshes/ycb_video/models/models_info.json'
 
     threeD_boxes = np.ndarray((22, 8, 3), dtype=np.float32)
     sym_cont = np.ndarray((22, 3), dtype=np.float32)
@@ -213,6 +213,9 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                                    [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
+
+
+    print(threeD_boxes)
 
     # start collecting results
     results = []
@@ -307,6 +310,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
             t_gt = np.array(t_tra, dtype=np.float32)
             t_gt = t_gt * 0.001
+            print(anno['cam_params'][idx])
 
             ori_points = np.ascontiguousarray(threeD_boxes[int(lab), :, :], dtype=np.float32)
             colGT = (0, 204, 0)
@@ -339,6 +343,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             image = cv2.line(image, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
                              colGT, 2)
 
+
         for inv_cls in range(scores.shape[2]):
 
             true_cat = inv_cls + 1
@@ -355,8 +360,9 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             # print(' ')
             # print('true cat: ', checkLab)
             # print('query cat: ', true_cat)
-            # print(len(cls_indices[0]))
-            # print(cls_mask[cls_indices])
+            #print(np.nanmax(cls_mask))
+            #print(len(cls_indices[0]))
+            #print(cls_mask[cls_indices])
             # print(len(cls_mask[cls_indices]))
 
             if cls not in checkLab:
@@ -367,6 +373,8 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 # print('not enough inlier')
                 continue
             trueDets[int(cls)] += 1
+
+            #print('detection: ', true_cat)
 
             obj_mask = mask[0, :, inv_cls]
             # print(np.nanmax(obj_mask))
@@ -544,12 +552,12 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
             t_gt = np.array(t_tra, dtype=np.float32)
 
-            # print(t_est)
-            # print(t_gt)
-
             t_gt = t_gt * 0.001
             t_est = t_est.T
             # print('pose: ', pose)
+
+            #print(t_est)
+            #print(t_gt)
 
             model_vsd["pts"] = model_vsd["pts"] * 0.001
 
@@ -604,9 +612,9 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 idx = idx+8
             '''
 
-        #name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
-        #+cv2.imwrite(name, image)
-        #cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
+        name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
+        cv2.imwrite(name, image)
+        cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
         # print('break')
 
     recall = np.zeros((22), dtype=np.float32)
