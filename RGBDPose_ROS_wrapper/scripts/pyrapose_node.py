@@ -29,8 +29,7 @@ from RetNetPose.utils.config import read_config_file, parse_anchor_parameters
 from RetNetPose.utils.eval import evaluate
 from RetNetPose.utils.keras_version import check_keras_version
 
-from ar_track_alvar_msgs.msg import AlvarMarkers, AlvarMarker
-from RGBDPose_ROS.srv import returnPoses
+from RGBDPose_ROS_wrapper.srv import returnPoses
 
 ###################################
 ##### Global Variable Space #######
@@ -95,115 +94,6 @@ def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
     return cloud_final
 
-
-def boxoverlap(a, b):
-    a = np.array([a[0], a[1], a[0] + a[2], a[1] + a[3]])
-    b = np.array([b[0], b[1], b[0] + b[2], b[1] + b[3]])
-
-    x1 = np.amax(np.array([a[0], b[0]]))
-    y1 = np.amax(np.array([a[1], b[1]]))
-    x2 = np.amin(np.array([a[2], b[2]]))
-    y2 = np.amin(np.array([a[3], b[3]]))
-
-    wid = x2-x1+1
-    hei = y2-y1+1
-    inter = wid * hei
-    aarea = (a[2] - a[0] + 1) * (a[3] - a[1] + 1)
-    barea = (b[2] - b[0] + 1) * (b[3] - b[1] + 1)
-    # intersection over union overlap
-    ovlap = inter / (aarea + barea - inter)
-    # set invalid entries to 0 overlap
-    maskwid = wid <= 0
-    maskhei = hei <= 0
-    np.where(ovlap, maskwid, 0)
-    np.where(ovlap, maskhei, 0)
-
-    return ovlap
-
-
-def get_normal(depth_refine, fx=-1, fy=-1, cx=-1, cy=-1, for_vis=True):
-    res_y = depth_refine.shape[0]
-    res_x = depth_refine.shape[1]
-
-    #scaCro = 255.0 / np.nanmax(depth_refine)
-    #visImg = np.multiply(depth_refine, scaCro)
-    #visImg = visImg.astype(np.uint8)
-    #cv2.imwrite('/home/sthalham/depth_refine.jpg', visImg)
-
-    # inpainting
-    depth_refine[np.isnan(depth_refine)] = 0.0
-    #depth_refine = np.multiply(depth_refine, 1000.0)
-
-    # inpainting
-    scaleOri = np.amax(depth_refine)
-
-    inPaiMa = np.where(depth_refine == 0.0, 255, 0)
-    inPaiMa = inPaiMa.astype(np.uint8)
-    inPaiDia = 5.0
-    depth_refine = depth_refine.astype(np.float32)
-    depPaint = cv2.inpaint(depth_refine, inPaiMa, inPaiDia, cv2.INPAINT_NS)
-
-    depNorm = depPaint - np.amin(depPaint)
-    rangeD = np.amax(depNorm)
-    depNorm = np.divide(depNorm, rangeD)
-    depth_refine = np.multiply(depNorm, scaleOri)
-
-    centerX = cx
-    centerY = cy
-
-    constant = 1 / fx
-    uv_table = np.zeros((res_y, res_x, 2), dtype=np.int16)
-    column = np.arange(0, res_y)
-
-    uv_table[:, :, 1] = np.arange(0, res_x) - centerX  # x-c_x (u)
-    uv_table[:, :, 0] = column[:, np.newaxis] - centerY  # y-c_y (v)
-    uv_table_sign = np.copy(uv_table)
-    uv_table = np.abs(uv_table)
-
-    # kernel = np.ones((5, 5), np.uint8)
-    # depth_refine = cv2.dilate(depth_refine, kernel, iterations=1)
-    # depth_refine = cv2.medianBlur(depth_refine, 5 )
-    depth_refine = ndimage.gaussian_filter(depth_refine, 2)  # sigma=3)
-    # depth_refine = ndimage.uniform_filter(depth_refine, size=11)
-
-    # very_blurred = ndimage.gaussian_filter(face, sigma=5)
-    v_x = np.zeros((res_y, res_x, 3))
-    v_y = np.zeros((res_y, res_x, 3))
-    normals = np.zeros((res_y, res_x, 3))
-
-    dig = np.gradient(depth_refine, 2, edge_order=2)
-    v_y[:, :, 0] = uv_table_sign[:, :, 1] * constant * dig[0]
-    v_y[:, :, 1] = depth_refine * constant + (uv_table_sign[:, :, 0] * constant) * dig[0]
-    v_y[:, :, 2] = dig[0]
-
-    v_x[:, :, 0] = depth_refine * constant + uv_table_sign[:, :, 1] * constant * dig[1]
-    v_x[:, :, 1] = uv_table_sign[:, :, 0] * constant * dig[1]
-    v_x[:, :, 2] = dig[1]
-
-    cross = np.cross(v_x.reshape(-1, 3), v_y.reshape(-1, 3))
-    norm = np.expand_dims(np.linalg.norm(cross, axis=1), axis=1)
-    # norm[norm == 0] = 1
-
-    cross = cross / norm
-    cross = cross.reshape(res_y, res_x, 3)
-    cross = np.abs(cross)
-    cross = np.nan_to_num(cross)
-
-    #cross[depth_refine <= 200] = 0  # 0 and near range cut
-    cross[depth_refine > 1800.0] = 0  # far range cut
-    if not for_vis:
-        scaDep = 1.0 / np.amax(depth_refine)
-        scaDep = 1.0 / 2200.0
-        depth_refine = np.multiply(depth_refine, scaDep)
-        cross[:, :, 0] = cross[:, :, 0] * (1 - (depth_refine - 0.5))  # nearer has higher intensity
-        cross[:, :, 1] = cross[:, :, 1] * (1 - (depth_refine - 0.5))
-        cross[:, :, 2] = cross[:, :, 2] * (1 - (depth_refine - 0.5))
-        #print(np.max(np.linalg.norm(cross, axis=2)), np.min(np.linalg.norm(cross, axis=2)))
-        scaCro = 255.0 / np.amax(cross)
-        cross = np.multiply(cross, scaCro)
-        cross = cross.astype(np.uint8)
-
-    return cross
 
 
 #################################
@@ -459,7 +349,7 @@ def run_estimation(image, image_dep, model, score_threshold, graph, frame_id):
     #print('new image')
 
     # compute predicted labels and scores
-    for box, box3D, score, label in zip(boxes[0], boxes3D[0], scores[0], labels[0]):
+    for box3D, score, mask in zip(boxes[0], boxes3D[0], scores[0], labels[0]):
         # scores are sorted, so we can break
 
         if score < score_threshold:
