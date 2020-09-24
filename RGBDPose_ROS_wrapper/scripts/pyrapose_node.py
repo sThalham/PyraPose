@@ -24,10 +24,10 @@ import tensorflow as tf
 import open3d
 
 sys.path.append("/RGBDPose")
-from RetNetPose import models
-from RetNetPose.utils.config import read_config_file, parse_anchor_parameters
-from RetNetPose.utils.eval import evaluate
-from RetNetPose.utils.keras_version import check_keras_version
+from RGBDPose import models
+from RGBDPose.utils.config import read_config_file, parse_anchor_parameters
+from RGBDPose.utils.eval import evaluate
+from RGBDPose.utils.keras_version import check_keras_version
 
 from RGBDPose_ROS_wrapper.srv import returnPoses
 
