@@ -15,7 +15,6 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   visualization_msgs
   message_generation
-  ar_track_alvar_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -110,10 +109,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+  #INCLUDE_DIRS include
   LIBRARIES PyraPose
-  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs sensor_msgs visualization_msgs message_runtime ar_track_alvar_msgs
-  DEPENDS system_lib
+  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs sensor_msgs visualization_msgs message_runtime
+  #DEPENDS system_lib
 )
 
 ###########
