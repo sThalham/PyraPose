@@ -357,10 +357,10 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             cls_mask = scores[0, :, inv_cls]
 
             cls_indices = np.where(cls_mask > threshold)
-            # print(' ')
-            # print('true cat: ', checkLab)
+            #print(' ')
+            #print('true cat: ', checkLab)
             # print('query cat: ', true_cat)
-            #print(np.nanmax(cls_mask))
+            ##print(np.nanmax(cls_mask))
             #print(len(cls_indices[0]))
             #print(cls_mask[cls_indices])
             # print(len(cls_mask[cls_indices]))
