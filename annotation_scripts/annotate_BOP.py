@@ -176,11 +176,11 @@ if __name__ == "__main__":
     dataset = 'ycbv'
     traintestval = 'train'
     visu = False
-    specific_object_set = False
+    specific_object_set = True
     spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/ycbv_PBR_train/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/ycbv_PBR_BOP/'
+    root = "/home/stefan/data/datasets/YCBV_BOP_train/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/ycbv_PBR_BOP_graspa/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -315,7 +315,7 @@ if __name__ == "__main__":
                 for anno_idx in range(len(gtPose)):
                     if gtPose[anno_idx]['obj_id'] in spec_objs:
                         curlist = gtImg[anno_idx]
-                        if float(curlist["visib_fract"]) > 0.5:
+                        if float(curlist["visib_fract"]) > 0.7:
                             no_vis = False
                 if no_vis == True:
                     continue
@@ -373,7 +373,7 @@ if __name__ == "__main__":
                 mask_ind = mask_ind + 1
 
                 curlist = gtImg[i]
-                obj_bb = curlist["bbox_obj"]
+                obj_bb = curlist["bbox_visib"]
                 bbox_vis.append(obj_bb)
 
                 gtPose = scenejson.get(str(samp))
@@ -439,6 +439,19 @@ if __name__ == "__main__":
                 ny2 = ny1 + obj_bb[3]
                 npseg = np.array([nx1, ny1, nx2, ny1, nx2, ny2, nx1, ny2])
                 cont = npseg.tolist()
+
+                spec_objs
+                if specific_object_set == True:
+                    if obj_id == 5:
+                        obj_id = 1
+                    elif obj_id == 8:
+                        obj_id = 2
+                    elif obj_id == 9:
+                        obj_id = 3
+                    elif obj_id == 10:
+                        obj_id = 4
+                    elif obj_id == 21:
+                        obj_id = 5
 
                 annoID = annoID + 1
                 tempTA = {
@@ -534,6 +547,9 @@ if __name__ == "__main__":
         catsInt = range(1, 31)
     elif dataset == 'homebrewed':
         catsInt = range(1, 34)
+
+    if specific_object_set == True:
+        catsInt = range(1, (len(spec_objs)+1))
 
     for s in catsInt:
         objName = str(s)

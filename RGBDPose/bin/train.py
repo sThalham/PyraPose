@@ -184,7 +184,7 @@ def create_generators(args, preprocess_image):
 
         train_generator = YCBvGenerator(
             args.ycbv_path,
-            'val',
+            'train',
             transform_generator=transform_generator,
             **common_args
         )

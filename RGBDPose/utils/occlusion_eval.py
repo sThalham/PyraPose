@@ -269,8 +269,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask = model.predict_on_batch(
-            [np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
         image = image_raw
         image_mask = copy.deepcopy(image_raw)
@@ -548,7 +547,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
         #name = '/home/stefan/occ_viz/img_' + str(index) + '.jpg'
         #cv2.imwrite(name, image)
-        cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
+        #cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
         #print('break')
 
     recall = np.zeros((16), dtype=np.float32)

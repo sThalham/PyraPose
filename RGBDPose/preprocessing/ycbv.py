@@ -226,7 +226,7 @@ class YCBvGenerator(Generator):
         print(self.set_name)
         for idx, a in enumerate(anns):
             if self.set_name == 'train':
-                if a['feature_visibility'] < 0.5:
+                if a['feature_visibility'] < 0.7:
                     continue
 
             annotations['labels'] = np.concatenate([annotations['labels'], [self.inv_label_to_label(a['category_id'])]], axis=0)
