@@ -223,7 +223,6 @@ class YCBvGenerator(Generator):
 
         annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
-        print(self.set_name)
         for idx, a in enumerate(anns):
             if self.set_name == 'train':
                 if a['feature_visibility'] < 0.7:

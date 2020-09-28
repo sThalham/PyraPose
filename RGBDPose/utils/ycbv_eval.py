@@ -215,7 +215,6 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         model_dia[int(key)] = value['diameter'] * fac
 
 
-    print(threeD_boxes)
 
     # start collecting results
     results = []
@@ -310,7 +309,6 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
             t_gt = np.array(t_tra, dtype=np.float32)
             t_gt = t_gt * 0.001
-            print(anno['cam_params'][idx])
 
             ori_points = np.ascontiguousarray(threeD_boxes[int(lab), :, :], dtype=np.float32)
             colGT = (0, 204, 0)
@@ -346,7 +344,25 @@ def evaluate_ycbv(generator, model, threshold=0.05):
 
         for inv_cls in range(scores.shape[2]):
 
-            true_cat = inv_cls + 1
+            if inv_cls == 0:
+                true_cat = 5
+            if inv_cls == 1:
+                true_cat = 8
+            if inv_cls == 2:
+                true_cat = 9
+            if inv_cls == 3:
+                true_cat = 10
+            if inv_cls == 4:
+                true_cat = 21
+
+
+
+
+
+
+
+
+            #true_cat = inv_cls + 1
             # if true_cat > 5:
             #    cls = true_cat + 2
             # elif true_cat > 2:
@@ -358,8 +374,8 @@ def evaluate_ycbv(generator, model, threshold=0.05):
 
             cls_indices = np.where(cls_mask > threshold)
             # print(' ')
-            # print('true cat: ', checkLab)
-            # print('query cat: ', true_cat)
+            print( checkLab)
+            #print('query cat: ', true_cat)
             #print(np.nanmax(cls_mask))
             #print(len(cls_indices[0]))
             #print(cls_mask[cls_indices])
@@ -369,7 +385,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 # falsePoses[int(cls)] += 1
                 continue
 
-            if len(cls_indices[0]) < 10:
+            if len(cls_indices[0]) < 1:
                 # print('not enough inlier')
                 continue
             trueDets[int(cls)] += 1
@@ -378,6 +394,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
 
             obj_mask = mask[0, :, inv_cls]
             # print(np.nanmax(obj_mask))
+            '''
             if inv_cls == 0:
                 obj_col = [1, 255, 255]
             elif inv_cls == 4:
@@ -405,6 +422,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             image_mask = np.where(cls_img > 0
                                   , cls_img, image_mask)
 
+            '''
             '''
             # mask from anchors
             pot_mask = scores[0, :, inv_cls]
