@@ -66,8 +66,8 @@ class YCBvGenerator(Generator):
 
         self.load_classes()
 
+        '''
         self.TDboxes = np.ndarray((22, 8, 3), dtype=np.float32)
-
         for key, value in yaml.load(open(self.mesh_info)).items():
             x_minus = value['min_x']
             y_minus = value['min_y']
@@ -84,6 +84,41 @@ class YCBvGenerator(Generator):
                                        [x_minus, y_minus, z_minus],
                                        [x_minus, y_minus, z_plus]])
             self.TDboxes[int(key), :, :] = three_box_solo
+        '''
+
+        self.TDboxes = np.ndarray((6, 8, 3), dtype=np.float32)
+
+        for key, value in yaml.load(open(self.mesh_info)).items():
+            if int(key) == 5:
+                key = 1
+            elif int(key) == 8:
+                key = 2
+            elif int(key) == 9:
+                key = 3
+            elif int(key) == 10:
+                key = 4
+            elif int(key) == 21:
+                key = 5
+            else:
+                continue
+
+            x_minus = value['min_x']
+            y_minus = value['min_y']
+            z_minus = value['min_z']
+            x_plus = value['size_x'] + x_minus
+            y_plus = value['size_y'] + y_minus
+            z_plus = value['size_z'] + z_minus
+            three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                       [x_plus, y_plus, z_minus],
+                                       [x_plus, y_minus, z_minus],
+                                       [x_plus, y_minus, z_plus],
+                                       [x_minus, y_plus, z_plus],
+                                       [x_minus, y_plus, z_minus],
+                                       [x_minus, y_minus, z_minus],
+                                       [x_minus, y_minus, z_plus]])
+            self.TDboxes[int(key), :, :] = three_box_solo
+
+        super(YCBvGenerator, self).__init__(**kwargs)
 
         super(YCBvGenerator, self).__init__(**kwargs)
 
@@ -224,9 +259,9 @@ class YCBvGenerator(Generator):
         annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
         for idx, a in enumerate(anns):
-            if self.set_name == 'train':
-                if a['feature_visibility'] < 0.7:
-                    continue
+            #if self.set_name == 'train':
+            if a['feature_visibility'] < 0.5:
+                continue
 
             annotations['labels'] = np.concatenate([annotations['labels'], [self.inv_label_to_label(a['category_id'])]], axis=0)
             annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[

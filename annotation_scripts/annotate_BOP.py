@@ -175,12 +175,12 @@ if __name__ == "__main__":
 
     dataset = 'ycbv'
     traintestval = 'train'
-    visu = False
+    visu = True
     specific_object_set = True
     spec_objs = [5, 8, 9, 10, 21]
 
     root = "/home/stefan/data/datasets/YCBV_BOP_train/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/ycbv_PBR_BOP_graspa/'
+    target = '/home/stefan/data/train_data/test/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
