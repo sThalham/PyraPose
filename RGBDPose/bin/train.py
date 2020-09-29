@@ -184,7 +184,7 @@ def create_generators(args, preprocess_image):
 
         train_generator = YCBvGenerator(
             args.ycbv_path,
-            'val',
+            'train',
             transform_generator=transform_generator,
             **common_args
         )
@@ -277,7 +277,7 @@ def parse_args(args):
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
 
     parser.add_argument('--backbone', help='Backbone model used by retinanet.', default='resnet50', type=str)
-    parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
+    parser.add_argument('--batch-size',       help='Size of the batches.', default=8, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
@@ -291,7 +291,7 @@ def parse_args(args):
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Fit generator arguments
-    parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=1)
+    parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=4)
     parser.add_argument('--max-queue-size', help='Queue length for multiprocessing workers in fit generator.', type=int, default=10)
 
     return parser.parse_args(args)

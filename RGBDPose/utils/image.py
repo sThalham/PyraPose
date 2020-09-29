@@ -165,6 +165,7 @@ def apply_transform(matrix, image, params, cpara):
 
     # rgb
     # seq describes an object for rgb image augmentation using aleju/imgaug
+    '''
     seq = iaa.Sequential([
         # blur
         iaa.SomeOf((0, 2), [
@@ -202,8 +203,46 @@ def apply_transform(matrix, image, params, cpara):
             iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
         ]),
     ], random_order=True)
-    #image0 = seq.augment_image(image[0])
-    image0 = image[0]
+    '''
+    seq = iaa.Sequential([
+        # blur
+        iaa.SomeOf((0, 2), [
+            iaa.GaussianBlur((0.0, 2.0)),
+            iaa.AverageBlur(k=(3, 7)),
+            iaa.MedianBlur(k=(3, 7)),
+            iaa.BilateralBlur(d=(1, 7)),
+            iaa.MotionBlur(k=(3, 7))
+        ]),
+        # color
+        iaa.SomeOf((0, 2), [
+            # iaa.WithColorspace(),
+            iaa.AddToHueAndSaturation((-25, 25)),
+            # iaa.ChangeColorspace(to_colorspace[], alpha=0.5),
+            iaa.Grayscale(alpha=(0.0, 0.3))
+        ]),
+        # brightness
+        iaa.OneOf([
+            iaa.Sequential([
+                iaa.Add((-25, 25), per_channel=0.5),
+                iaa.Multiply((0.5, 1.5), per_channel=0.5)
+            ]),
+            iaa.Add((-25, 25), per_channel=0.5),
+            iaa.Multiply((0.5, 1.5), per_channel=0.5),
+            iaa.FrequencyNoiseAlpha(
+                exponent=(-4, 0),
+                first=iaa.Multiply((0.5, 1.5), per_channel=0.5),
+                second=iaa.LinearContrast((0.5, 1.5), per_channel=0.5))
+        ]),
+        # contrast
+        iaa.SomeOf((0, 2), [
+            iaa.GammaContrast((0.5, 1.5), per_channel=0.5),
+            iaa.SigmoidContrast(gain=(0, 25), cutoff=(0.25, 0.75), per_channel=0.5),
+            iaa.LogContrast(gain=(0.5, 1), per_channel=0.5),
+            iaa.LinearContrast(alpha=(0.5, 1.5), per_channel=0.5)
+        ]),
+    ], random_order=True)
+    image0 = seq.augment_image(image[0])
+    #image0 = image[0]
     image0 = cv2.warpAffine(
         image0,
         matrix[:2, :],
