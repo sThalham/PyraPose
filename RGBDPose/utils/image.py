@@ -19,7 +19,7 @@ import numpy as np
 import cv2
 from PIL import Image
 import imgaug.augmenters as iaa
-import pyfastnoisesimd as fns
+#import pyfastnoisesimd as fns
 import random
 from scipy import ndimage
 
