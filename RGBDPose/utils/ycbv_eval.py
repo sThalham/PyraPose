@@ -214,6 +214,11 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 3bf01a4e974929b82f840572e368551fb8d1d739
     # start collecting results
     results = []
     image_ids = []
@@ -315,17 +320,6 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             t_gt = np.array(t_tra, dtype=np.float32)
             t_gt = t_gt * 0.001
 
-            if lab == 5:
-                lab = 1
-            if lab == 8:
-                lab = 2
-            if lab == 9:
-                lab = 3
-            if lab == 10:
-                lab = 4
-            if lab == 21:
-                lab = 5
-
             ori_points = np.ascontiguousarray(threeD_boxes[int(lab), :, :], dtype=np.float32)
             colGT = (0, 204, 0)
             tDbox = R_gt.dot(ori_points.T).T
@@ -361,6 +355,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         for inv_cls in range(scores.shape[2]):
 
             cls = inv_cls + 1
+
             if inv_cls == 0:
                 true_cat = 5
             if inv_cls == 1:
@@ -372,29 +367,16 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             if inv_cls == 4:
                 true_cat = 21
 
-            true_cat = inv_cls + 1
-            #cls = true_cat
-
             cls_mask = scores[0, :, inv_cls]
-
-            #cls_indices = np.where(cls_mask > threshold)
-            cls_indices = np.argmax(cls_mask)
-
-            #print(' ')
-            #print('true cat: ', checkLab)
-            print('query cat: ', true_cat)
-            print(np.nanmax(cls_mask))
-            #print(len(cls_indices[0]))
-            #print(cls_mask[cls_indices])
-            # print(len(cls_mask[cls_indices]))
+            cls_indices = np.where(cls_mask > threshold)
 
             if cls not in checkLab:
                 # falsePoses[int(cls)] += 1
                 continue
 
-            #if len(cls_indices[0]) < 1:
+            if len(cls_indices[0]) < 1:
                 # print('not enough inlier')
-            #    continue
+                continue
             trueDets[int(true_cat)] += 1
 
             #print('detection: ', true_cat)
@@ -419,10 +401,10 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             cls_img[:, :, 0] *= obj_col[0]
             cls_img[:, :, 1] *= obj_col[1]
             cls_img[:, :, 2] *= obj_col[2]
-            image_mask = np.where(cls_img > 0
-                                  , cls_img, image_mask)
+            image_mask = np.where(cls_img > 0, cls_img, image_mask)
 
-            anno_ind = np.argwhere(anno['labels'] == true_cat)
+            anno_ind = np.argwhere(anno['labels'] == cls)
+
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
             # print(t_rot)

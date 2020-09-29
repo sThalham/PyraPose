@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     dataset = 'ycbv'
     traintestval = 'train'
-    visu = False
+    visu = True
     specific_object_set = True
     spec_objs = [5, 8, 9, 10, 21]
 
@@ -440,7 +440,6 @@ if __name__ == "__main__":
                 npseg = np.array([nx1, ny1, nx2, ny1, nx2, ny2, nx1, ny2])
                 cont = npseg.tolist()
 
-                spec_objs
                 if specific_object_set == True:
                     if obj_id == 5:
                         obj_id = 1
