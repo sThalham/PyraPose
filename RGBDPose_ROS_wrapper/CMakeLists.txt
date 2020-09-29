@@ -18,7 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+#set(OpenCV_DIR /usr/local/lib/python3.6/opencv_python-3.4.0.14.dist-info)
+#find_package(OpenCV 3.2.0 REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
