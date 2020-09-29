@@ -179,7 +179,7 @@ if __name__ == "__main__":
     specific_object_set = True
     spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/YCBV_BOP_train/"  # path to train samples, depth + rgb
+    root = "/home/stefan/data/datasets/ycbv_PBR_train/"  # path to train samples, depth + rgb
     target = '/home/stefan/data/train_data/ycbv_PBR_BOP_graspa/'
 
     if dataset == 'linemod':
@@ -279,7 +279,7 @@ if __name__ == "__main__":
         with open(infoPath, 'r') as streamINFO:
             gtjson = json.load(streamINFO)
 
-        for samp in os.listdir(rgbPath):
+        for samp in os.listdir(rgbPath)[:10]:
 
             imgname = samp
             rgbImgPath = rgbPath + samp

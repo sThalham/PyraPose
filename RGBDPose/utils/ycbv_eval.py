@@ -186,7 +186,7 @@ def boxoverlap(a, b):
 
 
 def evaluate_ycbv(generator, model, threshold=0.05):
-    threshold = 0.5
+    threshold = 0.2
 
     mesh_info = '/home/stefan/data/Meshes/ycb_video/models/models_info.json'
 
@@ -213,9 +213,6 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                                    [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
-
-
-    print(threeD_boxes)
 
     # start collecting results
     results = []
@@ -275,7 +272,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         image_raw = generator.load_image(index)
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
-
+            # print(pose_votes.shape)
         image_raw_dep = generator.load_image_dep(index)
         image_raw_dep = np.where(image_raw_dep > 0, image_raw_dep, 0.0)
         image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
@@ -289,10 +286,17 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         if len(anno['labels']) < 1:
             continue
 
+        desired_ann = False
         checkLab = anno['labels']  # +1 to real_class
         for idx, lab in enumerate(checkLab):
             allPoses[int(lab) + 1] += 1
             checkLab[idx] += 1
+            if (lab+1) in [5, 8, 9, 10, 21]:
+                desired_ann = True
+
+        if desired_ann == False:
+            continue
+        print(checkLab)
 
         # run network
         images = []
@@ -310,7 +314,17 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
             t_gt = np.array(t_tra, dtype=np.float32)
             t_gt = t_gt * 0.001
-            print(anno['cam_params'][idx])
+
+            if lab == 5:
+                lab = 1
+            if lab == 8:
+                lab = 2
+            if lab == 9:
+                lab = 3
+            if lab == 10:
+                lab = 4
+            if lab == 21:
+                lab = 5
 
             ori_points = np.ascontiguousarray(threeD_boxes[int(lab), :, :], dtype=np.float32)
             colGT = (0, 204, 0)
@@ -346,21 +360,30 @@ def evaluate_ycbv(generator, model, threshold=0.05):
 
         for inv_cls in range(scores.shape[2]):
 
+            cls = inv_cls + 1
+            if inv_cls == 0:
+                true_cat = 5
+            if inv_cls == 1:
+                true_cat = 8
+            if inv_cls == 2:
+                true_cat = 9
+            if inv_cls == 3:
+                true_cat = 10
+            if inv_cls == 4:
+                true_cat = 21
+
             true_cat = inv_cls + 1
-            # if true_cat > 5:
-            #    cls = true_cat + 2
-            # elif true_cat > 2:
-            #    cls = true_cat + 1
-            # else:
-            cls = true_cat
+            #cls = true_cat
 
             cls_mask = scores[0, :, inv_cls]
 
-            cls_indices = np.where(cls_mask > threshold)
+            #cls_indices = np.where(cls_mask > threshold)
+            cls_indices = np.argmax(cls_mask)
+
             #print(' ')
             #print('true cat: ', checkLab)
-            # print('query cat: ', true_cat)
-            ##print(np.nanmax(cls_mask))
+            print('query cat: ', true_cat)
+            print(np.nanmax(cls_mask))
             #print(len(cls_indices[0]))
             #print(cls_mask[cls_indices])
             # print(len(cls_mask[cls_indices]))
@@ -369,10 +392,10 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 # falsePoses[int(cls)] += 1
                 continue
 
-            if len(cls_indices[0]) < 10:
+            #if len(cls_indices[0]) < 1:
                 # print('not enough inlier')
-                continue
-            trueDets[int(cls)] += 1
+            #    continue
+            trueDets[int(true_cat)] += 1
 
             #print('detection: ', true_cat)
 
@@ -380,20 +403,14 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             # print(np.nanmax(obj_mask))
             if inv_cls == 0:
                 obj_col = [1, 255, 255]
-            elif inv_cls == 4:
+            elif inv_cls == 1:
                 obj_col = [1, 1, 128]
-            elif inv_cls == 5:
+            elif inv_cls == 2:
                 obj_col = [255, 255, 1]
-            elif inv_cls == 7:
+            elif inv_cls == 3:
                 obj_col = [220, 245, 245]
-            elif inv_cls == 8:
+            elif inv_cls == 4:
                 obj_col = [128, 1, 1]
-            elif inv_cls == 9:
-                obj_col = [30, 105, 210]
-            elif inv_cls == 10:
-                obj_col = [107, 142, 35]
-            elif inv_cls == 11:
-                obj_col = [1, 255, 1]
             cls_img = np.where(obj_mask > 0.5, 1, 0)
             cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
             cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
@@ -405,34 +422,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             image_mask = np.where(cls_img > 0
                                   , cls_img, image_mask)
 
-            '''
-            # mask from anchors
-            pot_mask = scores[0, :, inv_cls]
-            pot_mask_P3 = pot_mask[:43200]
-            pot_mask_P4 = pot_mask[43200:54000]
-            pot_mask_P4 = pot_mask[54000:]
-            print(pot_mask.shape)
-
-            sidx = 0
-            eidx = 0
-            mask_P3 = np.zeros((4800), dtype=np.float32)
-            for idx in range(4800):
-                eidx = eidx + 9
-                mask_P3[idx] = np.sum(pot_mask_P3[sidx:eidx])
-                sidx = eidx
-
-            print(mask_P3.shape)
-            print(np.nanmax(mask_P3))
-            mask_P3 = np.where(mask_P3 > 0.5 * (np.nanmax(mask_P3)), 255, 0)
-            cls_img = mask_P3.reshape((60, 80)).astype(np.uint8)
-            cls_img = cv2.resize(cls_img, (640, 480), interpolation=cv2.INTER_NEAREST)
-            cv2.imwrite('/home/stefan/RGBDPose_viz/pot_mask.jpg', cls_img)
-            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
-            '''
-
-            anno_ind = np.argwhere(anno['labels'] == cls)
+            anno_ind = np.argwhere(anno['labels'] == true_cat)
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
             # print(t_rot)
@@ -505,7 +495,8 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 model_vsd = mv21
                 pcd_model = pc21
 
-            k_hyp = len(cls_indices[0])
+            #k_hyp = len(cls_indices[0])
+            k_hyp = 1
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
@@ -556,8 +547,8 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             t_est = t_est.T
             # print('pose: ', pose)
 
-            #print(t_est)
-            #print(t_gt)
+            print(t_est)
+            print(t_gt)
 
             model_vsd["pts"] = model_vsd["pts"] * 0.001
 
@@ -615,7 +606,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
         cv2.imwrite(name, image)
         cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
-        # print('break')
+        print('break')
 
     recall = np.zeros((22), dtype=np.float32)
     precision = np.zeros((22), dtype=np.float32)

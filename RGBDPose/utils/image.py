@@ -202,8 +202,8 @@ def apply_transform(matrix, image, params, cpara):
             iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
         ]),
     ], random_order=True)
-    #image0 = seq.augment_image(image[0])
-    image0 = image[0]
+    image0 = seq.augment_image(image[0])
+    #image0 = image[0]
     image0 = cv2.warpAffine(
         image0,
         matrix[:2, :],
