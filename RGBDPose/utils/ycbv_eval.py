@@ -130,7 +130,7 @@ def load_pcd(cat):
     pcd_model = open3d.PointCloud()
     pcd_model.points = open3d.Vector3dVector(model_vsd['pts'])
     open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
-        radius=0.1, max_nn=30))
+        radius=20.0, max_nn=30))
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
     model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
@@ -214,11 +214,6 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 3bf01a4e974929b82f840572e368551fb8d1d739
     # start collecting results
     results = []
     image_ids = []
@@ -279,12 +274,12 @@ def evaluate_ycbv(generator, model, threshold=0.05):
         image, scale = generator.resize_image(image)
             # print(pose_votes.shape)
         image_raw_dep = generator.load_image_dep(index)
-        image_raw_dep = np.where(image_raw_dep > 0, image_raw_dep, 0.0)
-        image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
-        image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
+        image_dep = np.where(image_raw_dep > 0, image_raw_dep, np.NaN)
+        #image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
+        #image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
         # image_raw_dep = get_normal(image_raw_dep, fxkin, fykin, cxkin, cykin)
-        image_dep = generator.preprocess_image(image_raw_dep)
-        image_dep, scale = generator.resize_image(image_dep)
+        #image_dep = generator.preprocess_image(image_raw_dep)
+        #image_dep, scale = generator.resize_image(image_dep)
 
         anno = generator.load_annotations(index)
 
@@ -351,26 +346,26 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             image = cv2.line(image, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
                              colGT, 2)
 
-
         for inv_cls in range(scores.shape[2]):
 
-            cls = inv_cls + 1
+            #cls = inv_cls + 1
 
             if inv_cls == 0:
                 true_cat = 5
-            if inv_cls == 1:
+            elif inv_cls == 1:
                 true_cat = 8
-            if inv_cls == 2:
+            elif inv_cls == 2:
                 true_cat = 9
-            if inv_cls == 3:
+            elif inv_cls == 3:
                 true_cat = 10
-            if inv_cls == 4:
+            elif inv_cls == 4:
                 true_cat = 21
+            cls = true_cat
 
             cls_mask = scores[0, :, inv_cls]
             cls_indices = np.where(cls_mask > threshold)
 
-            if cls not in checkLab:
+            if true_cat not in checkLab:
                 # falsePoses[int(cls)] += 1
                 continue
 
@@ -378,6 +373,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 # print('not enough inlier')
                 continue
             trueDets[int(true_cat)] += 1
+            print(np.nanmax(cls_mask), len(cls_indices[0]))
 
             #print('detection: ', true_cat)
 
@@ -396,6 +392,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             cls_img = np.where(obj_mask > 0.5, 1, 0)
             cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
             cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            depth_mask = copy.deepcopy(cls_img)
             cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
             cls_img = cls_img.astype(np.uint8)
             cls_img[:, :, 0] *= obj_col[0]
@@ -403,7 +400,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             cls_img[:, :, 2] *= obj_col[2]
             image_mask = np.where(cls_img > 0, cls_img, image_mask)
 
-            anno_ind = np.argwhere(anno['labels'] == cls)
+            anno_ind = np.argwhere(anno['labels'] == true_cat)
 
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
@@ -477,8 +474,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 model_vsd = mv21
                 pcd_model = pc21
 
-            #k_hyp = len(cls_indices[0])
-            k_hyp = 1
+            k_hyp = len(cls_indices[0])
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
@@ -498,20 +494,93 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             t_est = otvec
 
             ##############################
-            # pnp
-            # pose_votes = boxes3D[0, cls_indices, :]
-            # pose_weights = scores[0, cls_indices, :]
-            # print(pose_votes.shape)
-            # print(pose_weights.shape)
-            # print(ori_points.shape)
+            print(np.sum(depth_mask))
+            if np.sum(depth_mask) > 1000:
+                print('--------------------- ICP refinement -------------------')
+                cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
 
-            # Rt = uncertainty_pnp(pose_votes, pose_weights, ori_points, K)
+                pcd_img = np.where(depth_mask, image_dep, np.NaN)
+                pcd_img = create_point_cloud(pcd_img, fxkin, fykin, cxkin, cykin, 1.0)
+                pcd_img = pcd_img[~np.isnan(pcd_img).any(axis=1)]
+                pcd_crop = open3d.PointCloud()
+                pcd_crop.points = open3d.Vector3dVector(pcd_img)
+                open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=30))
 
-            # BOP_score = -1
-            # R_est = tf3d.quaternions.quat2mat(pose[3:])
-            # t_est = pose[:3]
-            # t_est[:2] = t_est[:2] * 0.5
-            # t_est[2] = (t_est[2] / 3 + 1.0)
+                guess = np.zeros((4, 4), dtype=np.float32)
+                guess[:3, :3] = R_est
+                guess[:3, 3] = t_est.T * 1000.0
+                guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
+
+                pcd_model = open3d.geometry.voxel_down_sample(pcd_model, voxel_size=10.0)
+                pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=10.0)
+                open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
+                open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
+
+                pcd_model.transform(guess)
+
+                # print('model unfiltered: ', pcd_model)
+                pcd_crop.paint_uniform_color(np.array([0.99, 0.0, 0.00]))
+                pcd_model.paint_uniform_color(np.array([0.00, 0.99, 0.00]))
+
+
+                # remove model vertices facing away from camera
+                points_unfiltered = np.asarray(pcd_model.points)
+                last_pcd_temp = []
+                for i, normal in enumerate(pcd_model.normals):
+                    if normal[2] < 0:
+                        last_pcd_temp.append(points_unfiltered[i, :])
+
+                pcd_model.points = open3d.Vector3dVector(np.asarray(last_pcd_temp))
+
+                #open3d.draw_geometries([pcd_crop, pcd_model])
+
+                # align translation
+                mean_crop = np.mean(np.array(pcd_crop.points), axis=0)
+                mean_model = np.median(np.array(pcd_model.points), axis=0)
+                pcd_diff = mean_crop - mean_model
+
+                print('pcd_diff: ', pcd_diff)
+
+                # align model with median depth of scene
+                #new_pcd_trans = []
+                #for i, point in enumerate(pcd_model.points):
+                #    poi = np.asarray(point)
+                #    poi = poi + pcd_diff
+                #    new_pcd_trans.append(poi)
+                #pcd_model.points = open3d.Vector3dVector(np.asarray(new_pcd_trans))
+                pcd_model.translate(pcd_diff)
+                open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
+                    radius=20.0, max_nn=10))
+                open3d.draw_geometries([pcd_crop, pcd_model])
+                guess[:3, 3] = guess[:3, 3] + pcd_diff
+
+                reg_p2p = open3d.registration.registration_icp(pcd_model, pcd_crop, 1.0, np.eye(4),
+                                                               open3d.registration.TransformationEstimationPointToPlane(), open3d.registration.ICPConvergenceCriteria(max_iteration=100))
+
+                print('icp: ', reg_p2p.transformation)
+                pcd_model.transform(reg_p2p.transformation)
+                guess = np.matmul(reg_p2p.transformation, guess)
+                R_est = guess[:3, :3]
+                t_est = guess[:3, 3] * 0.001
+                t_est = t_est[:, np.newaxis]
+
+                print('guess: ', guess)
+                open3d.draw_geometries([pcd_crop, pcd_model])
+
+
+
+                #reg_icp = cv2.ppf_match_3d_ICP(100, tolerence=0.005, numLevels=4)
+                #model_points = np.asarray(pcd_model.points, dtype=np.float32)
+                #model_normals = np.asarray(pcd_model.normals, dtype=np.float32)
+                #crop_points = np.asarray(pcd_crop.points, dtype=np.float32)
+                #crop_normals = np.asarray(pcd_crop.points, dtype=np.float32)
+                #pcd_source = np.zeros((model_points.shape[0], 6), dtype=np.float32)
+                #pcd_target = np.zeros((crop_points.shape[0], 6), dtype=np.float32)
+                #pcd_source[:, :3] = model_points * 0.001
+                #pcd_source[:, 3:] = model_normals
+                #pcd_target[:, :3] = crop_points * 0.001
+                #pcd_target[:, 3:] = crop_normals
+                #retval, residual, pose = reg_icp.registerModelToScene(pcd_source, pcd_target)
 
             BOP_R = R_est.flatten().tolist()
             BOP_t = t_est.flatten().tolist()
@@ -529,9 +598,6 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             t_est = t_est.T
             # print('pose: ', pose)
 
-            print(t_est)
-            print(t_gt)
-
             model_vsd["pts"] = model_vsd["pts"] * 0.001
 
             if cls == 1 or cls == 11:
@@ -546,7 +612,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
             eDbox = R_est.dot(ori_points.T).T
-            # eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+            #eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
             eDbox = eDbox + np.repeat(t_est, 8, axis=0)
             est3D = toPix_array(eDbox)
             eDbox = np.reshape(est3D, (16))
@@ -587,7 +653,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
 
         name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
         cv2.imwrite(name, image)
-        cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
+
         print('break')
 
     recall = np.zeros((22), dtype=np.float32)

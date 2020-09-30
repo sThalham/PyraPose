@@ -48,11 +48,21 @@ The default anchor parameters.
 AnchorParameters.default = AnchorParameters(
     #sizes   = [32, 64, 128, 256, 512],
     #strides = [8, 16, 32, 64, 128],
-    sizes   = [32, 64, 128],
+    sizes   = [36, 64, 128],
     strides = [8, 16, 32],
     ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
     scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
 )
+
+# YCB-video
+#AnchorParameters.default = AnchorParameters(
+#    #sizes   = [32, 64, 128, 256, 512],
+#    #strides = [8, 16, 32, 64, 128],
+#    sizes   = [48, 96, 192],
+#    strides = [8, 16, 32],
+#    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
+#)
 
 
 def anchor_targets_bbox(
@@ -111,6 +121,7 @@ def anchor_targets_bbox(
         #image_raw[..., 1] += 116.779
         #image_raw[..., 2] += 123.68
 
+        #rind = np.random.randint(0, 1000)
         #image_raw = image_raw.astype(np.uint8)
         #viz_img = False
 
@@ -187,29 +198,31 @@ def anchor_targets_bbox(
                                      5)
                 '''
 
-                #cls_ind = np.where(annotations['labels']==cls) # index of cls
-                #if not len(cls_ind[0]) == 0:
-                #    viz_img = True
-                #    ov_laps = argmax_overlaps_inds #cls index overlap per anchor location?
-                #    am_laps = positive_indices
-                #    ov_laps = ov_laps[am_laps]
-                #    pru_anc = anchors[am_laps, :]
-                #    anc_idx = ov_laps == cls_ind
-                #    true_anchors = pru_anc[anc_idx[0,:], :]
-                #    for jdx in range(true_anchors.shape[0]):
-                #        bb = true_anchors[jdx, :]
-                #        #print(bb)
-                #        cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                #                   (255, 255, 255), 2)
-                #        #cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                #        #              (255, 0, 0), 1)
-                #        image_crop = image[0][int(bb[1]):int(bb[3]), int(bb[0]):int(bb[2]), :]
-                #        name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(cls) + '_' + str(jdx) + '_crop.jpg'
-                #        cv2.imwrite(name, image_crop)
-            #if viz_img == True:
+                '''
+                cls_ind = np.where(annotations['labels']==cls) # index of cls
+                if not len(cls_ind[0]) == 0:
+                    viz_img = True
+                    ov_laps = argmax_overlaps_inds #cls index overlap per anchor location?
+                    am_laps = positive_indices
+                    ov_laps = ov_laps[am_laps]
+                    pru_anc = anchors[am_laps, :]
+                    anc_idx = ov_laps == cls_ind
+                    true_anchors = pru_anc[anc_idx[0,:], :]
+                    for jdx in range(true_anchors.shape[0]):
+                        bb = true_anchors[jdx, :]
+                        #print(bb)
+                        cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                                   (255, 255, 255), 2)
+                        #cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                        #              (255, 0, 0), 1)
+                        #image_crop = image[0][int(bb[1]):int(bb[3]), int(bb[0]):int(bb[2]), :]
+                        #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(cls) + '_' + str(jdx) + '_crop.jpg'
+                        #cv2.imwrite(name, image_crop)
+            if viz_img == True:
                 #image_raw = image_raw[int(np.nanmin(true_anchors[:, 0])):int(np.nanmin(true_anchors[:, 1])), int(np.nanmax(true_anchors[:, 2])):int(np.nanmax(true_anchors[:, 3])), :]
-                #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-                #cv2.imwrite(name, image_raw)
+                name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+                cv2.imwrite(name, image_raw)
+            '''
 
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1

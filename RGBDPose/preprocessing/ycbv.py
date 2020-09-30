@@ -86,21 +86,22 @@ class YCBvGenerator(Generator):
             self.TDboxes[int(key), :, :] = three_box_solo
         '''
 
-        self.TDboxes = np.ndarray((6, 8, 3), dtype=np.float32)
+        self.TDboxes = np.ndarray((22, 8, 3), dtype=np.float32)
 
         for key, value in yaml.load(open(self.mesh_info)).items():
-            if int(key) == 5:
-                key = 1
-            elif int(key) == 8:
-                key = 2
-            elif int(key) == 9:
-                key = 3
-            elif int(key) == 10:
-                key = 4
-            elif int(key) == 21:
-                key = 5
-            else:
-                continue
+            if self.set_name == 'train':
+                if int(key) == 5:
+                    key = 1
+                elif int(key) == 8:
+                    key = 2
+                elif int(key) == 9:
+                    key = 3
+                elif int(key) == 10:
+                    key = 4
+                elif int(key) == 21:
+                    key = 5
+                else:
+                    continue
 
             x_minus = value['min_x']
             y_minus = value['min_y']
