@@ -38,7 +38,7 @@ from RGBDPose.utils import ply_loader
 
 from object_detector_msgs.srv import get_poses, get_posesResponse
 from object_detector_msgs.msg import PoseWithConfidence
-
+from geometry_msgs.msg import PoseArray, Pose
 ###################################
 ##### Global Variable Space #######
 ######## aka. death zone ##########
@@ -220,8 +220,9 @@ class PoseEstimationClass:
         self.time = None
         self.frame_id = None
         self.bridge = CvBridge()
-        self.pose_pub = rospy.Publisher("/pyrapose/poses", get_posesResponse, queue_size=1)
+        self.pose_pub = rospy.Publisher("/pyrapose/poses", PoseArray, queue_size=10)
         self.image_sub = rospy.Subscriber(topic, Image, self.callback)
+        self.depth_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
 
         self.threeD_boxes = np.ndarray((22, 8, 3), dtype=np.float32)
         mesh_info = os.path.join(mesh_path, 'models_info.json')
@@ -246,53 +247,105 @@ class PoseEstimationClass:
         model_vsd = ply_loader.load_ply(ply_path)
         self.model_6 = open3d.PointCloud()
         self.model_6.points = open3d.Vector3dVector(model_vsd['pts'])
+        self.pcd_model_6 = open3d.PointCloud()
+        self.pcd_model_6.points = open3d.Vector3dVector(model_vsd['pts'])
+        open3d.estimate_normals(self.pcd_model_6, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=2.0, max_nn=30))
         ply_path = mesh_path + '/obj_000008.ply'
         model_vsd = ply_loader.load_ply(ply_path)
         self.model_9 = open3d.PointCloud()
         self.model_9.points = open3d.Vector3dVector(model_vsd['pts'])
+        self.pcd_model_9 = open3d.PointCloud()
+        self.pcd_model_9.points = open3d.Vector3dVector(model_vsd['pts'])
+        open3d.estimate_normals(self.pcd_model_9, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=2.0, max_nn=30))
         ply_path = mesh_path + '/obj_000009.ply'
         model_vsd = ply_loader.load_ply(ply_path)
         self.model_10 = open3d.PointCloud()
         self.model_10.points = open3d.Vector3dVector(model_vsd['pts'])
+        self.pcd_model_10 = open3d.PointCloud()
+        self.pcd_model_10.points = open3d.Vector3dVector(model_vsd['pts'])
+        open3d.estimate_normals(self.pcd_model_10, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=2.0, max_nn=30))
         ply_path = mesh_path + '/obj_000010.ply'
         model_vsd = ply_loader.load_ply(ply_path)
         self.model_11 = open3d.PointCloud()
         self.model_11.points = open3d.Vector3dVector(model_vsd['pts'])
+        self.pcd_model_11 = open3d.PointCloud()
+        self.pcd_model_11.points = open3d.Vector3dVector(model_vsd['pts'])
+        open3d.estimate_normals(self.pcd_model_11, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=2.0, max_nn=30))
         ply_path = mesh_path + '/obj_000021.ply'
         model_vsd = ply_loader.load_ply(ply_path)
         self.model_61 = open3d.PointCloud()
         self.model_61.points = open3d.Vector3dVector(model_vsd['pts'])
+        self.pcd_model_61 = open3d.PointCloud()
+        self.pcd_model_61.points = open3d.Vector3dVector(model_vsd['pts'])
+        open3d.estimate_normals(self.pcd_model_61, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=2.0, max_nn=30))
+    def depth_callback(self, data):
+        self.depth = data
 
     def callback(self, data):
         self.seq = data.header.seq
         self.time = data.header.stamp
         self.frame_id = data.header.frame_id
         self._msg = self.bridge.imgmsg_to_cv2(data, "8UC3")
+        #self._msg = ros_numpy.numpify(data)
+        self._dep =self.bridge.imgmsg_to_cv2(self.depth, "16UC1")
 
-        det_objs, det_poses, det_confs = run_estimation(self._msg, self._model, self._score_th, self.threeD_boxes)#, self.seq)
+        f_sca_x = 538.391033 / 1066.778
+        f_sca_y = 538.085452 / 1067.487
+        x_min = 315.30747 * f_sca_x
+        x_max = 315.30747 + (640.0 - 315.30747) * f_sca_x
+        y_min = 233.04356 * f_sca_y
+        y_max = 233.04356 + (480.0 - 233.04356) * f_sca_y
+        self._msg = self._msg[int(y_min):int(y_max), int(x_min):int(x_max), :]
+        self._msg = cv2.resize(self._msg, (640, 480))
+        self._msg = cv2.cvtColor(self._msg, cv2.COLOR_BGR2RGB)
+        cv2.imwrite('/stefan/test.png', self._msg)
+        self._dep = self._dep[int(y_min):int(y_max), int(x_min):int(x_max)]
+        self._dep = cv2.resize(self._dep, (640, 480))
 
+
+        det_objs, det_poses, det_confs = run_estimation(self._msg, self._dep, self._model, self._score_th, self.threeD_boxes, self.pcd_model_6, self.pcd_model_9, self.pcd_model_10, self.pcd_model_11, self.pcd_model_61)#, self.seq)
 
         self.publish_pose(det_objs, det_poses, det_confs)
+    
 
     def publish_pose(self, det_names, det_poses, det_confidences):
+        msg = PoseArray()
+        msg.header.frame_id = '/head_rgbd_sensor_rgb_frame'
+        msg.header.stamp = rospy.Time(0)
 
-        msg = get_posesResponse()
         for idx in range(len(det_names)):
-            item = PoseWithConfidence()
-            item.name = det_names[idx] 
-            item.confidence = det_confidences[idx]
-            item.pose = Pose()
-            det_pose = det_poses[idx]
-            item.pose.position.x = det_pose[0]
-            item.pose.position.y = det_pose[1]
-            item.pose.position.z = det_pose[2]
-            item.pose.orientation.w = det_pose[3]
-            item.pose.orientation.x = det_pose[4]
-            item.pose.orientation.y = det_pose[5]
-            item.pose.orientation.z = det_pose[6]
+            item = Pose()
+            item.position.x = det_poses[idx][0] 
+            item.position.y = det_poses[idx][1] 
+            item.position.z = det_poses[idx][2] 
+            item.orientation.w = det_poses[idx][3] 
+            item.orientation.x = det_poses[idx][4] 
+            item.orientation.y = det_poses[idx][5] 
+            item.orientation.z = det_poses[idx][6]
             msg.poses.append(item)
-
         self.pose_pub.publish(msg)
+        # msg = get_posesResponse()
+        # for idx in range(len(det_names)):
+        #     item = PoseWithConfidence()
+        #     item.name = det_names[idx] 
+        #     item.confidence = det_confidences[idx]
+        #     item.pose = Pose()
+        #     det_pose = det_poses[idx]
+        #     item.pose.position.x = det_pose[0]
+        #     item.pose.position.y = det_pose[1]
+        #     item.pose.position.z = det_pose[2]
+        #     item.pose.orientation.w = det_pose[3]
+        #     item.pose.orientation.x = det_pose[4]
+        #     item.pose.orientation.y = det_pose[5]
+        #     item.pose.orientation.z = det_pose[6]
+        #     msg.poses.append(item)
+
+        # self.pose_pub.publish(msg)
 
 
 class PoseEstimationServer:
@@ -310,7 +363,7 @@ class PoseEstimationServer:
         self.topic = topic
         self.pose_srv = rospy.Service(service_name, get_poses, self.callback)
         self.image_sub = rospy.Subscriber(topic, Image, self.image_callback)
-        self.image_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
+        self.depth_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
 
 
         self.threeD_boxes = np.ndarray((22, 8, 3), dtype=np.float32)
@@ -584,68 +637,92 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
         R_est, _ = cv2.Rodrigues(orvec)
         t_est = otvec[:, 0]
               
-        if np.sum(depth_mask) > 5000:
+        if np.sum(depth_mask) > 3000:
             print('--------------------- ICP refinement -------------------')
-            print(inv_cls, np.sum(depth_mask))
-            print('trans_pre', t_est)
-            cv2.imwrite('/stefan/depth_mask_' + str(inv_cls) + '.png', depth_mask*255)
+
+            print(true_cls, np.sum(depth_mask))
 
             pcd_img = np.where(depth_mask, image_dep, np.NaN)
             pcd_img = create_point_cloud(pcd_img, fxkin, fykin, cxkin, cykin, 1.0)
             pcd_img = pcd_img[~np.isnan(pcd_img).any(axis=1)]
             pcd_crop = open3d.PointCloud()
             pcd_crop.points = open3d.Vector3dVector(pcd_img)
-            open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=2.0, max_nn=30))
-
-            # pcd_crop.paint_uniform_color(np.array([0.99, 0.0, 0.00]))
-            # open3d.draw_geometries([pcd_crop])
+            open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=30))
 
             guess = np.zeros((4, 4), dtype=np.float32)
             guess[:3, :3] = R_est
-            guess[:3, 3] = t_est.T
+            guess[:3, 3] = t_est.T * 1000.0
             guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
 
-            #np.where(cloud_final[:,2]!=np.NaN)
-            pcd_model = open3d.geometry.voxel_down_sample(pcd_model, voxel_size=5)
-            pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=5)
-            #print('model unfiltered: ', pcd_model)
+            pcd_model = open3d.geometry.voxel_down_sample(pcd_model, voxel_size=10.0)
+            pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=10.0)
+            open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
+            open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
+
+            pcd_model.transform(guess)
 
             # remove model vertices facing away from camera
-            pcd_model.transform(guess)
-            #points_unfiltered = np.asarray(pcd_model.points)
-            #last_pcd_temp = []
-            #for i, normal in enumerate(pcd_model.normals):
-            #    if normal[2] < 0:
-            #        last_pcd_temp.append(points_unfiltered[i, :])
+            points_unfiltered = np.asarray(pcd_model.points)
+            last_pcd_temp = []
+            for i, normal in enumerate(pcd_model.normals):
+                if normal[2] < 0:
+                    last_pcd_temp.append(points_unfiltered[i, :])
 
-            #pcd_model.points = open3d.Vector3dVector(np.asarray(last_pcd_temp))
-            #print('model filtered: ', pcd_model)
+            pcd_model.points = open3d.Vector3dVector(np.asarray(last_pcd_temp))
+            open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
+                    radius=20.0, max_nn=10))
 
-            if inv_cls == 4:
-                open3d.io.write_point_cloud('/stefan/brick_model.pcd', pcd_model)
-                open3d.io.write_point_cloud('/stefan/brick_crop.pcd', pcd_crop)
+            # align model with median depth of scene
+            mean_crop = np.median(np.array(pcd_crop.points), axis=0)
+            mean_model = np.mean(np.array(pcd_model.points), axis=0)
 
-            reg_icp = cv2.ppf_match_3d_ICP(100, tolerence=0.005, numLevels=4)
+            pcd_min = guess[2, 3] - 50
+            pcd_max = guess[2, 3] + 50
+            new_pcd_scene = []
+            for i, point in enumerate(pcd_crop.points):
+                if point[2] > pcd_min and point[2] < pcd_max:
+                    new_pcd_scene.append(point)
+
+            print(mean_crop, mean_crop.shape)
+            print(guess[:3, 3], guess[:3, 3].shape)
+            print(mean_crop-guess[:3, 3])
+            print(np.linalg.norm((mean_crop-guess[:3, 3]), ord=2))
+            if len(new_pcd_scene)< 50 or np.linalg.norm((mean_crop-guess[:3, 3]), ord=2) > 50:
+                pcd_diff = mean_crop - mean_model
+                pcd_model.translate(pcd_diff)
+                open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
+                    radius=20.0, max_nn=10))
+                guess[:3, 3] = mean_crop
+            else:
+                pcd_crop.points = open3d.Vector3dVector(np.asarray(new_pcd_scene))
+
+            open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(
+                radius=20.0, max_nn=10))
+
+            #reg_p2p = open3d.registration.registration_icp(pcd_model, pcd_crop, 5.0, np.eye(4),
+            #                                                open3d.registration.TransformationEstimationPointToPlane(), open3d.registration.ICPConvergenceCriteria(max_iteration=100))
+            reg_icp = cv2.ppf_match_3d_ICP(100, tolerence=0.05, numLevels=4)
             model_points = np.asarray(pcd_model.points, dtype=np.float32)
             model_normals = np.asarray(pcd_model.normals, dtype=np.float32)
             crop_points = np.asarray(pcd_crop.points, dtype=np.float32)
-            crop_normals = np.asarray(pcd_crop.points, dtype=np.float32)
+            crop_normals = np.asarray(pcd_crop.normals, dtype=np.float32)
             pcd_source = np.zeros((model_points.shape[0], 6), dtype=np.float32)
             pcd_target = np.zeros((crop_points.shape[0], 6), dtype=np.float32)
             pcd_source[:, :3] = model_points * 0.001
             pcd_source[:, 3:] = model_normals
             pcd_target[:, :3] = crop_points * 0.001
             pcd_target[:, 3:] = crop_normals
+
             retval, residual, pose = reg_icp.registerModelToScene(pcd_source, pcd_target)
-            #reg_p2p = open3d.registration.registration_icp(pcd_model, pcd_crop, 20.0)#, guess,
-            #                                           open3d.registration.TransformationEstimationPointToPlane())
-            #                                           open3d.registration.ICPConvergenceCriteria(max_iteration = 5))
-            #reg_p2p, _, _, _ =get_evaluation_kiru(pcd_model, pcd_crop, 50, guess, 5, model_dia[cls]*0.001)
-            reg_p2p = np.matmul(guess, pose)
-            R_est = reg_p2p[:3, :3]
-            t_est = reg_p2p[:3, 3]
-            print('trans_post', pose)
-            print('fitness: ', reg_p2p)
+            
+            #pcd_model.transform(reg_p2p.transformation)
+            guess[:3, 3] = guess[:3, 3] * 0.001
+            guess = np.matmul(pose, guess)
+            R_est = guess[:3, :3]
+            t_est = guess[:3, 3] 
+
+            print('guess: ', guess)
+            
 
         est_pose = np.zeros((7), dtype=np.float32)
         est_pose[:3] = t_est
