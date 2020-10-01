@@ -173,14 +173,14 @@ def create_BB(rgb):
 
 if __name__ == "__main__":
 
-    dataset = 'ycbv'
-    traintestval = 'train'
-    visu = True
-    specific_object_set = True
+    dataset = 'linemod'
+    traintestval = 'val'
+    visu = False
+    specific_object_set = False
     spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/ycbv_PBR_train/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/ycbv_PBR_BOP_graspa/'
+    root = "/home/stefan/data/datasets/LM_BOP_test/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/linemod_RGBD_test/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -199,7 +199,8 @@ if __name__ == "__main__":
     sym_cont = np.ndarray((34, 3), dtype=np.float32)
     sym_disc = np.ndarray((34, 4, 4), dtype=np.float32)
 
-    for key, value in json.load(open(mesh_info)).items():
+    for key, value in yaml.load(open(mesh_info)).items():
+    #for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
         x_minus = value['min_x']
         y_minus = value['min_y']
@@ -279,7 +280,7 @@ if __name__ == "__main__":
         with open(infoPath, 'r') as streamINFO:
             gtjson = json.load(streamINFO)
 
-        for samp in os.listdir(rgbPath)[:10]:
+        for samp in os.listdir(rgbPath):
 
             imgname = samp
             rgbImgPath = rgbPath + samp

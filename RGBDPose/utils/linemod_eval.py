@@ -302,14 +302,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
         #    t_tra = anno['poses'][0][:3]
         #    t_rot = anno['poses'][0][3:]
 
-        # if t_cat != 2:
+        #if anno['labels'][0] != 0:
         #    continue
 
         # run network
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask = model.predict_on_batch([np.expand_dims(image, axis=0), np.expand_dims(image_dep, axis=0)])
+        boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
         for inv_cls in range(scores.shape[2]):
 
@@ -605,7 +605,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             for idx in range(k_hyp):
                 hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
 
-            print('max location: ', np.nanmax(hyp_mask))
             hyp_mask = np.transpose(hyp_mask)
             hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
 
@@ -637,11 +636,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             image_crop = image_raw[min_y:max_y, min_x:max_x, :]
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
-
-            name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
-            cv2.imwrite(name, image_crop)
-            print('break')
             '''
+
+            #name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+            #cv2.imwrite(name, image_raw)
+            #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
