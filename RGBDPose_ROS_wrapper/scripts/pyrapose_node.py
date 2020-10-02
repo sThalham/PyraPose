@@ -65,10 +65,10 @@ from geometry_msgs.msg import PoseArray, Pose
 #cykin = 235.5
 
 # HSRB
-#fxkin = 538.391033
-#fykin = 538.085452
-#cxkin = 315.30747
-#cykin = 233.048356
+# fxkin = 538.391033
+# fykin = 538.085452
+# cxkin = 315.30747
+# cykin = 233.048356
 
 # magic intrinsics
 fxkin = 1066.778
@@ -294,6 +294,7 @@ class PoseEstimationClass:
         #self._msg = ros_numpy.numpify(data)
         self._dep =self.bridge.imgmsg_to_cv2(self.depth, "16UC1")
 
+        
         f_sca_x = 538.391033 / 1066.778
         f_sca_y = 538.085452 / 1067.487
         x_min = 315.30747 * f_sca_x
@@ -302,6 +303,7 @@ class PoseEstimationClass:
         y_max = 233.04356 + (480.0 - 233.04356) * f_sca_y
         self._msg = self._msg[int(y_min):int(y_max), int(x_min):int(x_max), :]
         self._msg = cv2.resize(self._msg, (640, 480))
+        
         self._msg = cv2.cvtColor(self._msg, cv2.COLOR_BGR2RGB)
         cv2.imwrite('/stefan/test.png', self._msg)
         self._dep = self._dep[int(y_min):int(y_max), int(x_min):int(x_max)]
@@ -311,6 +313,7 @@ class PoseEstimationClass:
         det_objs, det_poses, det_confs = run_estimation(self._msg, self._dep, self._model, self._score_th, self.threeD_boxes, self.pcd_model_6, self.pcd_model_9, self.pcd_model_10, self.pcd_model_11, self.pcd_model_61)#, self.seq)
 
         self.publish_pose(det_objs, det_poses, det_confs)
+        rospy.sleep(2)
     
 
     def publish_pose(self, det_names, det_poses, det_confidences):
@@ -361,6 +364,7 @@ class PoseEstimationServer:
         self.frame_id = None
         self.bridge = CvBridge()
         self.topic = topic
+        self.pose_pub = rospy.Publisher("/pyrapose/poses", PoseArray, queue_size=10)
         self.pose_srv = rospy.Service(service_name, get_poses, self.callback)
         self.image_sub = rospy.Subscriber(topic, Image, self.image_callback)
         self.depth_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
@@ -443,6 +447,7 @@ class PoseEstimationServer:
         #self._msg = ros_numpy.numpify(data)
         self._dep =self.bridge.imgmsg_to_cv2(self.depth, "16UC1")
 
+        
         f_sca_x = 538.391033 / 1066.778
         f_sca_y = 538.085452 / 1067.487
         x_min = 315.30747 * f_sca_x
@@ -451,6 +456,7 @@ class PoseEstimationServer:
         y_max = 233.04356 + (480.0 - 233.04356) * f_sca_y
         self._msg = self._msg[int(y_min):int(y_max), int(x_min):int(x_max), :]
         self._msg = cv2.resize(self._msg, (640, 480))
+        
         self._msg = cv2.cvtColor(self._msg, cv2.COLOR_BGR2RGB)
         cv2.imwrite('/stefan/test.png', self._msg)
         self._dep = self._dep[int(y_min):int(y_max), int(x_min):int(x_max)]
@@ -462,6 +468,21 @@ class PoseEstimationServer:
         return msg
 
     def fill_pose(self, det_names, det_poses, det_confidences):
+        msg = PoseArray()
+        msg.header.frame_id = '/head_rgbd_sensor_rgb_frame'
+        msg.header.stamp = rospy.Time(0)
+
+        for idx in range(len(det_names)):
+            item = Pose()
+            item.position.x = det_poses[idx][0] 
+            item.position.y = det_poses[idx][1] 
+            item.position.z = det_poses[idx][2] 
+            item.orientation.w = det_poses[idx][3] 
+            item.orientation.x = det_poses[idx][4] 
+            item.orientation.y = det_poses[idx][5] 
+            item.orientation.z = det_poses[idx][6]
+            msg.poses.append(item)
+        self.pose_pub.publish(msg)
 
         msg = get_posesResponse()
         for idx in range(len(det_names)):
@@ -526,15 +547,16 @@ def load_model(model_path):
 
     return model#, graph
 
-
+mask_pub = rospy.Publisher('/pyrapose/masks', Image, queue_size=10)
 #def run_estimation(image, model, score_threshold, graph, frame_id):
 def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model_6, model_9, model_10, model_11, model_61):
     obj_names = []
     obj_poses = []
     obj_confs = []
 
-    image = preprocess_image(image)
     image_mask = copy.deepcopy(image)
+    image = preprocess_image(image)
+    #image_mask = copy.deepcopy(image)
 
     #cv2.imwrite('/home/sthalham/retnetpose_image.jpg', image)
 
@@ -561,9 +583,8 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
 
         cls_mask = scores[0, :, inv_cls]
 
-        #cls_indices = np.where(cls_mask > score_threshold)
-        cls_indices = np.argmax(cls_mask)
-        #print(cls_indices)
+        cls_indices = np.where(cls_mask > score_threshold)
+        #cls_indices = np.argmax(cls_mask)
         #print(cls_mask[cls_indices])
 
         cls_img = image
@@ -587,12 +608,12 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
         cls_img[:, :, 0] *= obj_col[0]
         cls_img[:, :, 1] *= obj_col[1]
         cls_img[:, :, 2] *= obj_col[2]
-        image_mask = np.where(cls_img > 0, cls_img, image_mask)
-        cv2.imwrite('/stefan/mask.png', image_mask)
+        image_mask = np.where(cls_img > 0, cls_img, image_mask.astype(np.uint8))
+        #cv2.imwrite('/stefan/mask.png', image_mask)
 
         #if len(cls_indices[0]) < 1:
-        #if len(cls_indices[0]) < 1:
-        #    continue
+        if len(cls_indices[0]) < 1:
+            continue
 
         if true_cls == 5:
             name = '006_mustard_bottle'
@@ -617,8 +638,8 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
         obj_confs.append(np.sum(cls_mask[cls_indices]))
 
 
-        #k_hyp = len(cls_indices[0])
-        k_hyp = 1
+        k_hyp = len(cls_indices[0])
+        #k_hyp = 1
         ori_points = np.ascontiguousarray(threeD_boxes[(true_cls), :, :], dtype=np.float32)  # .reshape((8, 1, 3))
         K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
@@ -637,11 +658,12 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
         R_est, _ = cv2.Rodrigues(orvec)
         t_est = otvec[:, 0]
               
-        if np.sum(depth_mask) > 3000:
+        
+        if np.sum(depth_mask) > 3000 :
+
             print('--------------------- ICP refinement -------------------')
 
-            print(true_cls, np.sum(depth_mask))
-
+            print('cls: ', true_cls)
             pcd_img = np.where(depth_mask, image_dep, np.NaN)
             pcd_img = create_point_cloud(pcd_img, fxkin, fykin, cxkin, cykin, 1.0)
             pcd_img = pcd_img[~np.isnan(pcd_img).any(axis=1)]
@@ -654,10 +676,10 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
             guess[:3, 3] = t_est.T * 1000.0
             guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
 
-            pcd_model = open3d.geometry.voxel_down_sample(pcd_model, voxel_size=10.0)
-            pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=10.0)
-            open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
-            open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
+            pcd_model = open3d.geometry.voxel_down_sample(pcd_model, voxel_size=5.0)
+            pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=5.0)
+            open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=10.0, max_nn=10))
+            open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(radius=10.0, max_nn=10))
 
             pcd_model.transform(guess)
 
@@ -675,25 +697,35 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
             # align model with median depth of scene
             mean_crop = np.median(np.array(pcd_crop.points), axis=0)
             mean_model = np.mean(np.array(pcd_model.points), axis=0)
+            pcd_crop_filt = copy.deepcopy(pcd_crop)
 
-            pcd_min = guess[2, 3] - 50
-            pcd_max = guess[2, 3] + 50
+            pcd_min = guess[2, 3] - 75
+            pcd_max = guess[2, 3] + 75
             new_pcd_scene = []
             for i, point in enumerate(pcd_crop.points):
                 if point[2] > pcd_min and point[2] < pcd_max:
                     new_pcd_scene.append(point)
 
+            #mean_crop = np.mean(np.array(pcd_crop_filt.points), axis=0)
+
             print(mean_crop, mean_crop.shape)
-            print(guess[:3, 3], guess[:3, 3].shape)
-            print(mean_crop-guess[:3, 3])
-            print(np.linalg.norm((mean_crop-guess[:3, 3]), ord=2))
-            if len(new_pcd_scene)< 50 or np.linalg.norm((mean_crop-guess[:3, 3]), ord=2) > 50:
+            #print(guess[:3, 3], guess[:3, 3].shape)
+            #print(mean_crop-guess[:3, 3])
+            print('euclid: ', np.linalg.norm((mean_crop-guess[:3, 3]), ord=2))
+            print('num_points: ', len(new_pcd_scene))
+            if len(new_pcd_scene)< 50 or np.linalg.norm((mean_crop-guess[:3, 3]), ord=2) > 75:
+                print('use pcd mean')
+                if len(new_pcd_scene) > 50 and np.linalg.norm((mean_crop-guess[:3, 3]), ord=2) > 75:
+                    print('recalc mean')
+                    pcd_crop_filt.points = open3d.Vector3dVector(np.asarray(new_pcd_scene))
+                    mean_crop = np.mean(np.array(pcd_crop_filt.points), axis=0)
                 pcd_diff = mean_crop - mean_model
                 pcd_model.translate(pcd_diff)
                 open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
-                    radius=20.0, max_nn=10))
+                    radius=10.0, max_nn=10))
                 guess[:3, 3] = mean_crop
             else:
+                print('use pose')
                 pcd_crop.points = open3d.Vector3dVector(np.asarray(new_pcd_scene))
 
             open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(
@@ -701,7 +733,7 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
 
             #reg_p2p = open3d.registration.registration_icp(pcd_model, pcd_crop, 5.0, np.eye(4),
             #                                                open3d.registration.TransformationEstimationPointToPlane(), open3d.registration.ICPConvergenceCriteria(max_iteration=100))
-            reg_icp = cv2.ppf_match_3d_ICP(100, tolerence=0.05, numLevels=4)
+            reg_icp = cv2.ppf_match_3d_ICP(100, tolerence=0.075, numLevels=4)
             model_points = np.asarray(pcd_model.points, dtype=np.float32)
             model_normals = np.asarray(pcd_model.normals, dtype=np.float32)
             crop_points = np.asarray(pcd_crop.points, dtype=np.float32)
@@ -715,20 +747,26 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
 
             retval, residual, pose = reg_icp.registerModelToScene(pcd_source, pcd_target)
             
+            print('residual: ', residual)
             #pcd_model.transform(reg_p2p.transformation)
             guess[:3, 3] = guess[:3, 3] * 0.001
             guess = np.matmul(pose, guess)
             R_est = guess[:3, :3]
             t_est = guess[:3, 3] 
 
-            print('guess: ', guess)
-            
+            #print('guess: ', guess)
+        
 
         est_pose = np.zeros((7), dtype=np.float32)
         est_pose[:3] = t_est
         est_pose[3:] = tf3d.quaternions.mat2quat(R_est)
         obj_poses.append(est_pose)
 
+    bridge = CvBridge()
+
+    image_mask_msg = bridge.cv2_to_imgmsg(image_mask)
+
+    mask_pub.publish(image_mask_msg)
     return obj_names, obj_poses, obj_confs
 
 
