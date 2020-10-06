@@ -173,14 +173,14 @@ def create_BB(rgb):
 
 if __name__ == "__main__":
 
-    dataset = 'linemod'
-    traintestval = 'val'
+    dataset = 'homebrewed'
+    traintestval = 'train'
     visu = False
     specific_object_set = False
     spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/LM_BOP_test/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/linemod_RGBD_test/'
+    root = "/home/stefan/data/datasets/hb_train_pbr/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/hb_PBR_BOP/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     elif dataset == 'tless':
         mesh_info = '/home/stefan/data/Meshes/tless_30/models_eval/models_info.json'
     elif dataset == 'homebrewed':
-        mesh_info = '/home/stefan/data/Meshes/homebrewedDB/models_eval/models_info.json'
+        mesh_info = '/home/stefan/data/Meshes/homebrewed/models_eval/models_info.yml'
     else:
         print('unknown dataset')
 
@@ -409,6 +409,10 @@ if __name__ == "__main__":
                         pose = get_cont_sympose(pose, sym_cont[obj_id, :])
                     elif obj_id in [5, 6, 7, 8, 9, 10, 11, 12, 19, 20, 23, 25, 26, 28, 29]:
                         pose = get_disc_sympose(pose, sym_disc[obj_id, :, :])
+                #elif dataset == 'homebrewed':
+                #    if obj_id in [10, 11, 14]:
+                #        print('sym adjustment', obj_id)
+                #        pose = get_cont_sympose(pose, sym_cont[obj_id, :])
 
                 #elif objID == 27:
                 #    rot = get_disc_sympose(pose, [sym_disc[27, :, :], sym_disc[31, :, :], sym_disc[32, :, :]], objID)
@@ -427,12 +431,12 @@ if __name__ == "__main__":
                 pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
                         np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
 
-                #if obj_id in [13]:
-                bbox_vis.append(obj_bb)
-                bbvis.append(box3D)
-                camR_vis.append(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
-                camT_vis.append(np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32))
-                calib_K.append(K)
+                #if obj_id in [10, 11, 14]:
+                #    bbox_vis.append(obj_bb)
+                #    bbvis.append(box3D)
+                #    camR_vis.append(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+                #    camT_vis.append(np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32))
+                #    calib_K.append(K)
 
                 nx1 = obj_bb[0]
                 ny1 = obj_bb[1]

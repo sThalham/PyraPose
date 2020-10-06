@@ -244,6 +244,22 @@ def create_generators(args, preprocess_image):
             transform_generator=transform_generator,
             **common_args
         )
+    elif args.dataset_type == 'homebrewed':
+        from ..preprocessing.homebrewed import HomebrewedGenerator
+
+        train_generator = HomebrewedGenerator(
+            args.homebrewed_path,
+            'train',
+            transform_generator=transform_generator,
+            **common_args
+        )
+
+        validation_generator = HomebrewedGenerator(
+            args.homebrewed_path,
+            'val',
+            transform_generator=transform_generator,
+            **common_args
+        )
 
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
@@ -269,6 +285,9 @@ def parse_args(args):
 
     tless_parser = subparsers.add_parser('tless')
     tless_parser.add_argument('tless_path', help='Path to dataset directory (ie. /tmp/tless).')
+
+    homebrewed_parser = subparsers.add_parser('homebrewed')
+    homebrewed_parser.add_argument('homebrewed_path', help='Path to dataset directory (ie. /tmp/tless).')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--snapshot',          help='Resume training from a snapshot.')
