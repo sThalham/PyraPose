@@ -75,7 +75,7 @@ def anchor_targets_bbox(
     annotations_group,
     num_classes,
     negative_overlap=0.4,
-    positive_overlap=0.75
+    positive_overlap=0.5
 ):
     """ Generate anchor targets for bbox detection.
 
@@ -179,7 +179,7 @@ def anchor_targets_bbox(
                 '''
                 pose = box3D.reshape((16)).astype(np.int16)
 
-                #image_raw = image[0]
+                image_raw = image[0]
 
                 colEst = (255, 0, 0)
 
@@ -231,9 +231,9 @@ def anchor_targets_bbox(
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image_raw)
+            rind = np.random.randint(0, 1000)
+            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            cv2.imwrite(name, image_raw)
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
             #cv2.imwrite(name, image[1] + 100)
 
