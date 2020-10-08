@@ -135,9 +135,12 @@ def toPix_array(translation):
 
 def load_pcd(cat):
     # load meshes
-    #mesh_path ="/RGBDPose/Meshes/linemod_13/"
-    mesh_path = "/home/stefan/data/Meshes/homebrewed_hacked/"
-    #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
+    #mesh_path ="/RGBDPose/Meshes/homebrewedDB/models_eval/"
+    #mesh_path = "/home/stefan/data/Meshes/homebrewed_hacked/"
+    mesh_path = "/home/stefan/data/Meshes/homebrewedDB/models_eval/"
+    template = '000000'
+    lencat = len(cat)
+    cat = template[:-lencat] + cat
     ply_path = mesh_path + 'obj_' + cat + '.ply'
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.PointCloud()
@@ -201,9 +204,9 @@ def boxoverlap(a, b):
 def evaluate_homebrewed(generator, model, threshold=0.05):
     threshold = 0.5
 
-    # mesh_info = '/RGBDPose/Meshes/linemod_13/models_info.yml'
-    mesh_info = '/home/stefan/data/Meshes/homebrewed_hacked/models_info.yml'
-    # mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
+    #mesh_info = '/RGBDPose/Meshes/homebrewedDB/models_eval/models_info.yml'
+    #mesh_info = '/home/stefan/data/Meshes/homebrewed_hacked/models_info.yml'
+    mesh_info = '/home/stefan/data/Meshes/homebrewedDB/models_eval/models_info.yml'
 
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
     model_dia = np.zeros((34), dtype=np.float32)
@@ -227,15 +230,45 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
 
+    pc1, mv1, mv1_mm = load_pcd('01')
     pc2, mv2, mv2_mm = load_pcd('02')
+    pc3, mv3, mv3_mm = load_pcd('03')
+    pc4, mv4, mv4_mm = load_pcd('04')
+    pc5, mv5, mv5_mm = load_pcd('05')
+    pc6, mv6, mv6_mm = load_pcd('06')
+    pc7, mv7, mv7_mm = load_pcd('07')
     pc8, mv8, mv8_mm = load_pcd('08')
+    pc9, mv9, mv9_mm = load_pcd('09')
+    pc10, mv10, mv10_mm = load_pcd('10')
+    pc11, mv11, mv11_mm = load_pcd('11')
+    pc12, mv12, mv12_mm = load_pcd('12')
+    pc13, mv13, mv13_mm = load_pcd('13')
+    pc14, mv14, mv14_mm = load_pcd('14')
     pc15, mv15, mv15_mm = load_pcd('15')
+    pc16, mv16, mv16_mm = load_pcd('16')
+    pc17, mv17, mv17_mm = load_pcd('17')
+    pc18, mv18, mv18_mm = load_pcd('18')
+    pc19, mv19, mv19_mm = load_pcd('19')
+    pc20, mv20, mv20_mm = load_pcd('20')
+    pc21, mv21, mv21_mm = load_pcd('21')
+    pc22, mv22, mv22_mm = load_pcd('22')
+    pc23, mv23, mv23_mm = load_pcd('23')
+    pc24, mv24, mv24_mm = load_pcd('24')
+    pc25, mv25, mv25_mm = load_pcd('25')
+    pc26, mv26, mv26_mm = load_pcd('26')
+    pc27, mv27, mv27_mm = load_pcd('27')
+    pc28, mv28, mv28_mm = load_pcd('28')
+    pc29, mv29, mv29_mm = load_pcd('29')
+    pc30, mv30, mv30_mm = load_pcd('30')
+    pc31, mv31, mv31_mm = load_pcd('31')
+    pc32, mv32, mv32_mm = load_pcd('32')
+    pc33, mv33, mv33_mm = load_pcd('33')
 
-    allPoses = np.zeros((16), dtype=np.uint32)
-    trueDets = np.zeros((16), dtype=np.uint32)
-    falseDets = np.zeros((16), dtype=np.uint32)
-    truePoses = np.zeros((16), dtype=np.uint32)
-    falsePoses = np.zeros((16), dtype=np.uint32)
+    allPoses = np.zeros((34), dtype=np.uint32)
+    trueDets = np.zeros((34), dtype=np.uint32)
+    falseDets = np.zeros((34), dtype=np.uint32)
+    truePoses = np.zeros((34), dtype=np.uint32)
+    falsePoses = np.zeros((34), dtype=np.uint32)
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
@@ -258,12 +291,12 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
         checkLab = anno['labels']  # +1 to real_class
         new_Lab = []
         for idx, lab in enumerate(checkLab):
-            if int(lab) == 1:
-                lm_cat = 2
-            elif int(lab) == 6:
-                lm_cat = 8
-            elif int(lab) == 20:
-                lm_cat = 15
+            #if int(lab) == 1:
+            #    lm_cat = 2
+            #elif int(lab) == 6:
+            #    lm_cat = 8
+            #elif int(lab) == 20:
+            #    lm_cat = 15
             allPoses[lm_cat] += 1
             new_Lab.append(lm_cat)
             #checkLab[idx] += 1
@@ -286,21 +319,20 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
             t_gt = np.array(t_tra, dtype=np.float32)
             t_gt = t_gt * 0.001
 
-            torad = 0.0174533
-            if lab == 2:
-                R_rel = tf3d.euler.euler2mat(0.0, -16.0 * torad, 87.0 * torad, 'sxyz')
-                t_rel = [0.013, -0.016, 0.0]
-            elif lab == 8:
-                R_rel = tf3d.euler.euler2mat(-6.0*torad, 2.0*torad, 91.0*torad, 'sxyz')
-                t_rel = [-0.005, -0.005, 0.0]
-            elif lab == 15:
-                R_rel = tf3d.euler.euler2mat(0.0, 5.0*torad, 0.0, 'sxyz')
-                t_rel = [0.01, 0.0, 0.0]
+            #torad = 0.0174533
+            #if lab == 2:
+            #    R_rel = tf3d.euler.euler2mat(0.0, -16.0 * torad, 87.0 * torad, 'sxyz')
+            #    t_rel = [0.013, -0.016, 0.0]
+            #elif lab == 8:
+            #    R_rel = tf3d.euler.euler2mat(-6.0*torad, 2.0*torad, 91.0*torad, 'sxyz')
+            #    t_rel = [-0.005, -0.005, 0.0]
+            #elif lab == 15:
+            #    R_rel = tf3d.euler.euler2mat(0.0, 5.0*torad, 0.0, 'sxyz')
+            #    t_rel = [0.01, 0.0, 0.0]
 
-            R_rel = np.array(R_rel, dtype=np.float32).reshape(3, 3)
-            #R_rel = np.linalg.inv(R_rel)
-            R_gt = np.matmul(R_gt, R_rel)
-            t_gt = t_gt + t_rel
+            #R_rel = np.array(R_rel, dtype=np.float32).reshape(3, 3)
+            #R_gt = np.matmul(R_gt, R_rel)
+            #t_gt = t_gt + t_rel
 
             ori_points = np.ascontiguousarray(threeD_boxes[int(lab), :, :], dtype=np.float32)
             colGT = (255, 0, 0)
@@ -421,21 +453,21 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
             '''
 
             #map to homebreweddb
-            torad = 0.0174533
-            if cls == 2:
-                clsHB = 1
-                R_rel = tf3d.euler.euler2mat(0.0, -16.0 * torad, 87.0 * torad, 'sxyz')
-                t_rel = [0.013, -0.016, 0.0]
-            elif cls == 8:
-                clsHB = 6
-                R_rel = tf3d.euler.euler2mat(-6.0 * torad, 2.0 * torad, 91.0 * torad, 'sxyz')
-                t_rel = [-0.005, -0.005, 0.0]
-            elif cls == 15:
-                clsHB = 20
-                R_rel = tf3d.euler.euler2mat(0.0, 5.0 * torad, 0.0, 'sxyz')
-                t_rel = [0.01, 0.0, 0.0]
+            #torad = 0.0174533
+            #if cls == 2:
+            #    clsHB = 1
+            #    R_rel = tf3d.euler.euler2mat(0.0, -16.0 * torad, 87.0 * torad, 'sxyz')
+            #    t_rel = [0.013, -0.016, 0.0]
+            #elif cls == 8:
+            #    clsHB = 6
+            #    R_rel = tf3d.euler.euler2mat(-6.0 * torad, 2.0 * torad, 91.0 * torad, 'sxyz')
+            #    t_rel = [-0.005, -0.005, 0.0]
+            #elif cls == 15:
+            #    clsHB = 20
+            #    R_rel = tf3d.euler.euler2mat(0.0, 5.0 * torad, 0.0, 'sxyz')
+            #    t_rel = [0.01, 0.0, 0.0]
 
-            anno_ind = np.argwhere(anno['labels'] == clsHB)
+            anno_ind = np.argwhere(anno['labels'] == cls)
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
 
@@ -444,25 +476,113 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
             t_gt = np.array(t_tra, dtype=np.float32)
             t_gt = t_gt * 0.001
 
-            R_rel = np.array(R_rel, dtype=np.float32).reshape(3, 3)
-            #R_rel = np.linalg.inv(R_rel)
-            R_gt = np.matmul(R_gt, R_rel)
-
-            t_gt = t_gt + t_rel
+            #R_rel = np.array(R_rel, dtype=np.float32).reshape(3, 3)
+            #R_gt = np.matmul(R_gt, R_rel)
+            #t_gt = t_gt + t_rel
 
             BOP_obj_id = np.asarray([true_cat], dtype=np.uint32)
 
             # print(cls)
 
-            if cls == 2:
+            if cls == 1:
+                model_vsd = mv1
+                model_vsd_mm = mv1_mm
+            elif cls == 2:
                 model_vsd = mv2
                 model_vsd_mm = mv2_mm
+            elif cls == 3:
+                model_vsd = mv3
+                model_vsd_mm = mv3_mm
+            elif cls == 4:
+                model_vsd = mv4
+                model_vsd_mm = mv4_mm
+            elif cls == 5:
+                model_vsd = mv5
+                model_vsd_mm = mv5_mm
+            elif cls == 6:
+                model_vsd = mv6
+                model_vsd_mm = mv6_mm
+            elif cls == 7:
+                model_vsd = mv7
+                model_vsd_mm = mv7_mm
             elif cls == 8:
                 model_vsd = mv8
                 model_vsd_mm = mv8_mm
+            elif cls == 9:
+                model_vsd = mv9
+                model_vsd_mm = mv9_mm
+            elif cls == 10:
+                model_vsd = mv10
+                model_vsd_mm = mv10_mm
+            elif cls == 11:
+                model_vsd = mv11
+                model_vsd_mm = mv11_mm
+            elif cls == 12:
+                model_vsd = mv12
+                model_vsd_mm = mv12_mm
+            elif cls == 13:
+                model_vsd = mv13
+                model_vsd_mm = mv13_mm
+            elif cls == 14:
+                model_vsd = mv14
+                model_vsd_mm = mv14_mm
             elif cls == 15:
                 model_vsd = mv15
                 model_vsd_mm = mv15_mm
+            elif cls == 16:
+                model_vsd = mv16
+                model_vsd_mm = mv16_mm
+            elif cls == 17:
+                model_vsd = mv17
+                model_vsd_mm = mv17_mm
+            elif cls == 18:
+                model_vsd = mv18
+                model_vsd_mm = mv18_mm
+            elif cls == 19:
+                model_vsd = mv19
+                model_vsd_mm = mv19_mm
+            elif cls == 20:
+                model_vsd = mv20
+                model_vsd_mm = mv20_mm
+            elif cls == 21:
+                model_vsd = mv21
+                model_vsd_mm = mv21_mm
+            elif cls == 22:
+                model_vsd = mv22
+                model_vsd_mm = mv22_mm
+            elif cls == 23:
+                model_vsd = mv23
+                model_vsd_mm = mv23_mm
+            elif cls == 24:
+                model_vsd = mv24
+                model_vsd_mm = mv24_mm
+            elif cls == 25:
+                model_vsd = mv25
+                model_vsd_mm = mv25_mm
+            elif cls == 26:
+                model_vsd = mv26
+                model_vsd_mm = mv26_mm
+            elif cls == 27:
+                model_vsd = mv27
+                model_vsd_mm = mv27_mm
+            elif cls == 28:
+                model_vsd = mv28
+                model_vsd_mm = mv28_mm
+            elif cls == 29:
+                model_vsd = mv29
+                model_vsd_mm = mv29_mm
+            elif cls == 30:
+                model_vsd = mv30
+                model_vsd_mm = mv30_mm
+            elif cls == 31:
+                model_vsd = mv31
+                model_vsd_mm = mv31_mm
+            elif cls == 32:
+                model_vsd = mv32
+                model_vsd_mm = mv32_mm
+            elif cls == 33:
+                model_vsd = mv33
+                model_vsd_mm = mv33_mm
 
             k_hyp = len(cls_indices[0])
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -553,9 +673,9 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
         #cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
         #print('break')
 
-    recall = np.zeros((16), dtype=np.float32)
-    precision = np.zeros((16), dtype=np.float32)
-    detections = np.zeros((16), dtype=np.float32)
+    recall = np.zeros((34), dtype=np.float32)
+    precision = np.zeros((34), dtype=np.float32)
+    detections = np.zeros((34), dtype=np.float32)
     for i in range(1, (allPoses.shape[0])):
         recall[i] = truePoses[i] / allPoses[i]
         precision[i] = truePoses[i] / (truePoses[i] + falsePoses[i])
@@ -571,9 +691,9 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
         print('recall: ', recall[i])
         print('precision: ', precision[i])
 
-    recall_all = np.sum(recall[1:]) / 8.0
-    precision_all = np.sum(precision[1:]) / 8.0
-    detections_all = np.sum(detections[1:]) / 8.0
+    recall_all = np.sum(recall[1:]) / 3.0
+    precision_all = np.sum(precision[1:]) / 3.0
+    detections_all = np.sum(detections[1:]) / 3.0
     print('ALL: ')
     print('true detections: ', detections_all)
     print('recall: ', recall_all)
