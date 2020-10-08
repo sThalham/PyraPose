@@ -137,7 +137,7 @@ def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/homebrewedDB/models_eval/"
     #mesh_path = "/home/stefan/data/Meshes/homebrewed_hacked/"
-    mesh_path = "/home/stefan/data/Meshes/homebrewedDB/models_eval/"
+    mesh_path = "/home/stefan/data/Meshes/homebrewedDB/models/"
     template = '000000'
     lencat = len(cat)
     cat = template[:-lencat] + cat
@@ -297,10 +297,10 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
             #    lm_cat = 8
             #elif int(lab) == 20:
             #    lm_cat = 15
-            allPoses[lm_cat] += 1
-            new_Lab.append(lm_cat)
-            #checkLab[idx] += 1
-        checkLab = new_Lab
+            allPoses[int(lab)+1] += 1
+            #new_Lab.append(lm_cat)
+            checkLab[idx] += 1
+        #checkLab = new_Lab
 
         # run network
         images = []
@@ -614,6 +614,10 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
 
             t_gt = t_gt
             t_est = t_est.T  # * 0.001
+            #print(t_gt)
+            #print(t_est)
+            #print(np.nanmax(model_vsd['pts']))
+            model_vsd["pts"] = model_vsd["pts"] * 0.001
 
             err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
