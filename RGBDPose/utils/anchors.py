@@ -45,12 +45,12 @@ class AnchorParameters:
 """
 The default anchor parameters.
 """
-#AnchorParameters.default = AnchorParameters(
-#    sizes   = [32, 64, 128],
-#    strides = [8, 16, 32],
-#    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
-#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
-#)
+AnchorParameters.default = AnchorParameters(
+    sizes   = [32, 64, 128],
+    strides = [8, 16, 32],
+    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
+)
 
 # YCB-video
 #AnchorParameters.default = AnchorParameters(
@@ -60,13 +60,13 @@ The default anchor parameters.
 #    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
 #)
 
-# YCB-video
-AnchorParameters.default = AnchorParameters(
-    sizes   = [24, 64, 160],
-    strides = [8, 16, 32],
-    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
-    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
-)
+# homebrewed
+#AnchorParameters.default = AnchorParameters(
+#    sizes   = [24, 64, 160],
+#    strides = [8, 16, 32],
+#    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
+#)
 
 
 def anchor_targets_bbox(
@@ -231,9 +231,9 @@ def anchor_targets_bbox(
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            rind = np.random.randint(0, 1000)
-            name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            cv2.imwrite(name, image_raw)
+            #rind = np.random.randint(0, 1000)
+            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
             #cv2.imwrite(name, image[1] + 100)
 
