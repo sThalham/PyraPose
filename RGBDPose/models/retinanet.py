@@ -278,7 +278,6 @@ def retinanet(
 
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     mask_head = default_mask_model(num_classes=num_classes)
-    #attention_pnp = default_attention_pnp(num_classes, 16)
 
     b1, b2, b3 = backbone_layers_rgb
     b4, b5, b6 = backbone_layers_dep
@@ -298,8 +297,6 @@ def retinanet(
 
     masks = mask_head(features[0])
     pyramids.append(masks)
-
-    #pyramids.append(poses)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 

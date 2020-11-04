@@ -9,15 +9,22 @@ import open3d
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 from PIL import Image
+import imgaug.augmenters as iaa
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
 
 
+#fxkin = 1066.778
+#fykin = 1067.487
+#cxkin = 312.9869
+#cykin = 241.3109
+
+# magic intrinsics
 fxkin = 1066.778
 fykin = 1067.487
-cxkin = 312.9869
-cykin = 241.3109
+cxkin = 320.0
+cykin = 240.0
 
 
 def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
@@ -186,7 +193,7 @@ def boxoverlap(a, b):
 
 
 def evaluate_ycbv(generator, model, threshold=0.05):
-    threshold = 0.2
+    threshold = 0.5
 
     mesh_info = '/home/stefan/data/Meshes/ycb_video/models/models_info.json'
 
@@ -268,7 +275,312 @@ def evaluate_ycbv(generator, model, threshold=0.05):
     truePoses = np.zeros((22), dtype=np.uint32)
     falsePoses = np.zeros((22), dtype=np.uint32)
 
+    seq = iaa.Sequential([
+        # blur
+        # iaa.SomeOf((0, 2), [
+        #    iaa.GaussianBlur((0.0, 0.5)),
+        # ]),
+        # brightness
+        iaa.OneOf([
+            iaa.Sequential([
+                # foam
+                iaa.Add((-9, -5)),
+            ]),
+        ]),
+    ], random_order=True)
+    image_raw = cv2.imread('/home/stefan/ICRA21_paper/grasping/videos_raw/test.png', 1)
+    shiftx = np.random.randint(10)
+    shifty = np.random.randint(10)
+    ymin = shifty
+    ymax= 479 - (10 - shifty)
+    xmin = shiftx
+    xmax = 639 - (10 - shifty)
+
+    image_raw = seq.augment_image(image_raw)
+    img_est = False
+    boxes3D = None
+    scores = None
+    mask = None
+
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
+
+        # image_raw = generator.load_image(index)
+        # image_raw = np.asarray(Image.open('/home/stefan/ICRA21_paper/videos_raw/test.png').convert('RGB'))
+
+        #print(np.mean(np.reshape(image_iaa, (307200, 3)), axis=0))
+        # image_raw = cv2.cvtColor(image_raw, cv2.COLOR_BGR2RGB)
+        image = generator.preprocess_image(image_raw)
+        image, scale = generator.resize_image(image)
+        # print(pose_votes.shape)
+        image_raw_dep = generator.load_image_dep(index)
+        image_dep = np.where(image_raw_dep > 0, image_raw_dep, np.NaN)
+
+        vid_path = '/home/stefan/ICRA21_paper/videos_mobile/jello_grasp/frames/'
+        mobile_path = vid_path + 'frame' + str(index) + '.jpg'
+        image_mob = cv2.imread(mobile_path, 1)
+
+        if img_est == False:
+            boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))  # , np.expand_dims(image_dep, axis=0)])
+            img_est = True
+        else:
+            pass
+
+        image = image_raw
+        image_mask = copy.deepcopy(image_raw)
+        image_pose = copy.deepcopy(image_raw)
+
+        for inv_cls in range(scores.shape[2]):
+
+            # cls = inv_cls + 1
+
+            if inv_cls == 0:
+                true_cat = 5
+            elif inv_cls == 1:
+                true_cat = 8
+            elif inv_cls == 2:
+                true_cat = 9
+            elif inv_cls == 3:
+                true_cat = 10
+            elif inv_cls == 4:
+                true_cat = 21
+            cls = true_cat
+
+            cls_mask = scores[0, :, inv_cls]
+            cls_indices = np.where(cls_mask > threshold)
+
+            obj_mask = mask[0, :, inv_cls]
+            # print(np.nanmax(obj_mask))
+            if inv_cls == 0:
+                obj_col = [128, 1, 1]
+            elif inv_cls == 1:
+                obj_col = [255, 255, 1]
+            elif inv_cls == 2:
+                obj_col = [1, 1, 128]
+            elif inv_cls == 3:
+                obj_col = [220, 245, 245]
+            elif inv_cls == 4:
+                obj_col = [1, 255, 255]
+            cls_img = np.where(obj_mask > 0.5, 1, 0)
+            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            depth_mask = copy.deepcopy(cls_img)
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            cls_img = cls_img.astype(np.uint8)
+            cls_img[:, :, 0] *= obj_col[0]
+            cls_img[:, :, 1] *= obj_col[1]
+            cls_img[:, :, 2] *= obj_col[2]
+            image_mask = np.where(cls_img > 0, cls_img, image_mask)
+
+            if cls == 5:
+                model_vsd = mv5
+                pcd_model = pc5
+            elif cls == 8:
+                model_vsd = mv8
+                pcd_model = pc8
+            elif cls == 9:
+                model_vsd = mv9
+                pcd_model = pc9
+            elif cls == 10:
+                model_vsd = mv10
+                pcd_model = pc10
+            elif cls == 21:
+                model_vsd = mv21
+                pcd_model = pc21
+
+            k_hyp = len(cls_indices[0])
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+            ##############################
+            # pnp
+            pose_votes = boxes3D[0, cls_indices, :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                               imagePoints=est_points, cameraMatrix=K,
+                                                               distCoeffs=None, rvec=None, tvec=None,
+                                                               useExtrinsicGuess=False, iterationsCount=300,
+                                                               reprojectionError=5.0, confidence=0.99,
+                                                               flags=cv2.SOLVEPNP_ITERATIVE)
+            R_raw, _ = cv2.Rodrigues(orvec)
+            t_raw = otvec
+
+            guess = np.zeros((4, 4), dtype=np.float32)
+            guess[:3, :3] = R_raw
+            guess[:3, 3] = t_raw.T * 1000.0
+            guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
+
+            pcd_now = copy.deepcopy(pcd_model)
+            pcd_now.transform(guess)
+            cloud_points = np.asarray(pcd_now.points)
+            model_image = toPix_array(cloud_points)
+            for idx in range(model_image.shape[0]):
+                if int(model_image[idx, 1]) > 479 or int(model_image[idx, 0]) > 639 or int(model_image[idx, 1]) < 0 or int(model_image[idx, 0]) < 0:
+                    continue
+                image_pose[int(model_image[idx, 1]), int(model_image[idx, 0]), :] = obj_col
+
+            ##############################
+            '''
+            print(np.sum(depth_mask))
+            if np.sum(depth_mask) > 1000:
+                print('--------------------- ICP refinement -------------------')
+                cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
+
+                pcd_img = np.where(depth_mask, image_dep, np.NaN)
+                pcd_img = create_point_cloud(pcd_img, fxkin, fykin, cxkin, cykin, 1.0)
+                pcd_img = pcd_img[~np.isnan(pcd_img).any(axis=1)]
+                pcd_crop = open3d.PointCloud()
+                pcd_crop.points = open3d.Vector3dVector(pcd_img)
+                open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=30))
+
+                guess = np.zeros((4, 4), dtype=np.float32)
+                guess[:3, :3] = R_est
+                guess[:3, 3] = t_est.T * 1000.0
+                guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
+
+                pcd_model = open3d.geometry.voxel_down_sample(pcd_model, voxel_size=10.0)
+                pcd_crop = open3d.geometry.voxel_down_sample(pcd_crop, voxel_size=10.0)
+                open3d.estimate_normals(pcd_crop, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
+                open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(radius=20.0, max_nn=10))
+
+                pcd_model.transform(guess)
+
+                # print('model unfiltered: ', pcd_model)
+                pcd_crop.paint_uniform_color(np.array([0.99, 0.0, 0.00]))
+                pcd_model.paint_uniform_color(np.array([0.00, 0.99, 0.00]))
+
+                # remove model vertices facing away from camera
+                points_unfiltered = np.asarray(pcd_model.points)
+                last_pcd_temp = []
+                for i, normal in enumerate(pcd_model.normals):
+                    if normal[2] < 0:
+                        last_pcd_temp.append(points_unfiltered[i, :])
+
+                pcd_model.points = open3d.Vector3dVector(np.asarray(last_pcd_temp))
+
+                # open3d.draw_geometries([pcd_crop, pcd_model])
+
+                # align translation
+                mean_crop = np.mean(np.array(pcd_crop.points), axis=0)
+                mean_model = np.median(np.array(pcd_model.points), axis=0)
+                pcd_diff = mean_crop - mean_model
+
+                print('pcd_diff: ', pcd_diff)
+
+                # align model with median depth of scene
+                # new_pcd_trans = []
+                # for i, point in enumerate(pcd_model.points):
+                #    poi = np.asarray(point)
+                #    poi = poi + pcd_diff
+                #    new_pcd_trans.append(poi)
+                # pcd_model.points = open3d.Vector3dVector(np.asarray(new_pcd_trans))
+                pcd_model.translate(pcd_diff)
+                open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
+                    radius=20.0, max_nn=10))
+                open3d.draw_geometries([pcd_crop, pcd_model])
+                guess[:3, 3] = guess[:3, 3] + pcd_diff
+
+                reg_p2p = open3d.registration.registration_icp(pcd_model, pcd_crop, 1.0, np.eye(4),
+                                                               open3d.registration.TransformationEstimationPointToPlane(),
+                                                               open3d.registration.ICPConvergenceCriteria(
+                                                                   max_iteration=100))
+
+                print('icp: ', reg_p2p.transformation)
+                pcd_model.transform(reg_p2p.transformation)
+                guess = np.matmul(reg_p2p.transformation, guess)
+                R_icp = guess[:3, :3]
+                t_icp = guess[:3, 3] * 0.001
+                t_icp = t_est[:, np.newaxis]
+
+                print('guess: ', guess)
+                open3d.draw_geometries([pcd_crop, pcd_model])
+        
+
+            eDbox = R_est.dot(ori_points.T).T
+            # eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+            eDbox = eDbox + np.repeat(t_est, 8, axis=0)
+            est3D = toPix_array(eDbox)
+            eDbox = np.reshape(est3D, (16))
+            pose = eDbox.astype(np.uint16)
+
+            colEst = (255, 0, 0)
+
+            image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 2)
+            image = cv2.line(image, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                             2)
+            image = cv2.line(image, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                             2)
+            image = cv2.line(image, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                             2)
+            image = cv2.line(image, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+                             2)
+
+            '''
+            if cls == 5:
+                idx = 0
+                for i in range(k_hyp):
+                    image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
+                    image = cv2.circle(image, (est_points[idx+1, 0, 0], est_points[idx+1, 0, 1]), 3, (251, 194, 213), -2)
+                    image = cv2.circle(image, (est_points[idx+2, 0, 0], est_points[idx+2, 0, 1]), 3, (222, 243, 41), -2)
+                    image = cv2.circle(image, (est_points[idx+3, 0, 0], est_points[idx+3, 0, 1]), 3, (209, 31, 201), -2)
+                    image = cv2.circle(image, (est_points[idx+4, 0, 0], est_points[idx+4, 0, 1]), 3, (8, 62, 53), -2)
+                    image = cv2.circle(image, (est_points[idx+5, 0, 0], est_points[idx+5, 0, 1]), 3, (13, 243, 207), -2)
+                    image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
+                    image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
+                    idx = idx+8
+
+                name = '/home/stefan/RGBDPose_viz/ycbvimg_' + str(index) + '.jpg'
+                cv2.imwrite(name, image)
+                print('break')
+
+        image_mask = image_mask[ymin:ymax, xmin:xmax, :]
+        image_pose = image_pose[ymin:ymax, xmin:xmax, :]
+
+        img_vid = np.ones((900, 1600, 3), dtype=np.uint8) * 255 # * 192
+        #spam
+        image_mob_res = image_mob[50:950, 150:1150]
+        #mustard
+        image_mob_res = image_mob[50:950, 100:1100]
+        #banana
+        image_mob_res = image_mob[100:1000, 250:1250]
+        image_mob_res = cv2.resize(image_mob_res, (995, 870))
+        img_vid[15:885, 15:1010, :] = image_mob_res
+        img_vid[465:885, 1025:1585, :] = cv2.resize(image_mask, (560, 420))
+        img_vid[15:435, 1025:1585, :] = cv2.resize(image_pose, (560, 420))
+
+        cv2.rectangle(img_vid, (int(15), int(15)), (int(1010), int(885)),
+                      (0, 0, 0), 2)
+        cv2.rectangle(img_vid, (int(1025), int(465)), (int(1585), int(885)),
+                      (0, 0, 0), 2)
+        cv2.rectangle(img_vid, (int(1025), int(15)), (int(1585), int(435)),
+                      (0, 0, 0), 2)
+
+        #name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
+        #cv2.imwrite(name, image)
+        #name = '/home/stefan/ICRA21_paper/images_jello/pic_' + str(index) + '.jpg'
+        #cv2.imwrite(name, img_vid)
+
+
+
+
+
+
+
+
+
+
+
+
+
+        '''
         image_raw = generator.load_image(index)
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
@@ -294,9 +606,9 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             if (lab+1) in [5, 8, 9, 10, 21]:
                 desired_ann = True
 
-        if desired_ann == False:
-            continue
-        print(checkLab)
+        #if desired_ann == False:
+        #    continue
+        #print(checkLab)
 
         # run network
         images = []
@@ -366,7 +678,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             cls_indices = np.where(cls_mask > threshold)
 
             if true_cat not in checkLab:
-                # falsePoses[int(cls)] += 1
+                falsePoses[int(cls)] += 1
                 continue
 
             if len(cls_indices[0]) < 1:
@@ -378,7 +690,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             #print('detection: ', true_cat)
 
             obj_mask = mask[0, :, inv_cls]
-            # print(np.nanmax(obj_mask))
+            #print(np.nanmax(obj_mask))
             if inv_cls == 0:
                 obj_col = [1, 255, 255]
             elif inv_cls == 1:
@@ -399,6 +711,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             cls_img[:, :, 1] *= obj_col[1]
             cls_img[:, :, 2] *= obj_col[2]
             image_mask = np.where(cls_img > 0, cls_img, image_mask)
+
 
             anno_ind = np.argwhere(anno['labels'] == true_cat)
 
@@ -637,7 +950,7 @@ def evaluate_ycbv(generator, model, threshold=0.05):
             image = cv2.line(image, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              2)
 
-            '''
+            
             idx = 0
             for i in range(k_hyp):
                 image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
@@ -649,10 +962,12 @@ def evaluate_ycbv(generator, model, threshold=0.05):
                 image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
                 image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
                 idx = idx+8
-            '''
+        
 
-        name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
-        cv2.imwrite(name, image)
+        #name = '/home/stefan/RGBDPose_viz/img_' + str(index) + '.jpg'
+        #cv2.imwrite(name, image)
+        name = '/home/stefan/RGBDPose_viz/mask.jpg'
+        cv2.imwrite(name, image_mask)
 
         print('break')
 
@@ -681,4 +996,4 @@ def evaluate_ycbv(generator, model, threshold=0.05):
     print('true detections: ', detections_all)
     print('recall: ', recall_all)
     print('precision: ', precision_all)
-
+    '''
