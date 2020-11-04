@@ -695,9 +695,9 @@ def evaluate_homebrewed(generator, model, threshold=0.05):
         print('recall: ', recall[i])
         print('precision: ', precision[i])
 
-    recall_all = np.sum(recall[1:]) / 3.0
-    precision_all = np.sum(precision[1:]) / 3.0
-    detections_all = np.sum(detections[1:]) / 3.0
+    recall_all = np.sum(recall[1:]) / 33.0
+    precision_all = np.sum(precision[1:]) / 33.0
+    detections_all = np.sum(detections[1:]) / 33.0
     print('ALL: ')
     print('true detections: ', detections_all)
     print('recall: ', recall_all)
