@@ -36,30 +36,30 @@ class BuildExtension(setuptools.Command):
 
 extensions = [
     Extension(
-        'RGBDPose.utils.compute_overlap',
-        ['RGBDPose/utils/compute_overlap.pyx']
+        'PyraPose.utils.compute_overlap',
+        ['PyraPose/utils/compute_overlap.pyx']
     ),
 ]
 
 
 setuptools.setup(
-    name             = 'RGBDPose',
-    version          = '0.5.1',
-    description      = 'Keras implementation of RetinaNet object detection.',
-    url              = 'https://github.com/fizyr/keras-retinanet',
-    author           = 'Hans Gaiser',
-    author_email     = 'h.gaiser@fizyr.com',
-    maintainer       = 'Hans Gaiser',
-    maintainer_email = 'h.gaiser@fizyr.com',
+    name             = 'PyraPose',
+    version          = '1.0',
+    description      = 'Keras implementation of PyraPose.',
+    url              = 'https://github.com/sThalham/PyraPose',
+    author           = '',
+    author_email     = '',
+    maintainer       = '',
+    maintainer_email = '',
     cmdclass         = {'build_ext': BuildExtension},
     packages         = setuptools.find_packages(),
     install_requires = ['keras', 'keras-resnet==0.1.0', 'six', 'scipy', 'cython', 'Pillow', 'opencv-python', 'progressbar2'],
     entry_points     = {
         'console_scripts': [
-            'retinanet-train=keras_retinanet.bin.train:main',
-            'retinanet-evaluate=keras_retinanet.bin.evaluate:main',
-            'retinanet-debug=keras_retinanet.bin.debug:main',
-            'retinanet-convert-model=keras_retinanet.bin.convert_model:main',
+            'PyraPose-train=PyraPose.bin.train:main',
+            'PyraPose-evaluate=Pyra.bin.evaluate:main',
+            'PyraPose-debug=Pyra.bin.debug:main',
+            'PyraPose-convert-model=Pyra.bin.convert_model:main',
         ],
     },
     ext_modules    = extensions,

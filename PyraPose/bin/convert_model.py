@@ -26,8 +26,8 @@ import tensorflow as tf
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-    import RetNetPose.bin  # noqa: F401
-    __package__ = "RGBDPose.bin"
+    import PyraPose.bin  # noqa: F401
+    __package__ = "PyraPose.bin"
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
 from .. import models
