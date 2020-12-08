@@ -1,4 +1,5 @@
 import os
+import sys
 import yaml
 import cv2
 import numpy as np
@@ -15,38 +16,77 @@ from pathlib import Path
 from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibility
 from Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2, get_normal
 
+# Import bop_renderer and bop_toolkit.
+# ------------------------------------------------------------------------------
+# Import bop_renderer and bop_toolkit.
+# ------------------------------------------------------------------------------
+bop_renderer_path = '/home/stefan/bop_renderer/build'
+sys.path.append(bop_renderer_path)
+import bop_renderer
+
+
 if __name__ == "__main__":
 
-    root = '/home/stefan/data/rendered_data/linemod_rgbd_V3/patches'
-    target = '/home/stefan/data/train_data/linemod_RGBD_V3_feat/'
-    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
-    feature_file = '/home/stefan/data/Meshes/linemod_13/features_8.json'
+    mesh_path = sys.argv[1]
+    background = '/home/stefan/data/dataset/cocoval2017/'
+    set_path = '/home/stefan/data/train_data/fronius_train/'
 
     visu = False
     resX = 640
     resY = 480
-    fxkin = 579.68  # blender calculated
-    fykin = 542.31  # blender calculated
-    cxkin = 320
-    cykin = 240
-    depthCut = 2000
+    fx = 572.41140
+    fy = 573.57043
+    cx = 325.26110
+    cy = 242.04899
 
-    threeD_boxes = np.ndarray((16, 8, 3), dtype=np.float32)
+    ren = bop_renderer.Renderer()
+    ren.init(resX, resY)
+    mesh_id = 0
+    for mesh_now in os.listdir(mesh_path):
+        print(mesh_now)
+        ren.add_object(mesh_id, mesh_now)
+        mesh_id += 1
 
-    for key, value in yaml.load(open(feature_file)).items():
-        #fac = 0.001
-        value = np.asarray(value, dtype=np.float32)
+    threeD_boxes = np.ndarray((4, 8, 3), dtype=np.float32)
+    threeD_boxes[2, :, :] = np.array([[0.060, 0.1, 0.03],  # Seite-AC [120, 198, 45] links
+                                      [0.060, 0.1, -0.03],
+                                      [0.060, -0.1, -0.03],
+                                      [0.060, -0.1, 0.03],
+                                      [-0.060, 0.1, 0.03],
+                                      [-0.060, 0.1, -0.03],
+                                      [-0.060, -0.1, -0.03],
+                                      [-0.060, -0.1, 0.03]])
+    threeD_boxes[0, :, :] = np.array([[0.05, 0.04, 0.03],  # AC-Abdeckung [81, 68, 25] expand last dim
+                                      [0.05, 0.04, -0.03],
+                                      [0.05, -0.04, -0.03],
+                                      [0.05, -0.04, 0.03],
+                                      [-0.05, 0.04, 0.03],
+                                      [-0.05, 0.04, -0.03],
+                                      [-0.05, -0.04, -0.03],
+                                      [-0.05, -0.04, 0.03]])
+    threeD_boxes[1, :, :] = np.array([[0.05, 0.04, 0.03],  # DC [81, 72, 38]
+                                      [0.05, 0.04, -0.03],
+                                      [0.05, -0.04, -0.03],
+                                      [0.05, -0.04, 0.03],
+                                      [-0.05, 0.04, 0.03],
+                                      [-0.05, 0.04, -0.03],
+                                      [-0.05, -0.04, -0.03],
+                                      [-0.05, -0.04, 0.03]])
+    threeD_boxes[3, :, :] = np.array([[0.060, 0.1, 0.03],  # Seite-DC [120, 206, 56] rechts
+                                      [0.060, 0.1, -0.03],
+                                      [0.060, -0.1, -0.03],
+                                      [0.060, -0.1, 0.03],
+                                      [-0.060, 0.1, 0.03],
+                                      [-0.060, 0.1, -0.03],
+                                      [-0.060, -0.1, -0.03],
+                                      [-0.060, -0.1, 0.03]])
 
-        threeD_boxes[int(key), :, :] = value
-
-    now = datetime.datetime.now()
-    dateT = str(now)
 
     dict = {"info": {
         "description": "tless",
         "url": "cmp.felk.cvut.cz/t-less/",
         "version": "1.0",
-        "year": 2018,
+        "year": 2020,
         "contributor": "Stefan Thalhammer",
         "date_created": dateT
     },
@@ -76,10 +116,26 @@ if __name__ == "__main__":
     boxHeights = []
     meanRGBD = np.zeros((6), np.float64)
 
-    syns = os.listdir(root)
-    all = len(syns)
-    for fileInd in syns:
-        if fileInd.endswith(".yaml"):
+    syns = os.listdir(background)
+    for o_idx in range(10):
+        for bg_img_path in syns:
+
+            bg_img = cv2.imread(bg_img_path)
+            bg_x, bg_y, _ = bg_img.shape()
+
+            if bg_y > bg_x:
+                bg_img = np.swapaxes(bg_img, 0, 1)
+
+            bg_img = cv2.resize(bg_img, ())
+
+            for objID in threeD_boxes.shape[0]:
+                R = np.eye(3)
+                t = np.array([[0.0, 0.0, 150.0]]).T
+
+                R_list = R.flatten().tolist()
+                t_list = t.flatten().tolist()
+                ren.render_object(obj_id, R_list, t_list, fx, fy, cx, cy)
+                rgb = ren.get_color_image(obj_id)
 
             start_time = time.time()
             gloCo = gloCo + 1
