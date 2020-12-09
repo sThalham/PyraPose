@@ -10,11 +10,9 @@ import time
 import random
 import json
 
-import OpenEXR, Imath
 from pathlib import Path
 
 from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibility
-from Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2, get_normal
 
 # Import bop_renderer and bop_toolkit.
 # ------------------------------------------------------------------------------
@@ -22,14 +20,15 @@ from Augmentations import augmentDepth, augmentRGB, augmentAAEext, augmentRGB_V2
 # ------------------------------------------------------------------------------
 bop_renderer_path = '/home/stefan/bop_renderer/build'
 sys.path.append(bop_renderer_path)
+
 import bop_renderer
 
 
 if __name__ == "__main__":
 
     mesh_path = sys.argv[1]
-    background = '/home/stefan/data/dataset/cocoval2017/'
-    set_path = '/home/stefan/data/train_data/fronius_train/'
+    background = '/home/stefan/data/datasets/cocoval2017/'
+    target = '/home/stefan/data/train_data/fronius_train/'
 
     visu = False
     resX = 640
@@ -42,11 +41,41 @@ if __name__ == "__main__":
     ren = bop_renderer.Renderer()
     ren.init(resX, resY)
     mesh_id = 0
+    obj_ids = []
+
     for mesh_now in os.listdir(mesh_path):
-        print(mesh_now)
-        ren.add_object(mesh_id, mesh_now)
+        mesh_path_now = os.path.join(mesh_path, mesh_now)
+        if mesh_now[-4:] != '.ply':
+            continue
+        print(mesh_path_now)
+        ren.add_object(mesh_id, mesh_path_now)
+        obj_ids.append(mesh_id)
         mesh_id += 1
 
+    # interlude for debugging
+    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
+
+    for key, value in yaml.load(open(mesh_info)).items():
+        # for key, value in json.load(open(mesh_info)).items():
+        fac = 0.001
+        x_minus = value['min_x']
+        y_minus = value['min_y']
+        z_minus = value['min_z']
+        x_plus = value['size_x'] + x_minus
+        y_plus = value['size_y'] + y_minus
+        z_plus = value['size_z'] + z_minus
+        three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                   [x_plus, y_plus, z_minus],
+                                   [x_plus, y_minus, z_minus],
+                                   [x_plus, y_minus, z_plus],
+                                   [x_minus, y_plus, z_plus],
+                                   [x_minus, y_plus, z_minus],
+                                   [x_minus, y_minus, z_minus],
+                                   [x_minus, y_minus, z_plus]])
+        threeD_boxes[int(key), :, :] = three_box_solo
+
+    '''
     threeD_boxes = np.ndarray((4, 8, 3), dtype=np.float32)
     threeD_boxes[2, :, :] = np.array([[0.060, 0.1, 0.03],  # Seite-AC [120, 198, 45] links
                                       [0.060, 0.1, -0.03],
@@ -80,7 +109,10 @@ if __name__ == "__main__":
                                       [-0.060, 0.1, -0.03],
                                       [-0.060, -0.1, -0.03],
                                       [-0.060, -0.1, 0.03]])
+    '''
 
+    now = datetime.datetime.now()
+    dateT = str(now)
 
     dict = {"info": {
         "description": "tless",
@@ -102,440 +134,248 @@ if __name__ == "__main__":
     gloCo = 0
     times = []
 
-    trainN = 1
-    testN = 1
-    valN = 1
-
-    depPath = root + "/depth/"
-    partPath = root + "/part/"
-    gtPath = root
-    maskPath = root + "/mask/"
-    rgbPath = root + "/rgb/"
-    excludedImgs = []
-    boxWidths = []
-    boxHeights = []
-    meanRGBD = np.zeros((6), np.float64)
-
     syns = os.listdir(background)
-    for o_idx in range(10):
+    for o_idx in range(1,10):
         for bg_img_path in syns:
 
-            bg_img = cv2.imread(bg_img_path)
-            bg_x, bg_y, _ = bg_img.shape()
+            bg_img_path_j = os.path.join(background, bg_img_path)
+
+            bg_img = cv2.imread(bg_img_path_j)
+            print(bg_img.shape)
+            bg_x, bg_y, _ = bg_img.shape
 
             if bg_y > bg_x:
                 bg_img = np.swapaxes(bg_img, 0, 1)
 
-            bg_img = cv2.resize(bg_img, ())
+            bg_img = cv2.resize(bg_img, (resX, resY))
 
-            for objID in threeD_boxes.shape[0]:
-                R = np.eye(3)
-                t = np.array([[0.0, 0.0, 150.0]]).T
+            print(bg_img.shape)
+
+            samp = int(bg_img_path[:-4])
+            print(samp)
+
+            template_samp = '00000'
+            imgNum = str(o_idx) + template_samp[:-len(str(samp))] + str(samp)
+            img_id = int(imgNum)
+            imgNam = imgNum + '.png'
+            iname = str(imgNam)
+            print(img_id, imgNam)
+
+            fileName = target + 'images/train/' + imgNam[:-4] + '_rgb.png'
+            myFile = Path(fileName)
+
+            bbox_vis = []
+            cat_vis = []
+            camR_vis = []
+            camT_vis = []
+            calib_K = []
+            mask_ind = 0
+            mask_img = np.zeros((480, 640), dtype=np.uint8)
+            bbvis = []
+            cnt = 0
+
+            zeds = []
+            renderings = []
+            rotations = []
+            translations = []
+            obj_ids = np.random.choice(obj_ids, size=4, replace=False)
+
+            for objID in obj_ids:
+                R = tf3d.euler.euler2mat(np.random.rand(), np.random.rand(), np.random.rand())
+                z = 0.3 + np.random.rand() * 1.2
+                x = (2 * (0.6 * z)) * np.random.rand() - (0.6 * z)
+                y = (2 * (0.4 * z)) * np.random.rand() - (0.4 * z)
+                t = np.array([[x, y, z]]).T
+                rotations.append(R)
+                translations.append(t)
+                zeds.append(z)
 
                 R_list = R.flatten().tolist()
                 t_list = t.flatten().tolist()
-                ren.render_object(obj_id, R_list, t_list, fx, fy, cx, cy)
-                rgb = ren.get_color_image(obj_id)
 
-            start_time = time.time()
-            gloCo = gloCo + 1
+                light_pose = [np.random.rand() * 2 - 1.0, np.random.rand() * 2 - 1.0, np.random.rand() * 2 - 1.0]
+                light_color = [np.random.rand() * 0.2 + 0.8, np.random.rand() * 0.2 + 0.8, np.random.rand() * 0.2 + 0.8]
+                light_ambient_weight = np.random.rand()
+                light_diffuse_weight = 0.5 + np.random.rand() * 0.5
+                light_spec_weight = 0.5 + np.random.rand() * 0.5
+                light_spec_shine = np.random.rand() * 10.0
+                ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
+                ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
+                rgb_img = ren.get_color_image(objID)
+                renderings.append(rgb_img)
 
-            redname = fileInd[:-8]
+            zeds = np.asarray(zeds, dtype=np.float32)
+            low2high = np.argsort(zeds)
+            high2low = low2high[::-1]
 
-            gtfile = gtPath + '/' + fileInd
-            depfile = depPath + redname + "_depth.exr"
-            partfile = partPath + redname + "_part.png"
-            maskfile = maskPath + redname + "_mask.npy"
-            rgbfile = rgbPath + redname + "_rgb.png"
+            print(zeds)
+            print(low2high)
+            print(high2low)
 
-            depth_refine, rgb_refine, mask, bboxes, poses, mask_ids, visibilities = manipulate_RGB(gtfile, depfile, partfile, rgbfile)
-            try:
-                obj_mask = np.load(maskfile)
-            except Exception:
-                continue
-            obj_mask = obj_mask.astype(np.int8)
+            for i_idx in high2low:
 
-            if bboxes is None:
-                excludedImgs.append(int(redname))
-                continue
 
-            depth_refine = np.multiply(depth_refine, 1000.0)  # to millimeters
-            rows, cols = depth_refine.shape
+                bg_img = np.where(ren_img > 0, rgb_img, bg_img)
 
-            for k in range(0, 1):
+                mask_id = mask_ind + 1
+                mask_img = np.where(obj_mask > 0, mask_id, mask_img)
+                mask_ind = mask_ind + 1
 
-                newredname = redname[1:] + str(k)
+                obj_bb = curlist["bbox_visib"]
+                bbox_vis.append(obj_bb)
 
-                fileName = target + "images/train/" + newredname + '_rgb.jpg'
-                myFile = Path(fileName)
-                print(myFile)
+                cat_vis.append(obj_id)
 
-                if myFile.exists():
-                    print('File exists, skip encoding and safing.')
+                # pose [x, y, z, roll, pitch, yaw]
+                R = np.asarray(R, dtype=np.float32)
+                rot = tf3d.quaternions.mat2quat(R.reshape(3, 3))
+                rot = np.asarray(rot, dtype=np.float32)
+                tra = np.asarray(t, dtype=np.float32)
+                pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
 
-                else:
-                    depthAug = augmentDepth(depth_refine, obj_mask, mask)
-                    rgbAug = augmentRGB(rgb_refine)
-                    #rgbAug = augmentAAEext(rgb_refine)
 
-                    #aug_xyz, depth_refine_aug, depth_imp = get_normal(depthAug, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin,
-                    #                                                  for_vis=False)
+                #visib_fract = ?
+                area = obj_bb[2] * obj_bb[3]
 
-                    depthAug[depthAug > depthCut] = 0
-                    scaCro = 255.0 / np.nanmax(depthAug)
-                    cross = np.multiply(depthAug, scaCro)
-                    aug_dep = cross.astype(np.uint8)
-                    #aug_dep = np.repeat(aug_dep[:, :, np.newaxis], 3, 2)
+                trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
+                R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+                tDbox = R.reshape(3, 3).dot(threeD_boxes[obj_id, :, :].T).T
+                tDbox = tDbox + np.repeat(trans[np.newaxis, :], 8, axis=0)
+                box3D = toPix_array(tDbox, fx=fxca, fy=fyca, cx=cxca, cy=cyca)
+                box3D = np.reshape(box3D, (16))
+                box3D = box3D.tolist()
 
-                    meanRGBD[0] += np.nanmean(rgbAug[:, :, 0])
-                    meanRGBD[1] += np.nanmean(rgbAug[:, :, 1])
-                    meanRGBD[2] += np.nanmean(rgbAug[:, :, 2])
-                    meanRGBD[3] += np.nanmean(aug_dep[:, :])
-                    meanRGBD[4] += np.nanmean(aug_dep[:, :])
-                    meanRGBD[5] += np.nanmean(aug_dep[:, :])
-                    # meanRGBD[3] = np.nanmean(depthAug[:, :, 0])
-                    # meanRGBD[4] = np.nanmean(depthAug[:, :, 1])
-                    # meanRGBD[5] = np.nanmean(depthAug[:, :, 2])
+                pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
+                            np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
 
-                    cv2.imwrite(fileName, rgbAug)
-                    cv2.imwrite(fileName[:-8] + '_dep.jpg', aug_dep)
-                    #img_rgbd = np.concatenate((rgbAug, aug_dep[:, :, np.newaxis]), axis=2)
-                    #cv2.imwrite(fileName, img_rgbd)
-                    #np.save(fileName, img_rgbd)
+                # if obj_id in [10, 11, 14]:
+                bbox_vis.append(obj_bb)
+                bbvis.append(box3D)
+                camR_vis.append(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+                camT_vis.append(np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32))
+                calib_K.append(K)
 
-                imgID = int(newredname)
-                imgName = newredname + '.jpg'
-                # print(imgName)
+                nx1 = obj_bb[0]
+                ny1 = obj_bb[1]
+                nx2 = nx1 + obj_bb[2]
+                ny2 = ny1 + obj_bb[3]
+                npseg = np.array([nx1, ny1, nx2, ny1, nx2, ny2, nx1, ny2])
+                cont = npseg.tolist()
 
-                # bb scaling because of image scaling
-                bbvis = []
-                bb3vis = []
-                cats = []
-                posvis = []
-                postra = []
-                feat_visualization = []
-                # for i, bbox in enumerate(bboxes[:-1]):
-                for i, bbox in enumerate(bboxes[:-1]):
-
-                    if visibilities[i] < 0.5:
-                        # print('visivility: ', visibilities[i], ' skip!')
-                        continue
-                    #print(visibilities[i])
-                    #if (np.asscalar(bbox[0]) + 1) > 13:
-                    #    continue
-
-                    bbvis.append(bbox.astype(int))
-                    objID = np.asscalar(bbox[0]) + 1
-                    #objID = np.asscalar(bboxes[i+1][0]) + 1
-                    cats.append(objID)
-
-                    bbox = (bbox).astype(int)
-
-                    rot = tf3d.quaternions.quat2mat(poses[i, 3:])
-                    rot = np.asarray(rot, dtype=np.float32)
-
-                    if objID > 5:
-                        cls = objID + 2
-                    elif objID > 2:
-                        cls = objID + 1
-                    else:
-                        cls = objID
-
-                    tDbox = rot[:3, :3].dot(threeD_boxes[cls, :, :].T).T
-                    tDbox = tDbox + np.repeat(poses[i, np.newaxis, 0:3], 8, axis=0)
-
-                    # if objID == 10 or objID == 11:
-                    #    print(tf3d.euler.quat2euler(poses[i, 3:]))
-
-                    box3D = toPix_array(tDbox, fx=fxkin, fy=fykin, cx=cxkin, cy=cykin)
-                    box3D = np.reshape(box3D, (16))
-                    box3D = box3D.tolist()
-                    bb3vis.append(box3D)
-
-                    feature_visibilities = calculate_feature_visibility(depth_refine, box3D, tDbox)
-                    feat_visualization.append(feature_visibilities)
-                    #print(feature_visibilities)
-
-                    bbox = bbox.astype(int)
-                    x1 = np.asscalar(bbox[2])
-                    y1 = np.asscalar(bbox[1])
-                    x2 = np.asscalar(bbox[4])
-                    y2 = np.asscalar(bbox[3])
-                    nx1 = bbox[2]
-                    ny1 = bbox[1]
-                    nx2 = bbox[4]
-                    ny2 = bbox[3]
-                    w = (x2 - x1)
-                    h = (y2 - y1)
-                    boxWidths.append(w)
-                    boxHeights.append(h)
-                    bb = [x1, y1, w, h]
-                    area = w * h
-                    npseg = np.array([nx1, ny1, nx2, ny1, nx2, ny2, nx1, ny2])
-                    seg = npseg.tolist()
-
-                    pose = [np.asscalar(poses[i, 0]), np.asscalar(poses[i, 1]), np.asscalar(poses[i, 2]),
-                            np.asscalar(poses[i, 3]), np.asscalar(poses[i, 4]), np.asscalar(poses[i, 5]),
-                            np.asscalar(poses[i, 6])]
-                    if i != len(bboxes):
-                        pose[0:2] = toPix(pose[0:3], fx=fxkin, fy=fykin, cx=cxkin, cy=cykin)
-
-                    posvis.append(pose)
-                    tra = np.asarray(poses[i, :3], dtype=np.float32)
-                    postra.append(tra)
-
-                    annoID = annoID + 1
-                    tempTA = {
-                        "id": annoID,
-                        "image_id": imgID,
-                        "category_id": objID,
-                        "bbox": bb,
-                        "pose": pose,
-                        "segmentation": box3D,
-                        "area": area,
-                        "iscrowd": 0,
-                        "feature_visibility": feature_visibilities
-                    }
-                    # print('norm q: ', np.linalg.norm(pose[3:]))
-
-                    dict["annotations"].append(tempTA)
-
-                tempTL = {
-                    "url": "cmp.felk.cvut.cz/t-less/",
-                    "id": imgID,
-                    "name": imgName
+                annoID = annoID + 1
+                tempTA = {
+                    "id": annoID,
+                    "image_id": img_id,
+                    "category_id": obj_id,
+                    "bbox": obj_bb,
+                    "pose": pose,
+                    "segmentation": box3D,
+                    "mask_id": mask_id,
+                    "area": area,
+                    "iscrowd": 0,
+                    "feature_visibility": visib_fract
                 }
-                dict["licenses"].append(tempTL)
+
+                dict["annotations"].append(tempTA)
+                count = count + 1
+
+            tempTL = {
+                "url": "https://bop.felk.cvut.cz/home/",
+                "id": img_id,
+                "name": iname,
+            }
+            dict["licenses"].append(tempTL)
+
+            if myFile.exists():
+                print('File exists, skip encoding, ', fileName)
+            else:
+                cv2.imwrite(fileName, bg_img)
+                print("storing image in : ", fileName)
+                mask_safe_path = fileName[:-8] + '_mask.png'
+                cv2.imwrite(mask_safe_path, mask_img)
 
                 tempTV = {
                     "license": 2,
-                    "url": "cmp.felk.cvut.cz/t-less/",
-                    "file_name": imgName,
+                    "url": "https://bop.felk.cvut.cz/home/",
+                    "file_name": iname,
                     "height": resY,
                     "width": resX,
+                    "fx": fx,
+                    "fy": fy,
+                    "cx": cx,
+                    "cy": cy,
                     "date_captured": dateT,
-                    "id": imgID
+                    "id": img_id,
                 }
                 dict["images"].append(tempTV)
 
-                gloCo += 1
-
-                elapsed_time = time.time() - start_time
-                times.append(elapsed_time)
-                meantime = sum(times) / len(times)
-                eta = ((all - gloCo) * meantime) / 60
-                if gloCo % 100 == 0:
-                    print('eta: ', eta, ' min')
-                    times = []
-
                 if visu is True:
-                    img = rgbAug
+                    img = rgbImg
                     for i, bb in enumerate(bbvis):
-
-                        if cats[i] not in [4]:
-                            continue
 
                         bb = np.array(bb)
 
-                        cv2.rectangle(img, (int(bb[2]), int(bb[1])), (int(bb[4]), int(bb[3])),
-                                      (255, 255, 255), 2)
-                        cv2.rectangle(img, (int(bb[2]), int(bb[1])), (int(bb[4]), int(bb[3])),
-                                      (0, 0, 0), 1)
+                        phler = True
+                        if phler:
+                            pose = np.asarray(bbvis[i], dtype=np.float32)
 
-                        font = cv2.FONT_HERSHEY_SIMPLEX
-                        bottomLeftCornerOfText = (int(bb[2]), int(bb[1]))
-                        fontScale = 1
-                        fontColor = (0, 0, 0)
-                        fontthickness = 1
-                        lineType = 2
-                        gtText = str(cats[i])
-                        # print(cats[i])
+                            colR = 250
+                            colG = 25
+                            colB = 175
 
-                        fontColor2 = (255, 255, 255)
-                        fontthickness2 = 3
-                        cv2.putText(img, gtText,
-                                    bottomLeftCornerOfText,
-                                    font,
-                                    fontScale,
-                                    fontColor2,
-                                    fontthickness2,
-                                    lineType)
+                            img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
+                            img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
+                            img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
+                            img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
+                            img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
+                                           2)
+                            img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
+                                           (colR, colG, colB), 2)
+                            img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
+                                           (colR, colG, colB), 2)
+                            img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
+                                           (colR, colG, colB), 2)
+                            img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
+                                           (colR, colG, colB), 2)
+                            img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
+                                           (colR, colG, colB), 2)
+                            img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
+                                           (colR, colG, colB), 2)
+                            img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
+                                           (colR, colG, colB), 2)
 
-                        cv2.putText(img, gtText,
-                                    bottomLeftCornerOfText,
-                                    font,
-                                    fontScale,
-                                    fontColor,
-                                    fontthickness,
-                                    lineType)
-
-                        # print(posvis[i])
-                        if i is not poses.shape[0]:
-                            pose = np.asarray(bb3vis[i], dtype=np.float32)
-
-                            #colR = np.random.uniform(0, 255)
-                            #colG = np.random.uniform(0, 255)
-                            #colB = np.random.uniform(0, 255)
-
-                            #colRinv = np.random.uniform(0, 255)
-                            #colGinv = np.random.uniform(0, 255)
-                            #colBinv = np.random.uniform(0, 255)
-
-                            colR = 217
-                            colG = 17
-                            colB = 112
-
-                            colRinv = 97
-                            colGinv = 241
-                            colBinv = 43
-
-                            if feat_visualization[i][0] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[0]), int(pose[1])), 4, (colr, colg, colb), 3)
-                            if feat_visualization[i][1] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[2]), int(pose[3])), 4, (colr, colg, colb), 3)
-                            if feat_visualization[i][2] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[4]), int(pose[5])), 4, (colr, colg, colb), 3)
-                            if feat_visualization[i][3] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[6]), int(pose[7])), 4, (colr, colg, colb), 3)
-                            if feat_visualization[i][4] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[8]), int(pose[9])), 4, (colr, colg, colb), 3)
-                            if feat_visualization[i][5] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[10]), int(pose[11])), 4, (colr, colg, colb), 3)
-                            if feat_visualization[i][6] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[12]), int(pose[13])), 4, (colr, colg, colb), 3)
-                            if feat_visualization[i][7] == 1:
-                                colr = colR
-                                colg = colG
-                                colb = colB
-                            else:
-                                colr = colRinv
-                                colg = colGinv
-                                colb = colBinv
-                            cv2.circle(img, (int(pose[14]), int(pose[15])), 4, (colr, colg, colb), 3)
-
-                            font = cv2.FONT_HERSHEY_COMPLEX
-                            bottomLeftCornerOfText = (5, 10)
-                            bottomLeftCornerOfText2 = (5, 20)
-                            fontScale = 0.5
-                            fontColor = (colR, colG, colB)
-                            fontthickness = 2
-                            lineType = 2
-                            gtText_vis = 'visible'
-                            gtText_invis = 'invisible'
-                            fontColor2 = (colRinv, colGinv, colBinv)
-                            fontthickness2 = 4
-                            cv2.putText(img, gtText_vis,
-                                        bottomLeftCornerOfText,
-                                        font,
-                                        fontScale,
-                                        fontColor,
-                                        fontthickness,
-                                        lineType)
-                            cv2.putText(img, gtText_invis,
-                                        bottomLeftCornerOfText2,
-                                        font,
-                                        fontScale,
-                                        fontColor2,
-                                        fontthickness,
-                                        lineType)
-
-                            #img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
-                            #img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
-                            #img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
-                            #img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
-                            #img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
-                            #               2)
-                            #img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
-                            #               (colR, colG, colB), 2)
-                            #img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
-                            #               (colR, colG, colB), 2)
-                            #img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
-                            #               (colR, colG, colB), 2)
-                            #img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
-                            #               (colR, colG, colB), 2)
-                            #img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
-                            #               (colR, colG, colB), 2)
-                            #img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
-                            #               (colR, colG, colB), 2)
-                            #img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
-                            #               (colR, colG, colB), 2)
-
-                    cv2.imwrite(fileName, img)
+                    # print(camR_vis[i], camT_vis[i])
+                    # draw_axis(img, camR_vis[i], camT_vis[i], K)
+                    cv2.imwrite(rgb_name, img)
 
                     print('STOP')
 
-    catsInt = range(1, 14)
+            if dataset == 'linemod':
+                catsInt = range(1, 16)
+            elif dataset == 'occlusion':
+                catsInt = range(1, 9)
+            elif dataset == 'ycbv':
+                catsInt = range(1, 22)
+            elif dataset == 'tless':
+                catsInt = range(1, 31)
+            elif dataset == 'homebrewed':
+                catsInt = range(1, 34)
 
-    for s in catsInt:
-        objName = str(s)
-        tempC = {
-            "id": s,
-            "name": objName,
-            "supercategory": "object"
-        }
-        dict["categories"].append(tempC)
+            if specific_object_set == True:
+                catsInt = range(1, (len(spec_objs) + 1))
 
-    traAnno = target + "annotations/instances_train.json"
+            for s in catsInt:
+                objName = str(s)
+                tempC = {
+                    "id": s,
+                    "name": objName,
+                    "supercategory": "object"
+                }
+                dict["categories"].append(tempC)
 
-    with open(traAnno, 'w') as fpT:
-        json.dump(dict, fpT)
+            valAnno = target + 'annotations/instances_' + traintestval + '.json'
 
-    excludedImgs.sort()
-    print('excluded images: ')
-    for ex in excludedImgs:
-        print(ex)
+            with open(valAnno, 'w') as fpT:
+                json.dump(dict, fpT)
 
-    all_rendered = len(os.listdir(target + "images/train/")) * 0.5
-    means = meanRGBD / all_rendered
-    print('means: ', means)
-
-    print('Chill for once in your life... everything\'s done')
+            print('everythings done')
