@@ -47,7 +47,6 @@ if __name__ == "__main__":
         mesh_path_now = os.path.join(mesh_path, mesh_now)
         if mesh_now[-4:] != '.ply':
             continue
-        print(mesh_path_now)
         ren.add_object(mesh_id, mesh_path_now)
         obj_ids.append(mesh_id)
         mesh_id += 1
@@ -55,6 +54,7 @@ if __name__ == "__main__":
     # interlude for debugging
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
+    K = [fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0]
 
     for key, value in yaml.load(open(mesh_info)).items():
         # for key, value in json.load(open(mesh_info)).items():
@@ -152,14 +152,12 @@ if __name__ == "__main__":
             print(bg_img.shape)
 
             samp = int(bg_img_path[:-4])
-            print(samp)
 
             template_samp = '00000'
             imgNum = str(o_idx) + template_samp[:-len(str(samp))] + str(samp)
             img_id = int(imgNum)
             imgNam = imgNum + '.png'
             iname = str(imgNam)
-            print(img_id, imgNam)
 
             fileName = target + 'images/train/' + imgNam[:-4] + '_rgb.png'
             myFile = Path(fileName)
@@ -171,6 +169,7 @@ if __name__ == "__main__":
             calib_K = []
             mask_ind = 0
             mask_img = np.zeros((480, 640), dtype=np.uint8)
+            visib_img = np.zeros((480, 640, 3), dtype=np.uint8)
             bbvis = []
             cnt = 0
 
@@ -178,7 +177,7 @@ if __name__ == "__main__":
             renderings = []
             rotations = []
             translations = []
-            obj_ids = np.random.choice(obj_ids, size=4, replace=False)
+            obj_ids = np.random.choice(obj_ids, size=1, replace=False)
 
             for objID in obj_ids:
                 R = tf3d.euler.euler2mat(np.random.rand(), np.random.rand(), np.random.rand())
@@ -208,20 +207,53 @@ if __name__ == "__main__":
             low2high = np.argsort(zeds)
             high2low = low2high[::-1]
 
-            print(zeds)
-            print(low2high)
-            print(high2low)
-
             for i_idx in high2low:
+                ren_img = renderings[i_idx]
+                R = rotations[i_idx]
+                t = translations[i_idx]
+                obj_id = obj_ids[i_idx]
+                print(obj_id)
 
+                # full object surface
+                R_list = R.flatten()
+                t_list = np.array([[0.0, 0.0, t[2]]]).T
+                R_list = R_list.flatten().tolist()
+                t_list = t_list.flatten().tolist()
+                ren.render_object(obj_id, R_list, t_list, fx, fy, cx, cy)
+                full_visib_img = ren.get_color_image(obj_id)
+                visib_non_zero = np.nonzero(ren_img)
+                surf_visib = np.sum(visib_non_zero[0])
+                fullvisibName = target + 'images/train/' + imgNam[:-4] + str(obj_id) + '_fv.png'
+                cv2.imwrite(fullvisibName, full_visib_img)
 
-                bg_img = np.where(ren_img > 0, rgb_img, bg_img)
+                # partial visibility mask
+                partial_visib_img = np.where(visib_img > 0, 0.0, ren_img)
+                partial_non_zero = np.nonzero(partial_visib_img)
+                partial_surf_visib = np.sum(partial_non_zero[0])
+                partvisibName = target + 'images/train/' + imgNam[:-4] + str(obj_id) + '_pv.png'
+                cv2.imwrite(partvisibName, partial_visib_img)
+
+                visib_fract = partial_surf_visib / surf_visib
+                print(visib_fract)
+                visib_img = np.where(ren_img > 0, ren_img, visib_img)
+                visibName = target + 'images/train/' + imgNam[:-4] + str(obj_id) + '_vi.png'
+                cv2.imwrite(visibName, visib_img)
+
+                # da final image
+                bg_img = np.where(ren_img > 0, ren_img, bg_img)
 
                 mask_id = mask_ind + 1
-                mask_img = np.where(obj_mask > 0, mask_id, mask_img)
+                mask_img = np.where(ren_img.any(axis=2) > 0, mask_id, mask_img)
                 mask_ind = mask_ind + 1
 
-                obj_bb = curlist["bbox_visib"]
+                non_zero = np.nonzero(ren_img)
+                surf_ren = np.sum(non_zero[0])
+                bb_xmin = np.nanmin(non_zero[1])
+                bb_xmax = np.nanmax(non_zero[1])
+                bb_ymin = np.nanmin(non_zero[0])
+                bb_ymax = np.nanmax(non_zero[0])
+
+                obj_bb = [bb_xmin, bb_ymin, bb_xmax-bb_xmin, bb_ymax-bb_ymin]
                 bbox_vis.append(obj_bb)
 
                 cat_vis.append(obj_id)
@@ -234,14 +266,13 @@ if __name__ == "__main__":
                 pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
 
 
-                #visib_fract = ?
                 area = obj_bb[2] * obj_bb[3]
 
                 trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
                 R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
                 tDbox = R.reshape(3, 3).dot(threeD_boxes[obj_id, :, :].T).T
-                tDbox = tDbox + np.repeat(trans[np.newaxis, :], 8, axis=0)
-                box3D = toPix_array(tDbox, fx=fxca, fy=fyca, cx=cxca, cy=cyca)
+                tDbox = tDbox + np.repeat(trans.T, 8, axis=0)
+                box3D = toPix_array(tDbox, fx=fx, fy=fy, cx=cx, cy=cy)
                 box3D = np.reshape(box3D, (16))
                 box3D = box3D.tolist()
 
@@ -277,7 +308,7 @@ if __name__ == "__main__":
                 }
 
                 dict["annotations"].append(tempTA)
-                count = count + 1
+                cnt = cnt + 1
 
             tempTL = {
                 "url": "https://bop.felk.cvut.cz/home/",
