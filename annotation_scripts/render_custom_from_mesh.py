@@ -16,10 +16,9 @@ from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibilit
 
 # Import bop_renderer and bop_toolkit.
 # ------------------------------------------------------------------------------
-# Import bop_renderer and bop_toolkit.
-# ------------------------------------------------------------------------------
 bop_renderer_path = '/home/stefan/bop_renderer/build'
 sys.path.append(bop_renderer_path)
+print(sys.path)
 
 import bop_renderer
 
@@ -29,6 +28,7 @@ if __name__ == "__main__":
     mesh_path = sys.argv[1]
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/fronius_train/'
+    objsperimg = 7
 
     visu = False
     resX = 640
@@ -141,15 +141,12 @@ if __name__ == "__main__":
             bg_img_path_j = os.path.join(background, bg_img_path)
 
             bg_img = cv2.imread(bg_img_path_j)
-            print(bg_img.shape)
             bg_x, bg_y, _ = bg_img.shape
 
             if bg_y > bg_x:
                 bg_img = np.swapaxes(bg_img, 0, 1)
 
             bg_img = cv2.resize(bg_img, (resX, resY))
-
-            print(bg_img.shape)
 
             samp = int(bg_img_path[:-4])
 
@@ -177,7 +174,8 @@ if __name__ == "__main__":
             renderings = []
             rotations = []
             translations = []
-            obj_ids = np.random.choice(obj_ids, size=1, replace=False)
+            
+            obj_ids = np.random.choice(obj_ids, size=objsperimg, replace=False)
 
             for objID in obj_ids:
                 R = tf3d.euler.euler2mat(np.random.rand(), np.random.rand(), np.random.rand())
@@ -206,6 +204,7 @@ if __name__ == "__main__":
             zeds = np.asarray(zeds, dtype=np.float32)
             low2high = np.argsort(zeds)
             high2low = low2high[::-1]
+            full_seg = []
 
             for i_idx in high2low:
                 ren_img = renderings[i_idx]
@@ -220,21 +219,23 @@ if __name__ == "__main__":
                 R_list = R_list.flatten().tolist()
                 t_list = t_list.flatten().tolist()
                 ren.render_object(obj_id, R_list, t_list, fx, fy, cx, cy)
+
                 full_visib_img = ren.get_color_image(obj_id)
                 visib_non_zero = np.nonzero(ren_img)
                 surf_visib = np.sum(visib_non_zero[0])
+                full_seg = surf_visib
                 fullvisibName = target + 'images/train/' + imgNam[:-4] + str(obj_id) + '_fv.png'
-                cv2.imwrite(fullvisibName, full_visib_img)
+                #cv2.imwrite(fullvisibName, full_visib_img)
 
                 # partial visibility mask
-                partial_visib_img = np.where(visib_img > 0, 0.0, ren_img)
+                partial_visib_img = np.where(visib_img > 0, 0, ren_img)
                 partial_non_zero = np.nonzero(partial_visib_img)
                 partial_surf_visib = np.sum(partial_non_zero[0])
                 partvisibName = target + 'images/train/' + imgNam[:-4] + str(obj_id) + '_pv.png'
                 cv2.imwrite(partvisibName, partial_visib_img)
 
                 visib_fract = partial_surf_visib / surf_visib
-                print(visib_fract)
+                print(partial_surf_visib, surf_visib)
                 visib_img = np.where(ren_img > 0, ren_img, visib_img)
                 visibName = target + 'images/train/' + imgNam[:-4] + str(obj_id) + '_vi.png'
                 cv2.imwrite(visibName, visib_img)
