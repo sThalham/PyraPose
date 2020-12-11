@@ -7,6 +7,7 @@ import imgaug.augmenters as iaa
 #import pyfastnoisesimd as fns
 import random
 from scipy import ndimage
+import transforms3d as tf3d
 
 from .transform import change_transform_origin
 
@@ -397,9 +398,27 @@ def apply_transform2mask(matrix, mask, params):
 
 def adjust_pose_annotation(matrix, pose, cpara):
 
+    pitch_ori = np.arcsin(pose[0] / pose[2])
+    roll_ori = np.arcsin(pose[1] / pose[2])
+
     pose[2] = pose[2] / matrix[0, 0]
     pose[0] = pose[0] + ((matrix[0, 2] + ((cpara[2] * matrix[0, 0]) - cpara[2])) * pose[2]) / cpara[0]
     pose[1] = pose[1] + ((matrix[1, 2] + ((cpara[3] * matrix[0, 0]) - cpara[3])) * pose[2]) / cpara[1]
+
+    #########
+    # adjustment of rotation based on viewpoint change missing.... WTF
+    # -y = -roll
+    # -x = +pitch
+    #########
+
+    pitch_diff = pitch_ori - np.arcsin(pose[0] / pose[2])
+    roll_diff = roll_ori - np.arcsin(pose[1] / pose[2])
+
+    eulers = tf3d.euler.quat2euler(pose[3:], 'sxyz')
+    eulers[0] += roll_diff
+    eulers[1] += pitch_diff
+    pose[3:] = tf3d.euler.euler2quat(eulers, 'sxyz')
+
 
     return pose
 
