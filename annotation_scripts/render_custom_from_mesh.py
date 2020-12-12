@@ -16,7 +16,7 @@ from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibilit
 
 # Import bop_renderer and bop_toolkit.
 # ------------------------------------------------------------------------------
-bop_renderer_path = '/home/stefan/workspace/bop_renderer/build'
+bop_renderer_path = '/home/stefan/bop_renderer/build'
 sys.path.append(bop_renderer_path)
 
 import bop_renderer
@@ -180,20 +180,20 @@ if __name__ == "__main__":
 
             for objID in obj_ids:
                 # sample rotation and append
-                R = tf3d.euler.euler2mat(np.random.rand(), np.random.rand(), np.random.rand())
+                R_ren = tf3d.euler.euler2mat(np.random.rand(), np.random.rand(), np.random.rand())
                 z = 0.3 + np.random.rand() * 1.2
                 x = (2 * (0.6 * z)) * np.random.rand() - (0.6 * z)
                 y = (2 * (0.4 * z)) * np.random.rand() - (0.4 * z)
                 t = np.array([[x, y, z]]).T
-                rotations.append(R)
+                rotations.append(R_ren)
                 translations.append(t)
                 zeds.append(z)
 
-                R_list = R.flatten().tolist()
+                R_list = R_ren.flatten().tolist()
                 t_list = t.flatten().tolist()
 
                 # pose [x, y, z, roll, pitch, yaw]
-                R = np.asarray(R, dtype=np.float32)
+                R = np.asarray(R_ren, dtype=np.float32)
                 rot = tf3d.quaternions.mat2quat(R.reshape(3, 3))
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = np.asarray(t, dtype=np.float32)
@@ -226,13 +226,22 @@ if __name__ == "__main__":
                 # render for visibility mask
                 t_list = np.array([[0.0, 0.0, t[2]]]).T
                 t_list = t_list.flatten().tolist()
+
+                #########
+                # adjustment of rotation based on viewpoint change missing.... WTF
+                # -y = -roll
+                # -x = +pitch
+                #########
+                roll, pitch, yaw = tf3d.euler.quat2euler(pose[3:], 'sxyz')
+                pitch_adapt = np.arcsin(pose[0] / pose[2])
+                roll_adapt = np.arcsin(pose[1] / pose[2])
+                R_fv = tf3d.euler.euler2mat(roll_adapt, pitch_adapt, 0.0, 'sxyz')
+                R_fv = np.dot(R_ren, np.linalg.inv(R_fv))
+                R_list = R_fv.flatten().tolist()
+
                 ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
                 full_visib_img = ren.get_color_image(objID)
-                #visib_non_zero = np.nonzero(full_visib_img)
-                #surf_visib = np.sum(visib_non_zero[0])
                 full_visib.append(full_visib_img)
-                #partvisibName = target + 'images/train/' + imgNam[:-4] + str(objID) + '_fv.png'
-                #cv2.imwrite(partvisibName, full_visib_img)
 
                 # compute bounding box and append
                 non_zero = np.nonzero(rgb_img)
