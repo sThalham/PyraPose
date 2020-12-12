@@ -321,8 +321,7 @@ def apply_transform2mask(matrix, mask, params):
 
 def adjust_pose_annotation(matrix, pose, cpara):
 
-    pitch_ori = np.arcsin(pose[0] / pose[2])
-    roll_ori = np.arcsin(pose[1] / pose[2])
+    trans_noaug = np.array([pose[0], pose[1], pose[2]])
 
     pose[2] = pose[2] / matrix[0, 0]
     pose[0] = pose[0] + ((matrix[0, 2] + ((cpara[2] * matrix[0, 0]) - cpara[2])) * pose[2]) / cpara[0]
@@ -330,20 +329,46 @@ def adjust_pose_annotation(matrix, pose, cpara):
 
     #########
     # adjustment of rotation based on viewpoint change missing.... WTF
-    # -y = -roll
-    # -x = +pitch
-    #########
 
-    pitch_diff = pitch_ori - np.arcsin(pose[0] / pose[2])
-    roll_diff = roll_ori - np.arcsin(pose[1] / pose[2])
+    trans_aug = np.array([pose[0], pose[1], pose[2]])
 
-    eulers = tf3d.euler.quat2euler(pose[3:], 'sxyz')
-    eulers[0] += roll_diff
-    eulers[1] += pitch_diff
-    pose[3:] = tf3d.euler.euler2quat(eulers, 'sxyz')
+    T_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    R_2obj = T_2obj[:3, :3]
+    t_2obj = T_2obj[:3, 3]
+    R_fv = np.dot(R_2obj, np.linalg.inv(R).T)
 
 
     return pose
+
+
+def lookAt(eye, target, up):
+    # eye is from
+    # target is to
+    # expects numpy arrays
+    f = eye - target
+    f = f/np.linalg.norm(f)
+
+    s = np.cross(up, f)
+    s = s/np.linalg.norm(s)
+    u = np.cross(f, s)
+    u = u/np.linalg.norm(u)
+
+    tx = np.dot(s, eye.T)
+    ty = np.dot(u, eye.T)
+    tz = -np.dot(f, eye.T)
+
+    m = np.zeros((4, 4), dtype=np.float32)
+    m[0, :3] = s
+    m[1, :3] = u
+    m[2, :3] = f
+    m[:, 3] = [tx, ty, tz, 1]
+
+    #m[0, :-1] = s
+    #m[1, :-1] = u
+    #m[2, :-1] = -f
+    #m[-1, -1] = 1.0
+
+    return m
 
 
 def compute_resize_scale(image_shape, min_side=480, max_side=640):

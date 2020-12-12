@@ -16,7 +16,7 @@ from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibilit
 
 # Import bop_renderer and bop_toolkit.
 # ------------------------------------------------------------------------------
-bop_renderer_path = '/home/stefan/bop_renderer/build'
+bop_renderer_path = '/home/stefan/workspace/bop_renderer/build'
 sys.path.append(bop_renderer_path)
 
 import bop_renderer
@@ -220,7 +220,7 @@ if __name__ == "__main__":
             for objID in obj_ids:
                 # sample rotation and append
                 R_ren = tf3d.euler.euler2mat(np.random.rand(), np.random.rand(), np.random.rand())
-                z = 0.3 + np.random.rand() * 1.2
+                z = 0.6 + np.random.rand() * 0.6
                 x = (2 * (0.6 * z)) * np.random.rand() - (0.6 * z)
                 y = (2 * (0.4 * z)) * np.random.rand() - (0.4 * z)
                 t = np.array([[x, y, z]]).T
@@ -265,29 +265,11 @@ if __name__ == "__main__":
                 # render for visibility mask
                 t_list = np.array([[0.0, 0.0, t[2]]]).T
                 t_list = t_list.flatten().tolist()
-
-                #########
-                # adjustment of rotation based on viewpoint change missing.... WTF
-                # -y = -roll
-                # -x = +pitch
-                #########
-                # using look_at
-                #from_obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]),  np.array([0.0, 1.0, 0.0]))[:3, :3]
-                #print('from_obj: ', from_obj)
-                #from_tar = lookAt(np.array([0.0, 0.0, t[2][0]]), np.array([0.0, 0.0, 0.0]),  np.array([0.0, 1.0, 0.0]))[:3, :3]
-                #print('from_tar: ', from_tar)
-                #R_full = np.dot(R, from_obj.T)
-                R_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))[:3, :3]
-                R_fv = np.dot(R, R_2obj.T)
+                T_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+                R_2obj = T_2obj[:3, :3]
+                t_2obj = T_2obj[:3, 3]
+                R_fv = np.dot(R_2obj, np.linalg.inv(R).T)
                 R_list = R_fv.flatten().tolist()
-                # using eulers
-                #roll, pitch, yaw = tf3d.euler.quat2euler(pose[3:], 'sxyz')
-                #pitch_adapt = np.arcsin(pose[0] / pose[2])
-                #roll_adapt = np.arcsin(pose[1] / pose[2])
-                #R_fv = tf3d.euler.euler2mat(roll_adapt, pitch_adapt, 0.0, 'sxyz')
-                #R_fv = np.dot(R_fv, np.linalg.inv(R_ren).T)
-                #R_list = R_fv.flatten().tolist()
-
                 ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
                 full_visib_img = ren.get_color_image(objID)
                 full_visib.append(full_visib_img)
@@ -312,24 +294,29 @@ if __name__ == "__main__":
 
                 obj_id = obj_ids[v_idx]
                 ren_img = renderings[v_idx]
-                print(obj_id)
 
                 # partial visibility mask
                 partial_visib_img = np.where(visib_img > 0, 0, ren_img)
-                partial_non_zero = np.nonzero(partial_visib_img)
-                partial_surf_visib = np.sum(partial_non_zero[0])
+                partial_visib_mask = np.nan_to_num(partial_visib_img, copy=True, nan=0, posinf=0, neginf=0)
+                partial_visib_mask = np.where(np.any(partial_visib_mask, axis=2) > 0, 1, 0)
+                print(np.unique(partial_visib_mask))
+                partial_mask_surf = np.sum(partial_visib_mask)
                 partvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_pv.png'
-                cv2.imwrite(partvisibName, partial_visib_img)
+                cv2.imwrite(partvisibName, partial_visib_mask*255)
 
                 full_visib_img = full_visib[v_idx]
-                visib_non_zero = np.nonzero(full_visib_img)
-                surf_visib = np.sum(visib_non_zero[0])
+                full_visib_mask = np.nan_to_num(full_visib_img, copy=True, nan=0, posinf=0, neginf=0)
+                full_visib_mask = np.where(np.any(full_visib_mask, axis=2) > 0, 1, 0)
+                print(np.unique(full_visib_mask))
+                surf_visib = np.sum(full_visib_mask)
                 fullvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_fv.png'
-                cv2.imwrite(fullvisibName, full_visib_img)
+                cv2.imwrite(fullvisibName, full_visib_mask*255)
 
-                visib_fract = partial_surf_visib / surf_visib
+                visib_fract = partial_mask_surf / surf_visib
+                if visib_fract > 1.0:
+                    visib_fract = 1.0
+                print('annoID: ', v_idx, 'visib: ', visib_fract)
                 visibilities.append(visib_fract)
-                print(visib_fract)
 
                 visib_img = np.where(visib_img > 0, visib_img, ren_img)
 
