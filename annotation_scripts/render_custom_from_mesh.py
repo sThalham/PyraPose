@@ -22,6 +22,45 @@ sys.path.append(bop_renderer_path)
 import bop_renderer
 
 
+def lookAt(eye, target, up):
+    # eye is from
+    # target is to
+    # expects numpy arrays
+    f = eye - target
+    f = f/np.linalg.norm(f)
+
+    s = np.cross(up, f)
+    s = s/np.linalg.norm(s)
+    u = np.cross(f, s)
+    u = u/np.linalg.norm(u)
+
+    tx = np.dot(s, eye.T)
+    ty = np.dot(u, eye.T)
+    tz = -np.dot(f, eye.T)
+
+    m = np.zeros((4, 4), dtype=np.float32)
+    m[0, :3] = s
+    m[1, :3] = u
+    m[2, :3] = f
+    m[:, 3] = [tx, ty, tz, 1]
+
+    #m[0, :-1] = s
+    #m[1, :-1] = u
+    #m[2, :-1] = -f
+    #m[-1, -1] = 1.0
+
+    return m
+
+def m3dLookAt(eye, target, up):
+    mz = normalize(eye - target) # inverse line of sight
+    mx = normalize( cross( up, mz ) )
+    my = normalize( cross( mz, mx ) )
+    tx =  dot( mx, eye )
+    ty =  dot( my, eye )
+    tz = -dot( mz, eye )
+    return np.array([mx[0], my[0], mz[0], 0, mx[1], my[1], mz[1], 0, mx[2], my[2], mz[2], 0, tx, ty, tz, 1])
+
+
 if __name__ == "__main__":
 
     mesh_path = sys.argv[1]
@@ -232,12 +271,22 @@ if __name__ == "__main__":
                 # -y = -roll
                 # -x = +pitch
                 #########
-                roll, pitch, yaw = tf3d.euler.quat2euler(pose[3:], 'sxyz')
-                pitch_adapt = np.arcsin(pose[0] / pose[2])
-                roll_adapt = np.arcsin(pose[1] / pose[2])
-                R_fv = tf3d.euler.euler2mat(roll_adapt, pitch_adapt, 0.0, 'sxyz')
-                R_fv = np.dot(R_ren, np.linalg.inv(R_fv))
+                # using look_at
+                #from_obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]),  np.array([0.0, 1.0, 0.0]))[:3, :3]
+                #print('from_obj: ', from_obj)
+                #from_tar = lookAt(np.array([0.0, 0.0, t[2][0]]), np.array([0.0, 0.0, 0.0]),  np.array([0.0, 1.0, 0.0]))[:3, :3]
+                #print('from_tar: ', from_tar)
+                #R_full = np.dot(R, from_obj.T)
+                R_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))[:3, :3]
+                R_fv = np.dot(R, R_2obj.T)
                 R_list = R_fv.flatten().tolist()
+                # using eulers
+                #roll, pitch, yaw = tf3d.euler.quat2euler(pose[3:], 'sxyz')
+                #pitch_adapt = np.arcsin(pose[0] / pose[2])
+                #roll_adapt = np.arcsin(pose[1] / pose[2])
+                #R_fv = tf3d.euler.euler2mat(roll_adapt, pitch_adapt, 0.0, 'sxyz')
+                #R_fv = np.dot(R_fv, np.linalg.inv(R_ren).T)
+                #R_list = R_fv.flatten().tolist()
 
                 ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
                 full_visib_img = ren.get_color_image(objID)
