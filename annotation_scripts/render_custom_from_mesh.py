@@ -16,7 +16,7 @@ from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibilit
 
 # Import bop_renderer and bop_toolkit.
 # ------------------------------------------------------------------------------
-bop_renderer_path = '/home/stefan/workspace/bop_renderer/build'
+bop_renderer_path = '/home/stefan/bop_renderer/build'
 sys.path.append(bop_renderer_path)
 
 import bop_renderer
@@ -36,7 +36,7 @@ def lookAt(eye, target, up):
 
     tx = np.dot(s, eye.T)
     ty = np.dot(u, eye.T)
-    tz = -np.dot(f, eye.T)
+    tz = np.dot(f, eye.T)
 
     m = np.zeros((4, 4), dtype=np.float32)
     m[0, :3] = s
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     target = '/home/stefan/data/train_data/fronius_train/'
     objsperimg = 7
 
-    visu = False
+    visu = True
     resX = 640
     resY = 480
     fx = 572.41140
@@ -85,9 +85,10 @@ if __name__ == "__main__":
         mesh_path_now = os.path.join(mesh_path, mesh_now)
         if mesh_now[-4:] != '.ply':
             continue
+        mesh_id = int(mesh_now[-6:-4])
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)
-        mesh_id += 1
+        #mesh_id += 1
 
     # interlude for debugging
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -111,7 +112,7 @@ if __name__ == "__main__":
                                    [x_minus, y_plus, z_minus],
                                    [x_minus, y_minus, z_minus],
                                    [x_minus, y_minus, z_plus]])
-        threeD_boxes[int(key), :, :] = three_box_solo
+        threeD_boxes[int(key), :, :] = three_box_solo * fac
 
     '''
     threeD_boxes = np.ndarray((4, 8, 3), dtype=np.float32)
@@ -174,7 +175,7 @@ if __name__ == "__main__":
 
     syns = os.listdir(background)
     for o_idx in range(1,10):
-        for bg_img_path in syns:
+        for bg_img_path in syns[:2]:
 
             bg_img_path_j = os.path.join(background, bg_img_path)
 
@@ -231,21 +232,24 @@ if __name__ == "__main__":
                 R_list = R_ren.flatten().tolist()
                 t_list = t.flatten().tolist()
 
-                # pose [x, y, z, roll, pitch, yaw]
+                # pose [x, y, z, roll, pitch, yaw] for anno
                 R = np.asarray(R_ren, dtype=np.float32)
                 rot = tf3d.quaternions.mat2quat(R.reshape(3, 3))
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = np.asarray(t, dtype=np.float32)
                 pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
+                pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
+                        np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
                 trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
-                R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+                #R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+
+                #3Dbox for visualization
                 tDbox = R.reshape(3, 3).dot(threeD_boxes[objID, :, :].T).T
-                tDbox = tDbox + np.repeat(trans.T, 8, axis=0)
+                tDbox = tDbox + np.repeat(trans[:, np.newaxis].T, 8, axis=0)
                 box3D = toPix_array(tDbox, fx=fx, fy=fy, cx=cx, cy=cy)
                 box3D = np.reshape(box3D, (16))
                 box3D = box3D.tolist()
-                pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
-                        np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
+
                 poses.append(pose)
                 calib_K.append(K)
                 boxes3D.append(box3D)
@@ -263,6 +267,7 @@ if __name__ == "__main__":
                 renderings.append(rgb_img)
 
                 # render for visibility mask
+                z_straight = np.linalg.norm
                 t_list = np.array([[0.0, 0.0, t[2]]]).T
                 t_list = t_list.flatten().tolist()
                 T_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
@@ -274,17 +279,6 @@ if __name__ == "__main__":
                 full_visib_img = ren.get_color_image(objID)
                 full_visib.append(full_visib_img)
 
-                # compute bounding box and append
-                non_zero = np.nonzero(rgb_img)
-                surf_ren = np.sum(non_zero[0])
-                bb_xmin = np.nanmin(non_zero[1])
-                bb_xmax = np.nanmax(non_zero[1])
-                bb_ymin = np.nanmin(non_zero[0])
-                bb_ymax = np.nanmax(non_zero[0])
-                obj_bb = [bb_xmin, bb_ymin, bb_xmax - bb_xmin, bb_ymax - bb_ymin]
-                bboxes.append(obj_bb)
-                areas.append(obj_bb[2] * obj_bb[3])
-
             zeds = np.asarray(zeds, dtype=np.float32)
             low2high = np.argsort(zeds)
             high2low = low2high[::-1]
@@ -292,33 +286,48 @@ if __name__ == "__main__":
 
             for v_idx in low2high:
 
-                obj_id = obj_ids[v_idx]
+                obj_id = int(obj_ids[v_idx])
                 ren_img = renderings[v_idx]
 
                 # partial visibility mask
                 partial_visib_img = np.where(visib_img > 0, 0, ren_img)
                 partial_visib_mask = np.nan_to_num(partial_visib_img, copy=True, nan=0, posinf=0, neginf=0)
                 partial_visib_mask = np.where(np.any(partial_visib_mask, axis=2) > 0, 1, 0)
-                print(np.unique(partial_visib_mask))
                 partial_mask_surf = np.sum(partial_visib_mask)
-                partvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_pv.png'
-                cv2.imwrite(partvisibName, partial_visib_mask*255)
-
+                #partvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_pv.png'
+                #cv2.imwrite(partvisibName, partial_visib_mask*255)
                 full_visib_img = full_visib[v_idx]
                 full_visib_mask = np.nan_to_num(full_visib_img, copy=True, nan=0, posinf=0, neginf=0)
                 full_visib_mask = np.where(np.any(full_visib_mask, axis=2) > 0, 1, 0)
-                print(np.unique(full_visib_mask))
                 surf_visib = np.sum(full_visib_mask)
-                fullvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_fv.png'
-                cv2.imwrite(fullvisibName, full_visib_mask*255)
-
-                visib_fract = partial_mask_surf / surf_visib
+                #fullvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_fv.png'
+                #cv2.imwrite(fullvisibName, full_visib_mask*255)
+                # some systematic error in visibility calculation, yet I can't point the finger at it
+                visib_fract = int(partial_mask_surf / surf_visib)
                 if visib_fract > 1.0:
-                    visib_fract = 1.0
-                print('annoID: ', v_idx, 'visib: ', visib_fract)
+                    visib_fract = int(1.0)
                 visibilities.append(visib_fract)
-
+                #print('visib: ', obj_id, visib_fract)
                 visib_img = np.where(visib_img > 0, visib_img, ren_img)
+
+                # compute bounding box and append
+                non_zero = np.nonzero(partial_visib_mask)
+                surf_ren = np.sum(non_zero[0])
+                if non_zero[0].size != 0:
+                    bb_xmin = np.nanmin(non_zero[1])
+                    bb_xmax = np.nanmax(non_zero[1])
+                    bb_ymin = np.nanmin(non_zero[0])
+                    bb_ymax = np.nanmax(non_zero[0])
+                    obj_bb = [int(bb_xmin), int(bb_ymin), int(bb_xmax - bb_xmin), int(bb_ymax - bb_ymin)]
+                    # out of order with other lists
+                    bboxes.append(obj_bb)
+                    area = int(obj_bb[2] * obj_bb[3])
+                    areas.append(area)
+                else:
+                    area = int(0)
+                    obj_bb = [int(0), int(0), int(0), int(0)]
+                    bboxes.append(obj_bb)
+                    areas.append(area)
 
                 bg_img = np.where(partial_visib_img > 0, partial_visib_img, bg_img)
 
@@ -328,10 +337,8 @@ if __name__ == "__main__":
                 mask_ind = mask_ind + 1
 
                 annoID = annoID + 1
-                obj_bb = bboxes[v_idx]
                 pose = poses[v_idx]
                 box3D = boxes3D[v_idx]
-                area = areas[v_idx]
 
                 tempTA = {
                     "id": annoID,
@@ -362,7 +369,7 @@ if __name__ == "__main__":
                 cv2.imwrite(fileName, bg_img)
                 print("storing image in : ", fileName)
                 mask_safe_path = fileName[:-8] + '_mask.png'
-                cv2.imwrite(mask_safe_path, (mask_img*12).astype(np.int8))
+                cv2.imwrite(mask_safe_path, mask_img.astype(np.int8))
 
                 tempTV = {
                     "license": 2,
@@ -380,43 +387,89 @@ if __name__ == "__main__":
                 dict["images"].append(tempTV)
 
                 if visu is True:
-                    img = rgbImg
-                    for i, bb in enumerate(bbvis):
+
+                    boxes3D = [boxes3D[x] for x in low2high]
+                    obj_ids = [obj_ids[x] for x in low2high]
+                    #boxes3D = boxes3D[low2high]
+                    #obj_ids = obj_ids[low2high]
+                    img = bg_img
+                    for i, bb in enumerate(bboxes):
 
                         bb = np.array(bb)
+                        cv2.rectangle(img, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
+                                      (255, 255, 255), 2)
 
-                        phler = True
-                        if phler:
-                            pose = np.asarray(bbvis[i], dtype=np.float32)
+                        font = cv2.FONT_HERSHEY_SIMPLEX
+                        bottomLeftCornerOfText = (int(bb[0]), int(bb[1]))
+                        fontScale = 1
+                        fontColor = (0, 0, 0)
+                        fontthickness = 1
+                        lineType = 2
+                        gtText = str(obj_ids[i])
 
-                            colR = 250
-                            colG = 25
-                            colB = 175
+                        fontColor2 = (255, 255, 255)
+                        fontthickness2 = 3
+                        cv2.putText(img, gtText,
+                                    bottomLeftCornerOfText,
+                                    font,
+                                    fontScale,
+                                    fontColor2,
+                                    fontthickness2,
+                                    lineType)
 
-                            img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
-                            img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
-                            img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
-                            img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
-                            img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
+                        pose = np.asarray(boxes3D[i], dtype=np.float32)
+
+                        colR = 250
+                        colG = 25
+                        colB = 175
+
+                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
+                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
+                                       2)
+                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
+                                       (colR, colG, colB), 2)
+                        img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
+                                       (colR, colG, colB), 2)
+
+                        '''
+                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
+                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
+                        img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
                                            2)
-                            img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
+                        img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
                                            (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
+                        img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
                                            (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
+                        img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
                                            (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
+                        img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
                                            (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
+                        img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
                                            (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
+                        img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
                                            (colR, colG, colB), 2)
-                            img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
+                        img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
                                            (colR, colG, colB), 2)
+                        '''
 
                     # print(camR_vis[i], camT_vis[i])
                     # draw_axis(img, camR_vis[i], camT_vis[i], K)
-                    cv2.imwrite(rgb_name, img)
+                    cv2.imwrite(fileName, img)
 
                     print('STOP')
 
@@ -429,7 +482,7 @@ if __name__ == "__main__":
         }
         dict["categories"].append(tempC)
 
-    valAnno = target + 'annotations/instances_' + traintestval + '.json'
+    valAnno = target + 'annotations/instances_train.json'
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)
