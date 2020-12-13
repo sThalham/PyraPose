@@ -9,6 +9,7 @@ import transforms3d as tf3d
 import time
 import random
 import json
+import open3d
 
 from pathlib import Path
 
@@ -63,10 +64,29 @@ def m3dLookAt(eye, target, up):
 
 if __name__ == "__main__":
 
-    mesh_path = sys.argv[1]
+    #mesh_path = sys.argv[1]
+    #mesh_path = '/home/stefan/data/Meshes/linemod_13' # linemod
+    mesh_path = '/home/stefan/data/MMAssist/fronius_reconstructions/plys' #fronius
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/fronius_train/'
-    objsperimg = 7
+    objsperimg = 1
+
+    pcd = open3d.io.read_point_cloud("/home/stefan/data/MMAssist/fronius_reconstructions/pcds/sidepanel_left/3D_model.pcd")
+    open3d.draw_geometries([pcd])
+    #mesh = open3d.io.read_triangle_mesh("/home/stefan/data/MMAssist/fronius_reconstructions/seite_rechts.ply")
+    # open3d.draw_geometries([pcd])
+    #open3d.io.write_point_cloud(filename="/home/stefan/data/MMAssist/fronius_reconstructions/plys/seite_rechts.ply", pointcloud=pcd, write_ascii=True)
+    alpha = 0.03
+    print(f"alpha={alpha:.3f}")
+    mesh = open3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(pcd, alpha)
+    #mesh = open3d.geometry.TriangleMesh()
+    #mesh.triangles = open3d.utility.Vector3dVector(pcd.points)
+    #mesh.vertices = open3d.utility.Vector3dVector(pcd.points)
+    #mesh.vertex_normals = open3d.utility.Vector3dVector(pcd.normals)
+    #mesh.vertex_colors = open3d.utility.Vector3dVector(pcd.colors)
+    #open3d.draw_geometries([mesh])
+    open3d.io.write_triangle_mesh("/home/stefan/data/MMAssist/fronius_reconstructions/plys/seite_rechts.ply", mesh, write_ascii='True')
+
 
     visu = True
     resX = 640
@@ -83,12 +103,14 @@ if __name__ == "__main__":
 
     for mesh_now in os.listdir(mesh_path):
         mesh_path_now = os.path.join(mesh_path, mesh_now)
+        print(mesh_path_now)
         if mesh_now[-4:] != '.ply':
             continue
-        mesh_id = int(mesh_now[-6:-4])
+        #mesh_id = int(mesh_now[-6:-4])
         ren.add_object(mesh_id, mesh_path_now)
+        print(mesh_id)
         categories.append(mesh_id)
-        #mesh_id += 1
+        mesh_id += 1
 
     # interlude for debugging
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
