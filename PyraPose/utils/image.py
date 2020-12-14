@@ -321,7 +321,12 @@ def apply_transform2mask(matrix, mask, params):
 
 def adjust_pose_annotation(matrix, pose, cpara):
 
+
+    print('transform: ', matrix)
     trans_noaug = np.array([pose[0], pose[1], pose[2]])
+    pose_before = np.eye((4), dtype=np.float32)
+    pose_before[:3, :3] = tf3d.quaternions.quat2mat(np.array(pose[3:]))
+    pose_before[:3, 3] = pose[:3]
 
     pose[2] = pose[2] / matrix[0, 0]
     pose[0] = pose[0] + ((matrix[0, 2] + ((cpara[2] * matrix[0, 0]) - cpara[2])) * pose[2]) / cpara[0]
@@ -329,14 +334,19 @@ def adjust_pose_annotation(matrix, pose, cpara):
 
     #########
     # adjustment of rotation based on viewpoint change missing.... WTF
-
+    # everything's wrong
+    print('pose pre: ', pose)
     trans_aug = np.array([pose[0], pose[1], pose[2]])
-
-    T_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    R_2obj = T_2obj[:3, :3]
-    t_2obj = T_2obj[:3, 3]
-    R_fv = np.dot(R_2obj, np.linalg.inv(R).T)
-
+    T_2naug = lookAt(trans_noaug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    T_2aug = lookAt(trans_aug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    #print('T_2naug: ', T_2naug)
+    #print('T_2aug: ', T_2aug)
+    T_rel = np.dot(np.linalg.inv(T_2naug), T_2aug.T)
+    #pose_after = np.eye((4), dtype=np.float32)
+    pose_after = np.dot(np.linalg.inv(T_rel).T, pose_before)
+    pose[3:] = tf3d.quaternions.mat2quat(pose_after[:3, :3])
+    pose[:3] = pose_after[3, :3]
+    print('pose_after: ', pose)
 
     return pose
 
