@@ -117,8 +117,8 @@ def anchor_targets_bbox(
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
         # w/o mask
-        #mask = annotations['mask'][0]
-        #image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
+        mask = annotations['mask'][0]
+        image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
         #mask_viz = cv2.resize(image[0], (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
@@ -152,10 +152,8 @@ def anchor_targets_bbox(
             calculated_boxes = np.empty((0, 16))
             for idx, pose in enumerate(annotations['poses']):
 
-                cls = int(annotations['labels'][idx])
-
-                '''
                 # mask part
+                cls = int(annotations['labels'][idx])
                 mask_id = annotations['mask_ids'][idx]
                 mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
                 mask_flat = mask_flat.flatten()
@@ -166,7 +164,6 @@ def anchor_targets_bbox(
                     mask_batch[index, anchors_spec, -1] = 1
                     #mask_viz[anchors_spec, :] = int(10*cls)
                 # mask part
-                '''
 
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
@@ -253,7 +250,7 @@ def anchor_targets_bbox(
             regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, -1] = -1
 
-    return regression_3D, labels_batch#, mask_batch
+    return regression_3D, labels_batch, mask_batch
 
 
 def compute_gt_annotations(

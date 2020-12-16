@@ -293,8 +293,8 @@ def retinanet(
     features = create_pyramid_features(b1, b2, b3)
     pyramids = __build_pyramid(submodels, features)
 
-    #masks = mask_head(features[0])
-    #pyramids.append(masks)
+    masks = mask_head(features[0])
+    pyramids.append(masks)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -325,11 +325,11 @@ def retinanet_bbox(
 
     regression3D = model.outputs[0]
     classification = model.outputs[1]
-    #mask = model.outputs[2]
+    mask = model.outputs[2]
     #other = model.outputs[3:]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask], name=name)
