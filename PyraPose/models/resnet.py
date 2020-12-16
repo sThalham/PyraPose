@@ -80,21 +80,11 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
 
     if inputs is None:
         if keras.backend.image_data_format() == 'channels_first':
-            #inputs = keras.layers.Input(shape=(3, None, None))
-            inputs_0 = keras.layers.Input(shape=(3, None, None))
-            inputs_1 = keras.layers.Input(shape=(3, None, None))
+            inputs = keras.layers.Input(shape=(3, None, None))
         else:
-            #inputs = keras.layers.Input(shape=(None, None, 3))
-            inputs_0 = keras.layers.Input(shape=(480, 640, 3))
-            inputs_1 = keras.layers.Input(shape=(480, 640, 3))
-            #inputs_0 = keras.layers.Input(shape=(None, None, 3))
-            #inputs_1 = keras.layers.Input(shape=(None, None, 3))
+            inputs = keras.layers.Input(shape=(480, 640, 3))
 
-    #resnet_rgb = keras_resnet.models.ResNet50(inputs_0, include_top=False, freeze_bn=True)
-    #resnet_dep = keras_resnet.models.ResNet50(inputs_1, include_top=False, freeze_bn=True)
-
-    resnet_rgb = keras_resnet.models.ResNet50(inputs_0, include_top=False, freeze_bn=True)
-    resnet_dep = keras_resnet.models.ResNet50(inputs_1, include_top=False, freeze_bn=True)
+    resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)
 
     filename = 'ResNet-50-model.keras.h5'
     resource = 'https://github.com/fizyr/keras-models/releases/download/v0.0.1/{}'.format(filename)
@@ -105,22 +95,19 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
             cache_subdir='models',
             md5_hash=checksum
         )
-    resnet_rgb.load_weights(weights, by_name=True, skip_mismatch=False)
-    resnet_dep.load_weights(weights, by_name=True, skip_mismatch=False)
+    resnet.load_weights(weights, by_name=True, skip_mismatch=False)
 
-    for i, layer in enumerate(resnet_rgb.layers):
+    for i, layer in enumerate(resnet.layers):
         #print(i, layer.name)
         if i < 40 and 'bn' not in layer.name:
             layer.trainable=False
-        layer.name = 'layer_' + str(i)
 
         # invoke modifier if given
     if modifier:
-        resnet_rgb = modifier(resnet_rgb)
-        resnet_dep = modifier(resnet_dep)
+        resnet = modifier(resnet)
 
         # create the full model
-    return retinanet.retinanet(inputs=[inputs_0, inputs_1], num_classes=num_classes, backbone_layers_rgb=resnet_rgb.outputs[1:], backbone_layers_dep=resnet_dep.outputs[1:], **kwargs)
+    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=resnet.outputs[1:], **kwargs)
 
 
 def resnet50_retinanet(num_classes, inputs=None, **kwargs):

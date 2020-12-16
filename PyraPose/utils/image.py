@@ -68,7 +68,7 @@ def adjust_transform_for_image(transform, image, relative_translation):
     The translation of the matrix will be scaled with the size of the image.
     The linear part of the transformation will adjusted so that the origin of the transformation will be at the center of the image.
     """
-    height, width, channels = image[0].shape
+    height, width, channels = image.shape
 
     result = transform
 
@@ -188,122 +188,17 @@ def apply_transform(matrix, image, params, cpara):
             iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
         ]),
     ], random_order=True)
-    image0 = seq.augment_image(image[0])
-    image0 = cv2.warpAffine(
-        image0,
+    image = seq.augment_image(image)
+    image = cv2.warpAffine(
+        image,
         matrix[:2, :],
-        dsize       = (image[0].shape[1], image[0].shape[0]),
+        dsize       = (image.shape[1], image.shape[0]),
         flags       = params.cvInterpolation(),
         borderMode  = params.cvBorderMode(),
         borderValue = params.cval,
     )
 
-    # depth
-    image1 = image[1]
-    image1 = image1.astype('float32')
-    '''
-    blurK = np.random.choice([3, 5, 7], 1).astype(int)
-    blurS = random.uniform(0.0, 1.5)
-
-    image1 = cv2.resize(image1, None, fx=1 / 2, fy=1 / 2)
-    res = (((image1 / 1000.0) * 1.41421356) ** 2)
-    image1 = cv2.GaussianBlur(image1, (blurK, blurK), blurS, blurS)
-    # quantify to depth resolution and apply gaussian
-    dNonVar = np.divide(image1, res, out=np.zeros_like(image1), where=res != 0)
-    dNonVar = np.round(dNonVar)
-    dNonVar = np.multiply(dNonVar, res)
-    noise = np.multiply(dNonVar, random.uniform(0.002, 0.004))  # empirically determined
-    image1 = np.random.normal(loc=dNonVar, scale=noise, size=dNonVar.shape)
-    image1 = cv2.resize(image1, (image[1].shape[1], image[1].shape[0]))
-
-    # fast perlin noise
-    seed = np.random.randint(2 ** 31)
-    N_threads = 4
-    perlin = fns.Noise(seed=seed, numWorkers=N_threads)
-    drawFreq = random.uniform(0.05, 0.5)  # 0.05 - 0.2
-    #drawFreq = 0.5
-    perlin.frequency = drawFreq
-    perlin.noiseType = fns.NoiseType.SimplexFractal
-    perlin.fractal.fractalType = fns.FractalType.FBM
-    drawOct = [2, 4, 8]
-    freqOct = np.bincount(drawOct)
-    rndOct = np.random.choice(np.arange(len(freqOct)), 1, p=freqOct / len(drawOct), replace=False)
-    # rndOct = 8
-    perlin.fractal.octaves = rndOct
-    #perlin.fractal.lacunarity = 2.1
-    perlin.fractal.lacunarity = random.uniform(1.0, 3.0)
-    perlin.fractal.gain = random.uniform(0.25, 0.75)
-    #perlin.fractal.gain = 0.45
-    perlin.perturb.perturbType = fns.PerturbType.NoPerturb
-
-    noiseX = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    noiseY = np.random.uniform(0.001, 0.01, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
-    Wxy = np.random.randint(1, 8)  # 1 - 5
-    Wz = np.random.uniform(0.0001, 0.007)  # 0.0001 - 0.004
-
-    #noiseX = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    #noiseY = np.random.uniform(0.001, 0.05, image[1].shape[1] * image[1].shape[0])  # 0.0001 - 0.1
-    #noiseZ = np.random.uniform(0.01, 0.1, image[1].shape[1] * image[1].shape[0])  # 0.01 - 0.1
-    #Wxy = np.random.randint(1, 7)  # 1 - 5
-    #Wz = np.random.uniform(0.0001, 0.01)
-
-    X, Y = np.meshgrid(np.arange(image[1].shape[1]), np.arange(image[1].shape[0]))
-    coords0 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])
-    coords1 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])
-    coords2 = fns.empty_coords(image[1].shape[1] * image[1].shape[0])
-
-    coords0[0, :] = noiseX.ravel()
-    coords0[1, :] = Y.ravel()
-    coords0[2, :] = X.ravel()
-    VecF0 = perlin.genFromCoords(coords0)
-    VecF0 = VecF0.reshape((image[1].shape[0], image[1].shape[1]))
-
-    coords1[0, :] = noiseY.ravel()
-    coords1[1, :] = Y.ravel()
-    coords1[2, :] = X.ravel()
-    VecF1 = perlin.genFromCoords(coords1)
-    VecF1 = VecF1.reshape((image[1].shape[0], image[1].shape[1]))
-
-    coords2[0, :] = noiseZ.ravel()
-    coords2[1, :] = Y.ravel()
-    coords2[2, :] = X.ravel()
-    VecF2 = perlin.genFromCoords(coords2)
-    VecF2 = VecF2.reshape((image[1].shape[0], image[1].shape[1]))
-
-    x = np.arange(image[1].shape[1], dtype=np.uint16)
-    x = x[np.newaxis, :].repeat(image[1].shape[0], axis=0)
-    y = np.arange(image[1].shape[0], dtype=np.uint16)
-    y = y[:, np.newaxis].repeat(image[1].shape[1], axis=1)
-
-    Wxy_scaled = image1 * 0.001 * Wxy
-    Wz_scaled = image1 * 0.001 * Wz
-    # scale with depth
-    fx = x + Wxy_scaled * VecF0
-    fy = y + Wxy_scaled * VecF1
-    fx = np.where(fx < 0, 0, fx)
-    fx = np.where(fx >= image[1].shape[1], image[1].shape[1] - 1, fx)
-    fy = np.where(fy < 0, 0, fy)
-    fy = np.where(fy >= image[1].shape[0], image[1].shape[0] - 1, fy)
-    fx = fx.astype(dtype=np.uint16)
-    fy = fy.astype(dtype=np.uint16)
-    image1 = image1[fy, fx] + Wz_scaled * VecF2
-    '''
-    image1 = np.where(image1 > 0, image1, 0.0)
-    image1 = np.where(image1 > 2000.0, 0.0, image1)
-    image1 = np.repeat(image1[:, :, np.newaxis], 3, axis=2)
-    image1 = np.multiply(image1, 255.0/2000.0)
-    #print(np.nanmax(image1), np.nanmin(image1))
-    #image1 = get_normal(image1, cpara[0], cpara[1], cpara[2], cpara[3])
-    image1 = cv2.warpAffine(
-        image1,
-        matrix[:2, :],
-        dsize=(image[1].shape[1], image[1].shape[0]),
-        flags=params.cvInterpolation(),
-        borderMode=params.cvBorderMode(),
-        borderValue=params.cval,
-    )
-    return [image0, image1]
+    return image
 
 
 def apply_transform2mask(matrix, mask, params):
@@ -321,12 +216,7 @@ def apply_transform2mask(matrix, mask, params):
 
 def adjust_pose_annotation(matrix, pose, cpara):
 
-
-    print('transform: ', matrix)
     trans_noaug = np.array([pose[0], pose[1], pose[2]])
-    pose_before = np.eye((4), dtype=np.float32)
-    pose_before[:3, :3] = tf3d.quaternions.quat2mat(np.array(pose[3:]))
-    pose_before[:3, 3] = pose[:3]
 
     pose[2] = pose[2] / matrix[0, 0]
     pose[0] = pose[0] + ((matrix[0, 2] + ((cpara[2] * matrix[0, 0]) - cpara[2])) * pose[2]) / cpara[0]
@@ -335,18 +225,12 @@ def adjust_pose_annotation(matrix, pose, cpara):
     #########
     # adjustment of rotation based on viewpoint change missing.... WTF
     # everything's wrong
-    print('pose pre: ', pose)
-    trans_aug = np.array([pose[0], pose[1], pose[2]])
-    T_2naug = lookAt(trans_noaug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    T_2aug = lookAt(trans_aug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    #print('T_2naug: ', T_2naug)
-    #print('T_2aug: ', T_2aug)
-    T_rel = np.dot(np.linalg.inv(T_2naug), T_2aug.T)
-    #pose_after = np.eye((4), dtype=np.float32)
-    pose_after = np.dot(np.linalg.inv(T_rel).T, pose_before)
-    pose[3:] = tf3d.quaternions.mat2quat(pose_after[:3, :3])
-    pose[:3] = pose_after[3, :3]
-    print('pose_after: ', pose)
+    #trans_aug = np.array([pose[0], pose[1], pose[2]])
+    #R_2naug = lookAt(trans_noaug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    #R_2aug = lookAt(trans_aug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    #R_rel = np.matmul(np.linalg.inv(R_2naug[:3, :3]), R_2aug[:3, :3])
+    #R_aug = np.matmul(tf3d.quaternions.quat2mat(pose[3:]), R_rel)
+    #pose[3:] = tf3d.quaternions.mat2quat(R_aug)
 
     return pose
 

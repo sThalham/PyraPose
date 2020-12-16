@@ -177,7 +177,7 @@ def __create_FPN(C3, C4, C5, feature_size=256):
 
 
 #def __create_sparceFPN(P3, P4, P5, feature_size=256):
-def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
+def __create_sparceFPN(C3_R, C4_R, C5_R, feature_size=256):
 
     # only from here for FPN-fusion test 3
     #C3 = keras.layers.Add()([C3_R, C3_D])
@@ -204,7 +204,7 @@ def __create_sparceFPN(C3_R, C4_R, C5_R, C3_D, C4_D, C5_D, feature_size=256):
     P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P3')(P3_fin) # replace with depthwise and 3x1+1x3
 
     P4_fin = keras.layers.Add()([P3_down, P4_mid])
-    P4_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P4_fin)
+    P4_down = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same')(P4_mid)
     P4_fin = keras.layers.Add()([P4_fin, P4])  # skip connection
     P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same', name='P4')(P4_fin) # replace with depthwise and 3x1+1x3
 
@@ -259,8 +259,7 @@ def __build_anchors_pnp(anchor_parameters, features):
 
 def retinanet(
     inputs,
-    backbone_layers_rgb,
-    backbone_layers_dep,
+    backbone_layers,
     num_classes,
     num_anchors             = None,
     create_pyramid_features = __create_sparceFPN,
@@ -279,8 +278,7 @@ def retinanet(
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     mask_head = default_mask_model(num_classes=num_classes)
 
-    b1, b2, b3 = backbone_layers_rgb
-    b4, b5, b6 = backbone_layers_dep
+    b1, b2, b3 = backbone_layers
 
     # feature fusion
     #C3 = keras.layers.Add()([b1, b4])
@@ -292,11 +290,11 @@ def retinanet(
     #P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C5)
 
     #features = create_pyramid_features(P3, P4, P5)
-    features = create_pyramid_features(b1, b2, b3, b4, b5, b6)
+    features = create_pyramid_features(b1, b2, b3)
     pyramids = __build_pyramid(submodels, features)
 
-    masks = mask_head(features[0])
-    pyramids.append(masks)
+    #masks = mask_head(features[0])
+    #pyramids.append(masks)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -327,11 +325,11 @@ def retinanet_bbox(
 
     regression3D = model.outputs[0]
     classification = model.outputs[1]
-    mask = model.outputs[2]
+    #mask = model.outputs[2]
     #other = model.outputs[3:]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification], name=name)

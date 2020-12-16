@@ -116,10 +116,12 @@ def anchor_targets_bbox(
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
-        mask = annotations['mask'][0]
-        image_shapes = guess_shapes(image[0].shape[:2], pyramid_levels)
-        #mask_viz = cv2.resize(image[0], (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
+        # w/o mask
+        #mask = annotations['mask'][0]
+        #image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
+        # w/o mask
 
+        #mask_viz = cv2.resize(image[0], (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
         #image_raw = image[0]
         #image_raw[..., 0] += 103.939
         #image_raw[..., 1] += 116.779
@@ -150,20 +152,21 @@ def anchor_targets_bbox(
             calculated_boxes = np.empty((0, 16))
             for idx, pose in enumerate(annotations['poses']):
 
-                mask_id = annotations['mask_ids'][idx]
                 cls = int(annotations['labels'][idx])
 
+                '''
+                # mask part
+                mask_id = annotations['mask_ids'][idx]
                 mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
-
                 mask_flat = mask_flat.flatten()
                 anchors_pyramid = np.where(mask_flat == int(mask_id))
-
                 anchors_spec = anchors_pyramid[0]
-
                 if len(anchors_spec) > 1:
                     mask_batch[index, anchors_spec, cls] = 1
                     mask_batch[index, anchors_spec, -1] = 1
                     #mask_viz[anchors_spec, :] = int(10*cls)
+                # mask part
+                '''
 
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
@@ -171,15 +174,14 @@ def anchor_targets_bbox(
                 tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
                 tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
-
                 box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
                 box3D = np.reshape(box3D, (16))
                 calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
 
-
+                '''
                 pose = box3D.reshape((16)).astype(np.int16)
 
-                image_raw = image[0]
+                image_raw = image
 
                 colEst = (255, 0, 0)
 
@@ -202,7 +204,7 @@ def anchor_targets_bbox(
                                      5)
 
 
-                '''
+                
                 cls_ind = np.where(annotations['labels']==cls) # index of cls
                 if not len(cls_ind[0]) == 0:
                     viz_img = True
@@ -231,9 +233,9 @@ def anchor_targets_bbox(
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            rind = np.random.randint(0, 1000)
-            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            cv2.imwrite(name, image_raw)
+            #rind = np.random.randint(0, 1000)
+            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
             #cv2.imwrite(name, image[1] + 100)
 
@@ -243,15 +245,15 @@ def anchor_targets_bbox(
             #cv2.imwrite(name, mask_viz)
 
         # ignore annotations outside of image
-        if image[0].shape:
+        if image.shape:
             anchors_centers = np.vstack([(anchors[:, 0] + anchors[:, 2]) / 2, (anchors[:, 1] + anchors[:, 3]) / 2]).T
-            indices = np.logical_or(anchors_centers[:, 0] >= image[0].shape[1], anchors_centers[:, 1] >= image[0].shape[0])
+            indices = np.logical_or(anchors_centers[:, 0] >= image.shape[1], anchors_centers[:, 1] >= image.shape[0])
 
             labels_batch[index, indices, -1]     = -1
             regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, mask_batch
+    return regression_3D, labels_batch#, mask_batch
 
 
 def compute_gt_annotations(
