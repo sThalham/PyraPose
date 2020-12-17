@@ -98,7 +98,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             'cls'          : losses.focal(),
             'mask'          : losses.focal(),
         },
-        optimizer=keras.optimizers.Adam(lr=lr, clipnorm=0.001)
+        optimizer=tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001)
     )
 
     return model, training_model, prediction_model

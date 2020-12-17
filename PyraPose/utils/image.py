@@ -225,12 +225,14 @@ def adjust_pose_annotation(matrix, pose, cpara):
     #########
     # adjustment of rotation based on viewpoint change missing.... WTF
     # everything's wrong
-    #trans_aug = np.array([pose[0], pose[1], pose[2]])
-    #R_2naug = lookAt(trans_noaug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    #R_2aug = lookAt(trans_aug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    #R_rel = np.matmul(np.linalg.inv(R_2naug[:3, :3]), R_2aug[:3, :3])
-    #R_aug = np.matmul(tf3d.quaternions.quat2mat(pose[3:]), R_rel)
-    #pose[3:] = tf3d.quaternions.mat2quat(R_aug)
+    #pose[7:10] = pose[:3]
+    trans_aug = np.array([pose[0], pose[1], pose[2]])
+    R_2naug = lookAt(trans_noaug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    R_2aug = lookAt(trans_aug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    R_rel = np.matmul(np.linalg.inv(R_2naug[:3, :3]), R_2aug[:3, :3])
+    R_aug = np.matmul(tf3d.quaternions.quat2mat(pose[3:7]), R_rel)
+    pose[3:] = tf3d.quaternions.mat2quat(R_aug)
+    #pose[10:] = tf3d.quaternions.mat2quat(R_aug)
 
     return pose
 

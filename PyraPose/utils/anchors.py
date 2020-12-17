@@ -121,7 +121,7 @@ def anchor_targets_bbox(
         image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
-        #mask_viz = cv2.resize(image[0], (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
+        #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
         #image_raw = image[0]
         #image_raw[..., 0] += 103.939
         #image_raw[..., 1] += 116.779
@@ -165,6 +165,45 @@ def anchor_targets_bbox(
                     #mask_viz[anchors_spec, :] = int(10*cls)
                 # mask part
 
+                '''
+                # debug
+                pose_aug = pose[7:]
+                rot = tf3d.quaternions.quat2mat(pose_aug[3:])
+                rot = np.asarray(rot, dtype=np.float32)
+                tra = pose_aug[:3]
+                tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
+                tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1],
+                                    cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
+                box3D = np.reshape(box3D, (16))
+                pose1 = box3D.reshape((16)).astype(np.int16)
+
+                image_raw = image
+
+                colEst = (0, 0, 255)
+
+                image_raw = cv2.line(image_raw, tuple(pose1[0:2].ravel()), tuple(pose1[2:4].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[2:4].ravel()), tuple(pose1[4:6].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[4:6].ravel()), tuple(pose1[6:8].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[6:8].ravel()), tuple(pose1[0:2].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[0:2].ravel()), tuple(pose1[8:10].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[2:4].ravel()), tuple(pose1[10:12].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[4:6].ravel()), tuple(pose1[12:14].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[6:8].ravel()), tuple(pose1[14:16].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose1[8:10].ravel()), tuple(pose1[10:12].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose1[10:12].ravel()), tuple(pose1[12:14].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose1[12:14].ravel()), tuple(pose1[14:16].ravel()), colEst,
+                                     5)
+                image_raw = cv2.line(image_raw, tuple(pose1[14:16].ravel()), tuple(pose1[8:10].ravel()), colEst,
+
+                                     5)
+                pose = pose[:7]
+                # debug
+                '''
+
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = pose[:3]
@@ -200,7 +239,6 @@ def anchor_targets_bbox(
 
                                      5)
 
-
                 
                 cls_ind = np.where(annotations['labels']==cls) # index of cls
                 if not len(cls_ind[0]) == 0:
@@ -233,12 +271,9 @@ def anchor_targets_bbox(
             #rind = np.random.randint(0, 1000)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
             #cv2.imwrite(name, image_raw)
-            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_DEP.jpg'
-            #cv2.imwrite(name, image[1] + 100)
-
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
             #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
-            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_MASK.jpg'
+            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
             #cv2.imwrite(name, mask_viz)
 
         # ignore annotations outside of image

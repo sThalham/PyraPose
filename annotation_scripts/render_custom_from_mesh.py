@@ -71,22 +71,22 @@ if __name__ == "__main__":
     target = '/home/stefan/data/train_data/fronius_train/'
     objsperimg = 1
 
-    print(open3d.__version__)
-    pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
-    open3d.visualization.draw_geometries([pcd])
-    distances = pcd.compute_nearest_neighbor_distance()
-    avg_dist = np.mean(distances)
-    radius = 4 * avg_dist
-    bpa_mesh = open3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd, open3d.utility.DoubleVector(
-        [radius, radius * 2]))
-    print('stuck here')
+    #print(open3d.__version__)
+    #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
+    #open3d.visualization.draw_geometries([pcd])
+    #distances = pcd.compute_nearest_neighbor_distance()
+    #avg_dist = np.mean(distances)
+    #radius = 4 * avg_dist
+    #bpa_mesh = open3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd, open3d.utility.DoubleVector(
+    #    [radius, radius * 2]))
+    #print('stuck here')
     #dec_mesh = bpa_mesh.simplify_quadric_decimation(100000)
-    dec_mesh = bpa_mesh
+    #dec_mesh = bpa_mesh
     #dec_mesh.remove_degenerate_triangles()
     #dec_mesh.remove_duplicated_triangles()
     #dec_mesh.remove_duplicated_vertices()
     #dec_mesh.remove_non_manifold_edges()
-    open3d.io.write_triangle_mesh(filename="/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply/seite_rechts.ply", mesh=dec_mesh, write_ascii=True)
+    #open3d.io.write_triangle_mesh(filename="/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply/seite_rechts.ply", mesh=dec_mesh, write_ascii=True)
 
     visu = True
     resX = 640

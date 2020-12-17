@@ -247,6 +247,13 @@ class LinemodGenerator(Generator):
                 a['pose'][4],
                 a['pose'][5],
                 a['pose'][6],
+                #0.0,
+                #0.0,
+                #0.0,
+                #0.0,
+                #0.0,
+                #0.0,
+                #0.0,
             ]]], axis=0)
             annotations['mask_ids'] = np.concatenate([annotations['mask_ids'], [
                 a['mask_id'],
