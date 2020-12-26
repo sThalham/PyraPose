@@ -8,6 +8,7 @@ import imgaug.augmenters as iaa
 import random
 from scipy import ndimage
 import transforms3d as tf3d
+import mmcv
 
 from .transform import change_transform_origin
 
@@ -151,6 +152,7 @@ def apply_transform(matrix, image, params, cpara):
 
     # rgb
     # seq describes an object for rgb image augmentation using aleju/imgaug
+    '''
     seq = iaa.Sequential([
         # blur
         iaa.SomeOf((0, 2), [
@@ -189,8 +191,59 @@ def apply_transform(matrix, image, params, cpara):
         ]),
     ], random_order=True)
     image = seq.augment_image(image)
+    '''
+    brightness_delta = 32.0
+    hue_delta=18
+    contrast_lower, contrast_upper = 0.5, 1.5
+    saturation_lower, saturation_upper = 0.5, 1.5
+    hue_delta = hue_delta
+
+    img = image
+
+    if np.random.randint(2):
+        delta = np.random.uniform(low=-brightness_delta, high=brightness_delta)
+        img = img + delta
+
+
+        # mode == 0 --> do random contrast first
+        # mode == 1 --> do random contrast last
+    mode = np.random.randint(2)
+    if mode == 1:
+        if np.random.randint(2):
+            alpha = np.random.uniform(contrast_lower, contrast_upper)
+            img = img * alpha
+
+    img = img.astype(np.float32)
+    # convert color from BGR to HSV
+    img = mmcv.bgr2hsv(img)
+
+    # random saturation
+    if np.random.randint(2):
+        img[..., 1] = img[..., 1] * np.random.uniform(saturation_lower,
+                                      saturation_upper)
+
+    # random hue
+    if np.random.randint(2):
+        img[..., 0] = img[..., 0] + np.random.uniform(-hue_delta, hue_delta)
+        img[..., 0][img[..., 0] > 360] = img[..., 0][img[..., 0] > 360] - 360
+        img[..., 0][img[..., 0] < 0] = img[..., 0][img[..., 0] < 0] + 360
+
+    # convert color from HSV to BGR
+    img = mmcv.hsv2bgr(img)
+
+    # random contrast
+    if mode == 0:
+        if np.random.randint(2):
+            alpha = np.random.uniform(contrast_lower,
+                                   contrast_upper)
+            img = img * alpha
+
+    # randomly swap channels
+    if np.random.randint(2):
+        img = img[..., np.random.permutation(3)]
+
     image = cv2.warpAffine(
-        image,
+        img,
         matrix[:2, :],
         dsize       = (image.shape[1], image.shape[0]),
         flags       = params.cvInterpolation(),
@@ -225,14 +278,12 @@ def adjust_pose_annotation(matrix, pose, cpara):
     #########
     # adjustment of rotation based on viewpoint change missing.... WTF
     # everything's wrong
-    #pose[7:10] = pose[:3]
-    trans_aug = np.array([pose[0], pose[1], pose[2]])
-    R_2naug = lookAt(trans_noaug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    R_2aug = lookAt(trans_aug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    R_rel = np.matmul(np.linalg.inv(R_2naug[:3, :3]), R_2aug[:3, :3])
-    R_aug = np.matmul(tf3d.quaternions.quat2mat(pose[3:7]), R_rel)
-    pose[3:] = tf3d.quaternions.mat2quat(R_aug)
-    #pose[10:] = tf3d.quaternions.mat2quat(R_aug)
+    #trans_aug = np.array([pose[0], pose[1], pose[2]])
+    #R_2naug = lookAt(trans_noaug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    #R_2aug = lookAt(trans_aug, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    #R_rel = np.matmul(np.linalg.inv(R_2naug[:3, :3]), R_2aug[:3, :3])
+    #R_aug = np.matmul(tf3d.quaternions.quat2mat(pose[3:7]), R_rel)
+    #pose[3:] = tf3d.quaternions.mat2quat(R_aug)
 
     return pose
 
