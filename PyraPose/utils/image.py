@@ -192,58 +192,18 @@ def apply_transform(matrix, image, params, cpara):
     ], random_order=True)
     image = seq.augment_image(image)
     '''
-    brightness_delta = 32.0
-    hue_delta=18
-    contrast_lower, contrast_upper = 0.5, 1.5
-    saturation_lower, saturation_upper = 0.5, 1.5
-    hue_delta = hue_delta
-
-    img = image
-
-    if np.random.randint(2):
-        delta = np.random.uniform(low=-brightness_delta, high=brightness_delta)
-        img = img + delta
-
-
-        # mode == 0 --> do random contrast first
-        # mode == 1 --> do random contrast last
-    mode = np.random.randint(2)
-    if mode == 1:
-        if np.random.randint(2):
-            alpha = np.random.uniform(contrast_lower, contrast_upper)
-            img = img * alpha
-
-    img = img.astype(np.float32)
-    # convert color from BGR to HSV
-    img = mmcv.bgr2hsv(img)
-
-    # random saturation
-    if np.random.randint(2):
-        img[..., 1] = img[..., 1] * np.random.uniform(saturation_lower,
-                                      saturation_upper)
-
-    # random hue
-    if np.random.randint(2):
-        img[..., 0] = img[..., 0] + np.random.uniform(-hue_delta, hue_delta)
-        img[..., 0][img[..., 0] > 360] = img[..., 0][img[..., 0] > 360] - 360
-        img[..., 0][img[..., 0] < 0] = img[..., 0][img[..., 0] < 0] + 360
-
-    # convert color from HSV to BGR
-    img = mmcv.hsv2bgr(img)
-
-    # random contrast
-    if mode == 0:
-        if np.random.randint(2):
-            alpha = np.random.uniform(contrast_lower,
-                                   contrast_upper)
-            img = img * alpha
-
-    # randomly swap channels
-    if np.random.randint(2):
-        img = img[..., np.random.permutation(3)]
-
+    seq = iaa.Sequential([
+                        iaa.Sometimes(0.5, iaa.CoarseDropout(p=0.2, size_percent=(0.1, 0.25))),
+                        iaa.Sometimes(0.5, iaa.GaussianBlur(1.2*np.random.rand())),
+                        iaa.Sometimes(0.5, iaa.Add((-25, 25), per_channel=0.3)),
+                        iaa.Sometimes(0.5, iaa.Invert(0.2, per_channel=True)),
+                        iaa.Sometimes(0.5, iaa.Multiply((0.6, 1.4), per_channel=0.5)),
+                        iaa.Sometimes(0.5, iaa.Multiply((0.6, 1.4))),
+                        iaa.Sometimes(0.5, iaa.ContrastNormalization((0.5, 2.2), per_channel=0.3))
+                ], random_order=False)
+    image = seq.augment_image(image)
     image = cv2.warpAffine(
-        img,
+        image,
         matrix[:2, :],
         dsize       = (image.shape[1], image.shape[0]),
         flags       = params.cvInterpolation(),

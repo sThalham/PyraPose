@@ -122,7 +122,7 @@ def anchor_targets_bbox(
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        #image_raw = image[0]
+        #image_raw = image
         #image_raw[..., 0] += 103.939
         #image_raw[..., 1] += 116.779
         #image_raw[..., 2] += 123.68
