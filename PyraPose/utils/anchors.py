@@ -238,8 +238,7 @@ def anchor_targets_bbox(
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
 
                                      5)
-
-                
+                               
                 cls_ind = np.where(annotations['labels']==cls) # index of cls
                 if not len(cls_ind[0]) == 0:
                     viz_img = True

@@ -152,7 +152,6 @@ def apply_transform(matrix, image, params, cpara):
 
     # rgb
     # seq describes an object for rgb image augmentation using aleju/imgaug
-    '''
     seq = iaa.Sequential([
         # blur
         iaa.SomeOf((0, 2), [
@@ -202,6 +201,7 @@ def apply_transform(matrix, image, params, cpara):
                         iaa.Sometimes(0.5, iaa.ContrastNormalization((0.5, 2.2), per_channel=0.3))
                 ], random_order=False)
     image = seq.augment_image(image)
+    '''
     image = cv2.warpAffine(
         image,
         matrix[:2, :],
