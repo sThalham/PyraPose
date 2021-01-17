@@ -354,6 +354,7 @@ class Generator(keras.utils.Sequence):
             annotations_group,
             self.num_classes()
         )
+        print(batches)
 
         return list(batches)
 

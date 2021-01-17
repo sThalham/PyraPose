@@ -106,9 +106,9 @@ def anchor_targets_bbox(
 
     batch_size = len(image_group)
 
-    regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
+    #regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
-    regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
+    regression_3D = np.zeros((batch_size, anchors.shape[0], 8, 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
@@ -138,16 +138,16 @@ def anchor_targets_bbox(
             labels_batch[index, ignore_indices, -1]       = -1
             labels_batch[index, positive_indices, -1]     = 1
 
-            regression_batch[index, ignore_indices, -1]   = -1
-            regression_batch[index, positive_indices, -1] = 1
+            #regression_batch[index, ignore_indices, -1]   = -1
+            #regression_batch[index, positive_indices, -1] = 1
 
-            regression_3D[index, ignore_indices, -1] = -1
-            regression_3D[index, positive_indices, -1] = 1
+            regression_3D[index, ignore_indices, :, -1] = -1
+            regression_3D[index, positive_indices, :, -1] = 1
 
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
-            regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
+            #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
             calculated_boxes = np.empty((0, 16))
             for idx, pose in enumerate(annotations['poses']):
@@ -264,7 +264,7 @@ def anchor_targets_bbox(
                 cv2.imwrite(name, image_raw)
             '''
 
-            regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
+            regression_3D[index, :, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :])
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             #rind = np.random.randint(0, 1000)
@@ -281,8 +281,10 @@ def anchor_targets_bbox(
             indices = np.logical_or(anchors_centers[:, 0] >= image.shape[1], anchors_centers[:, 1] >= image.shape[0])
 
             labels_batch[index, indices, -1]     = -1
-            regression_batch[index, indices, -1] = -1
-            regression_3D[index, indices, -1] = -1
+            #regression_batch[index, indices, -1] = -1
+            regression_3D[index, indices, :, -1] = -1
+
+        print('regression 3D: ', regression_3D.shape)
 
     return regression_3D, labels_batch, mask_batch
 
@@ -512,7 +514,7 @@ def bbox_transform(anchors, gt_boxes, mean=None, std=None):
     return targets
 
 
-def box3D_transform(anchors, gt_boxes, num_classes, mean=None, std=None):
+def box3D_transform(anchors, gt_boxes, mean=None, std=None):
     """Compute bounding-box regression targets for an image."""
 
     if mean is None:
@@ -551,7 +553,9 @@ def box3D_transform(anchors, gt_boxes, num_classes, mean=None, std=None):
     targets_dy8 = (gt_boxes[:, 15] - anchors[:, 3]) / anchor_heights
 
     targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
+    targets = np.repeat(targets[:, np.newaxis, :], repeats=8, axis=1)
     targets = targets.T
+    print('target_shape: ', targets.shape)
 
     targets = (targets - mean) / std
     #print(np.mean(gt_boxes, axis=0), np.var(gt_boxes, axis=0))
