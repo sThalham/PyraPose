@@ -284,8 +284,6 @@ def anchor_targets_bbox(
             #regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, :, -1] = -1
 
-        print('regression 3D: ', regression_3D.shape)
-
     return regression_3D, labels_batch, mask_batch
 
 
@@ -555,7 +553,6 @@ def box3D_transform(anchors, gt_boxes, mean=None, std=None):
     targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
     targets = np.repeat(targets[:, np.newaxis, :], repeats=8, axis=1)
     targets = targets.T
-    print('target_shape: ', targets.shape)
 
     targets = (targets - mean) / std
     #print(np.mean(gt_boxes, axis=0), np.var(gt_boxes, axis=0))

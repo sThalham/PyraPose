@@ -6,6 +6,14 @@ from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
 
+class expand_dims(keras.layers.Layer):
+    def __init__(self):
+        super(expand_dims, self).__init__()
+
+    def call(self, inputs):
+        return keras.backend.expand_dims(inputs, axis=2)
+
+
 def default_classification_model(
     num_classes,
     num_anchors,
@@ -127,6 +135,10 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression3D_permute'
     outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
+
+    #expand_dims_obj = expand_dims()
+    outputs = expand_dims()(outputs)
+    print('outputs: ', outputs)
 
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
@@ -295,6 +307,7 @@ def retinanet(
 
     masks = mask_head(features[0])
     pyramids.append(masks)
+    print('pyramids: ', pyramids[0])
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 
@@ -329,6 +342,7 @@ def retinanet_bbox(
     #other = model.outputs[3:]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
+    print('boxes3D: ', boxes3D)
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)

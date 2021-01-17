@@ -354,7 +354,7 @@ class Generator(keras.utils.Sequence):
             annotations_group,
             self.num_classes()
         )
-        print(batches)
+        print(batches[0].shape, batches[1].shape, batches[2].shape)
 
         return list(batches)
 

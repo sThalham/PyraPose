@@ -63,7 +63,9 @@ def focal(alpha=0.25, gamma=2.0):
         normalizer = keras.backend.cast(keras.backend.shape(normalizer)[0], keras.backend.floatx())
         normalizer = keras.backend.maximum(keras.backend.cast_to_floatx(1.0), normalizer)
 
-        return keras.backend.sum(cls_loss) / normalizer
+        loss = keras.backend.sum(cls_loss) / normalizer
+
+        return loss
 
     return _focal
 
@@ -491,9 +493,10 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
     def _sym_orth_l1(y_true, y_pred):
 
+        #y_pred = keras.backend.expand_dims(y_pred, axis=3)
         print('y true: ', y_true)
         print('y pred: ', y_pred)
-        regression        = y_pred
+        regression        = y_pred[:, :, 0, :]
         regression_target = y_true[:, :, :, :-1]
         anchor_state      = y_true[:, :, :, -1]
         print('regression target: ', regression_target)
@@ -519,8 +522,8 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         oct7 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 7, :], indices), indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
 
-        hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=1)
-        lowest_loss = keras.backend.argmin(hypotheses)
+        hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=0)
+        lowest_loss = keras.backend.gather_nd(hypotheses, keras.backend.argmin(hypotheses))
 
         return lowest_loss
 

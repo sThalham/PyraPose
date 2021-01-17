@@ -194,7 +194,8 @@ class RegressBoxes3D(keras.layers.Layer):
 
     def call(self, inputs, **kwargs):
         anchors, regression = inputs
-        return box3D_transform_inv(anchors, regression, mean=self.mean, std=self.std)
+        #return box3D_transform_inv(anchors, regression, mean=self.mean, std=self.std)
+        return box3D_denormalization(anchors, regression, mean=self.mean, std=self.std)
 
     def compute_output_shape(self, input_shape):
         return input_shape[1]
