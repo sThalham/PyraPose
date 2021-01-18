@@ -336,6 +336,9 @@ def orthogonal_l1(weight=0.125, sigma=3.0):
         indices           = backend.where(keras.backend.equal(anchor_state, 1))
         regression        = backend.gather_nd(regression, indices)
         regression_target = backend.gather_nd(regression_target, indices)
+        print('anchor_state: ', anchor_state)
+        print('regression: ', regression)
+        print('regression target: ', regression_target)
 
         x1 = (regression[:, 0] - regression[:, 6]) - (regression[:, 2] - regression[:, 4])
         y1 = (regression[:, 1] - regression[:, 7]) - (regression[:, 3] - regression[:, 5])
@@ -493,33 +496,38 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
     def _sym_orth_l1(y_true, y_pred):
 
-        #y_pred = keras.backend.expand_dims(y_pred, axis=3)
+        y_true = keras.backend.expand_dims(y_true, axis=2) # hackiest !
+        y_true = keras.backend.repeat_elements(x=y_true, rep=8, axis=2)
         print('y true: ', y_true)
         print('y pred: ', y_pred)
-        regression        = y_pred[:, :, 0, :]
+        regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
         anchor_state      = y_true[:, :, :, -1]
         print('regression target: ', regression_target)
 
         #### filter out "ignore" anchors
         indices           = backend.where(keras.backend.equal(anchor_state[:, :, 0], 1))
-        regression        = backend.gather_nd(regression, indices, 1)
-        regression_target = backend.gather_nd(regression_target, backend.where(keras.backend.equal(anchor_state)))
+        regression        = backend.gather_nd(regression, indices)
+        regression_target = backend.gather_nd(regression_target, backend.where(keras.backend.equal(anchor_state, 1)))
+        print('anchor_state: ', anchor_state)
+        print('regression: ', regression)
+        print('regression target: ', regression_target)
 
-        oct0 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 0, :], indices), indices, weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct1 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 1, :], indices), indices,
+
+        oct0 = orthogonal_l1_local(regression, regression_target[:, :, 0, :], indices, weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct1 = orthogonal_l1_local(regression, regression_target[:, :, 1, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct2 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 2, :], indices), indices,
+        oct2 = orthogonal_l1_local(regression, regression_target[:, :, 2, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct3 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 3, :], indices), indices,
+        oct3 = orthogonal_l1_local(regression, regression_target[:, :, 3, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct4 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 4, :], indices), indices,
+        oct4 = orthogonal_l1_local(regression, regression_target[:, :, 4, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct5 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 5, :], indices), indices,
+        oct5 = orthogonal_l1_local(regression, regression_target[:, :, 5, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct6 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 6, :], indices), indices,
+        oct6 = orthogonal_l1_local(regression, regression_target[:, :, 6, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct7 = orthogonal_l1_local(regression, backend.gather_nd(regression_target[:, :, 7, :], indices), indices,
+        oct7 = orthogonal_l1_local(regression, regression_target[:, :, 7, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
 
         hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=0)
