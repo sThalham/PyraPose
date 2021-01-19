@@ -414,6 +414,7 @@ def orthogonal_l1(weight=0.125, sigma=3.0):
 
 
 def orthogonal_l1_local(regression, regression_target, indices, weight=0.125, sigma_squared=9.0, weight_xy=0.8):
+
     x1 = (regression[:, 0] - regression[:, 6]) - (regression[:, 2] - regression[:, 4])
     y1 = (regression[:, 1] - regression[:, 7]) - (regression[:, 3] - regression[:, 5])
     x2 = (regression[:, 0] - regression[:, 6]) - (regression[:, 8] - regression[:, 14])
@@ -472,6 +473,9 @@ def orthogonal_l1_local(regression, regression_target, indices, weight=0.125, si
          yt11, xt12, yt12],
         axis=1)
 
+    print('orths: ', orths)
+    print('orths_target: ', orths_target)
+
     regression_diff = regression - regression_target
     regression_diff = keras.backend.abs(regression_diff)
     regression_xy = backend.where(
@@ -481,11 +485,15 @@ def orthogonal_l1_local(regression, regression_target, indices, weight=0.125, si
     )
     regression_orth = keras.losses.mean_absolute_error(orths, orths_target)
 
+    print('regression_xy: ', regression_xy)
+    print('regression_orth: ', regression_orth)
+
     #### compute the normalizer: the number of positive anchors
     normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
     normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
     regression_loss_xy = keras.backend.sum(regression_xy) / normalizer
     regression_loss_orth = keras.backend.sum(regression_orth) / normalizer
+
     return weight * (weight_xy * regression_loss_xy + (1 - weight_xy) * regression_loss_orth)
 
 
@@ -496,77 +504,49 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
     def _sym_orth_l1(y_true, y_pred):
 
-        y_true = keras.backend.expand_dims(y_true, axis=2) # hackiest !
-        y_true = keras.backend.repeat_elements(x=y_true, rep=8, axis=2)
+        #y_true = keras.backend.expand_dims(y_true, axis=2) # hackiest !
+        #y_true = keras.backend.repeat_elements(x=y_true, rep=8, axis=2)
         print('y true: ', y_true)
         print('y pred: ', y_pred)
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
-        anchor_state      = y_true[:, :, :, -1]
-        print('regression target: ', regression_target)
+        anchor_state      = y_true[:, :, 0, -1]
+        #print('regression target: ', regression_target)
 
         #### filter out "ignore" anchors
-        indices           = backend.where(keras.backend.equal(anchor_state[:, :, 0], 1))
-        regression        = backend.gather_nd(regression, indices)
-        regression_target = backend.gather_nd(regression_target, backend.where(keras.backend.equal(anchor_state, 1)))
-        print('anchor_state: ', anchor_state)
-        print('regression: ', regression)
-        print('regression target: ', regression_target)
-
-
-        oct0 = orthogonal_l1_local(regression, regression_target[:, :, 0, :], indices, weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct1 = orthogonal_l1_local(regression, regression_target[:, :, 1, :], indices,
-                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct2 = orthogonal_l1_local(regression, regression_target[:, :, 2, :], indices,
-                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct3 = orthogonal_l1_local(regression, regression_target[:, :, 3, :], indices,
-                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct4 = orthogonal_l1_local(regression, regression_target[:, :, 4, :], indices,
-                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct5 = orthogonal_l1_local(regression, regression_target[:, :, 5, :], indices,
-                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct6 = orthogonal_l1_local(regression, regression_target[:, :, 6, :], indices,
-                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-        oct7 = orthogonal_l1_local(regression, regression_target[:, :, 7, :], indices,
-                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
-
-        hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=0)
-        lowest_loss = keras.backend.gather_nd(hypotheses, keras.backend.argmin(hypotheses))
-
-        return lowest_loss
-
-    return _sym_orth_l1
-
-
-def smooth_l1_xy(sigma=3.0, weight=0.1):
-    sigma_squared = sigma ** 2
-
-    def _smooth_l1_xy(y_true, y_pred):
-        # separate target and state
-        regression        = y_pred
-        regression_target = y_true[:, :, :, :-1]
-        anchor_state      = y_true[:, :, :, -1]
-
-        # filter out "ignore" anchors
         indices           = backend.where(keras.backend.equal(anchor_state, 1))
         regression        = backend.gather_nd(regression, indices)
         regression_target = backend.gather_nd(regression_target, indices)
+        #regression_target = backend.gather_nd(regression_target, backend.where(keras.backend.equal(anchor_state, 1)))
+        #print('anchor_state: ', anchor_state)
+        #print('regression: ', regression)
+        #print('regression target: ', regression_target)
 
-        # compute smooth L1 loss
-        # f(x) = 0.5 * (sigma * x)^2          if |x| < 1 / sigma / sigma
-        #        |x| - 0.5 / sigma / sigma    otherwise
-        regression_diff = regression - regression_target
-        regression_diff = keras.backend.abs(regression_diff)
-        regression_loss = weight * backend.where(
-            keras.backend.less(regression_diff, 1.0 / sigma_squared),
-            0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
-            regression_diff - 0.5 / sigma_squared
-        )
+        print('target_axis: ', regression_target[:, 0, :])
+        oct0 = orthogonal_l1_local(regression, regression_target[:, 0, :], indices, weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct1 = orthogonal_l1_local(regression, regression_target[:, 1, :], indices,
+                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct2 = orthogonal_l1_local(regression, regression_target[:, 2, :], indices,
+                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct3 = orthogonal_l1_local(regression, regression_target[:, 3, :], indices,
+                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct4 = orthogonal_l1_local(regression, regression_target[:, 4, :], indices,
+                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct5 = orthogonal_l1_local(regression, regression_target[:, 5, :], indices,
+                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct6 = orthogonal_l1_local(regression, regression_target[:, 6, :], indices,
+                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
+        oct7 = orthogonal_l1_local(regression, regression_target[:, 7, :], indices,
+                                   weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
 
-        # compute the normalizer: the number of positive anchors
-        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
-        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return keras.backend.sum(regression_loss) / normalizer
+        oct7 = keras.backend.print_tensor(oct7, message='Value of x')
+        print('oct7: ', oct7)
+        hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=0)
+        #print('hypotheses: ', hypotheses)
+        #print('keras.backend.argmin(hypotheses): ', keras.backend.argmin(hypotheses))
+        #print('keras.backend.gather_nd(hypotheses, keras.backend.argmin(hypotheses)): ', backend.gather_nd(hypotheses, keras.backend.argmin(hypotheses)))
+        #lowest_loss = backend.gather_nd(hypotheses, keras.backend.argmin(hypotheses))
 
-    return _smooth_l1_xy
+        return hypotheses
 
+    return _sym_orth_l1
