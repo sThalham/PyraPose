@@ -149,7 +149,7 @@ def anchor_targets_bbox(
 
             #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
-            calculated_boxes = np.empty((0, 16))
+            calculated_boxes = np.empty((0, 8, 16))
             for idx, pose in enumerate(annotations['poses']):
 
                 # mask part
@@ -212,7 +212,21 @@ def anchor_targets_bbox(
 
                 box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
                 box3D = np.reshape(box3D, (16))
-                calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
+
+                #calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
+                eight_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=8, axis=1)
+                calculated_boxes = np.concatenate([calculated_boxes, eight_boxes], axis=0)
+
+                for sdx, sym in enumerate(annotations['symmetries']):
+                    rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
+                    tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
+                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
+                                        fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
+                                        cy=annotations['cam_params'][idx][3])
+                    box3D = np.reshape(box3D, (16))
+                    calculated_boxes[idx, sdx, :] = box3D
 
                 '''
                 pose = box3D.reshape((16)).astype(np.int16)
@@ -533,31 +547,33 @@ def box3D_transform(anchors, gt_boxes, mean=None, std=None):
     anchor_widths  = anchors[:, 2] - anchors[:, 0]
     anchor_heights = anchors[:, 3] - anchors[:, 1]
 
-    targets_dx1 = (gt_boxes[:, 0] - anchors[:, 0]) / anchor_widths
-    targets_dy1 = (gt_boxes[:, 1] - anchors[:, 1]) / anchor_heights
-    targets_dx2 = (gt_boxes[:, 2] - anchors[:, 2]) / anchor_widths
-    targets_dy2 = (gt_boxes[:, 3] - anchors[:, 3]) / anchor_heights
-    targets_dx3 = (gt_boxes[:, 4] - anchors[:, 0]) / anchor_widths
-    targets_dy3 = (gt_boxes[:, 5] - anchors[:, 1]) / anchor_heights
-    targets_dx4 = (gt_boxes[:, 6] - anchors[:, 2]) / anchor_widths
-    targets_dy4 = (gt_boxes[:, 7] - anchors[:, 3]) / anchor_heights
-    targets_dx5 = (gt_boxes[:, 8] - anchors[:, 0]) / anchor_widths
-    targets_dy5 = (gt_boxes[:, 9] - anchors[:, 1]) / anchor_heights
-    targets_dx6 = (gt_boxes[:, 10] - anchors[:, 2]) / anchor_widths
-    targets_dy6 = (gt_boxes[:, 11] - anchors[:, 3]) / anchor_heights
-    targets_dx7 = (gt_boxes[:, 12] - anchors[:, 0]) / anchor_widths
-    targets_dy7 = (gt_boxes[:, 13] - anchors[:, 1]) / anchor_heights
-    targets_dx8 = (gt_boxes[:, 14] - anchors[:, 2]) / anchor_widths
-    targets_dy8 = (gt_boxes[:, 15] - anchors[:, 3]) / anchor_heights
+    sym_targets = np.empty((gt_boxes.shape[0], 8, 16))
+    for idx in range(gt_boxes.shape[1]):
 
-    targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
-    targets = np.repeat(targets[:, np.newaxis, :], repeats=8, axis=1)
-    targets = targets.T
+        targets_dx1 = (gt_boxes[:, idx, 0] - anchors[:, 0]) / anchor_widths
+        targets_dy1 = (gt_boxes[:, idx, 1] - anchors[:, 1]) / anchor_heights
+        targets_dx2 = (gt_boxes[:, idx, 2] - anchors[:, 2]) / anchor_widths
+        targets_dy2 = (gt_boxes[:, idx, 3] - anchors[:, 3]) / anchor_heights
+        targets_dx3 = (gt_boxes[:, idx, 4] - anchors[:, 0]) / anchor_widths
+        targets_dy3 = (gt_boxes[:, idx, 5] - anchors[:, 1]) / anchor_heights
+        targets_dx4 = (gt_boxes[:, idx, 6] - anchors[:, 2]) / anchor_widths
+        targets_dy4 = (gt_boxes[:, idx, 7] - anchors[:, 3]) / anchor_heights
+        targets_dx5 = (gt_boxes[:, idx, 8] - anchors[:, 0]) / anchor_widths
+        targets_dy5 = (gt_boxes[:, idx, 9] - anchors[:, 1]) / anchor_heights
+        targets_dx6 = (gt_boxes[:, idx, 10] - anchors[:, 2]) / anchor_widths
+        targets_dy6 = (gt_boxes[:, idx, 11] - anchors[:, 3]) / anchor_heights
+        targets_dx7 = (gt_boxes[:, idx, 12] - anchors[:, 0]) / anchor_widths
+        targets_dy7 = (gt_boxes[:, idx, 13] - anchors[:, 1]) / anchor_heights
+        targets_dx8 = (gt_boxes[:, idx, 14] - anchors[:, 2]) / anchor_widths
+        targets_dy8 = (gt_boxes[:, idx, 15] - anchors[:, 3]) / anchor_heights
 
-    targets = (targets - mean) / std
+        targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
+        sym_targets[:, idx,:] = targets.T
+
+    sym_targets = (sym_targets - mean) / std
     #print(np.mean(gt_boxes, axis=0), np.var(gt_boxes, axis=0))
 
-    return targets
+    return sym_targets
 
 
 def toPix_array(translation, fx=None, fy=None, cx=None, cy=None):
