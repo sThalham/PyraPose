@@ -473,9 +473,6 @@ def orthogonal_l1_local(regression, regression_target, indices, weight=0.125, si
          yt11, xt12, yt12],
         axis=1)
 
-    print('orths: ', orths)
-    print('orths_target: ', orths_target)
-
     regression_diff = regression - regression_target
     regression_diff = keras.backend.abs(regression_diff)
     regression_xy = backend.where(
@@ -484,9 +481,6 @@ def orthogonal_l1_local(regression, regression_target, indices, weight=0.125, si
         regression_diff - 0.5 / sigma_squared
     )
     regression_orth = keras.losses.mean_absolute_error(orths, orths_target)
-
-    print('regression_xy: ', regression_xy)
-    print('regression_orth: ', regression_orth)
 
     #### compute the normalizer: the number of positive anchors
     normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
@@ -506,23 +500,15 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
         #y_true = keras.backend.expand_dims(y_true, axis=2) # hackiest !
         #y_true = keras.backend.repeat_elements(x=y_true, rep=8, axis=2)
-        print('y true: ', y_true)
-        print('y pred: ', y_pred)
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
         anchor_state      = y_true[:, :, 0, -1]
-        #print('regression target: ', regression_target)
 
         #### filter out "ignore" anchors
         indices           = backend.where(keras.backend.equal(anchor_state, 1))
-        regression        = backend.gather_nd(regression, indices)
+        regression        = backend.gather_nd(regression, indices)[:, 0, :]
         regression_target = backend.gather_nd(regression_target, indices)
-        #regression_target = backend.gather_nd(regression_target, backend.where(keras.backend.equal(anchor_state, 1)))
-        #print('anchor_state: ', anchor_state)
-        #print('regression: ', regression)
-        #print('regression target: ', regression_target)
 
-        print('target_axis: ', regression_target[:, 0, :])
         oct0 = orthogonal_l1_local(regression, regression_target[:, 0, :], indices, weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
         oct1 = orthogonal_l1_local(regression, regression_target[:, 1, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
@@ -539,8 +525,15 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         oct7 = orthogonal_l1_local(regression, regression_target[:, 7, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
 
-        oct7 = keras.backend.print_tensor(oct7, message='Value of x')
-        print('oct7: ', oct7)
+        oct0 = keras.backend.print_tensor(oct0, message='Value of 0')
+        oct1 = keras.backend.print_tensor(oct1, message='Value of 1')
+        oct2 = keras.backend.print_tensor(oct2, message='Value of 2')
+        oct3 = keras.backend.print_tensor(oct3, message='Value of 3')
+        oct4 = keras.backend.print_tensor(oct4, message='Value of 4')
+        oct5 = keras.backend.print_tensor(oct5, message='Value of 5')
+        oct6 = keras.backend.print_tensor(oct6, message='Value of 6')
+        oct7 = keras.backend.print_tensor(oct7, message='Value of 7')
+
         hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=0)
         #print('hypotheses: ', hypotheses)
         #print('keras.backend.argmin(hypotheses): ', keras.backend.argmin(hypotheses))
