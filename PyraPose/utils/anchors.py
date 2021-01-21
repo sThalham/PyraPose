@@ -126,7 +126,7 @@ def anchor_targets_bbox(
 
     #regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
-    regression_3D = np.zeros((batch_size, anchors.shape[0], 8, 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
+    regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 4 + 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
@@ -161,15 +161,22 @@ def anchor_targets_bbox(
             #regression_batch[index, ignore_indices, -1]   = -1
             #regression_batch[index, positive_indices, -1] = 1
 
-            regression_3D[index, ignore_indices, :, -1] = -1
-            regression_3D[index, positive_indices, :, -1] = 1
+            # MHP
+            #regression_3D[index, ignore_indices, :, -1] = -1
+            #regression_3D[index, positive_indices, :, -1] = 1
+            # Transformer
+            regression_3D[index, ignore_indices, -1] = -1
+            regression_3D[index, positive_indices, -1] = 1
 
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
             #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
-            calculated_boxes = np.empty((0, 8, 16))
+            # MHP
+            #calculated_boxes = np.empty((0, 8, 16))
+            # Transformer loss
+            calculated_boxes = np.empty((0, 16))
             for idx, pose_anno in enumerate(annotations['poses']):
 
                 # mask part
@@ -223,84 +230,51 @@ def anchor_targets_bbox(
                 pose = pose[:7]
                 # debug
                 '''
+                # MHP
+                #rot = tf3d.quaternions.quat2mat(pose_anno[3:])
+                #rot = np.asarray(rot, dtype=np.float32)
+                #tra = pose_anno[:3]
+                #tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
+                #tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
+                #box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
+                #box3D = np.reshape(box3D, (16))
+
+                #eight_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=8, axis=1)
+                #calculated_boxes = np.concatenate([calculated_boxes, eight_boxes], axis=0)
+
+                # for sdx, sym in enumerate(annotations['symmetries']):
+                #    rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
+                #    tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
+                #    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                #    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
+                #                        fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
+                #                        cy=annotations['cam_params'][idx][3])
+                #    box3D = np.reshape(box3D, (16))
+                #    calculated_boxes[idx, sdx, :] = box3D
+
+                # Transformer loss
                 rot = tf3d.quaternions.quat2mat(pose_anno[3:])
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = pose_anno[:3]
-                tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
-                tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+                tDbox = annotations['segmentations'][idx]
+                #tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
-                box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
+                box3D = toPix_noncenter(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1],
+                                    cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
                 box3D = np.reshape(box3D, (16))
+                print(box3D)
 
-                #calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
-                eight_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=8, axis=1)
-                calculated_boxes = np.concatenate([calculated_boxes, eight_boxes], axis=0)
+                calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
+
+                trans_Mat = np.eye((4))
+                trans_Mat[:3, :3] = np.linalg.inv(rot)
+                trans_Mat[:3, 3] = tra * -1.0
+                regression_3D[index, :, 16:20] = np.array([annotations['cam_params'][idx][0], annotations['cam_params'][idx][1], annotations['cam_params'][idx][2], annotations['cam_params'][idx][3]])
+                regression_3D[index, :, 20:36] = trans_Mat.flatten()
 
                 '''
-                pose = box3D.reshape((16)).astype(np.int16)
-
-                colEst = (255, 0, 0)
-
-                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (0, 0, 255), 5)
-                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (0, 0, 255), 5)
-                image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
-
-                                     5)
-                draw_axis(image_raw, pose_anno)
-                '''
-
-                for sdx, sym in enumerate(annotations['symmetries']):
-                    rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
-                    tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
-                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
-
-                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
-                                        fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
-                                        cy=annotations['cam_params'][idx][3])
-                    box3D = np.reshape(box3D, (16))
-                    calculated_boxes[idx, sdx, :] = box3D
-
-                    '''
-                    pose = box3D.reshape((16)).astype(np.int16)
-
-                    #image_raw = image
-
-                    colEst = (255, 0, 0)
-
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (0, 0, 255), 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (0, 0, 255), 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
-                                     5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
-                                     5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
-                                     5)
-                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
-
-                                     5)
-                    draw_axis(image_raw_sym, pose_anno)
-
-
-                
                 cls_ind = np.where(annotations['labels']==cls) # index of cls
                 if not len(cls_ind[0]) == 0:
                     viz_img = True
@@ -325,10 +299,12 @@ def anchor_targets_bbox(
                 name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
                 cv2.imwrite(name, image_raw)
             '''
+            # MHP
+            #regression_3D[index, :, :, :-1] = box3D_transform_sym(anchors, calculated_boxes[argmax_overlaps_inds, :])
+            # Transformer Pose
+            regression_3D[index, :, :16] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :])
 
-            regression_3D[index, :, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :])
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-
             #rind = np.random.randint(0, 1000)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
             #cv2.imwrite(name, image_raw)
@@ -346,7 +322,10 @@ def anchor_targets_bbox(
 
             labels_batch[index, indices, -1]     = -1
             #regression_batch[index, indices, -1] = -1
-            regression_3D[index, indices, :, -1] = -1
+            # MHP
+            #regression_3D[index, indices, :, -1] = -1
+            # Transformer
+            regression_3D[index, indices, -1] = -1
 
     return regression_3D, labels_batch, mask_batch
 
@@ -597,6 +576,53 @@ def box3D_transform(anchors, gt_boxes, mean=None, std=None):
     anchor_widths  = anchors[:, 2] - anchors[:, 0]
     anchor_heights = anchors[:, 3] - anchors[:, 1]
 
+    targets_dx1 = (gt_boxes[:, 0] - anchors[:, 0]) / anchor_widths
+    targets_dy1 = (gt_boxes[:, 1] - anchors[:, 1]) / anchor_heights
+    targets_dx2 = (gt_boxes[:, 2] - anchors[:, 2]) / anchor_widths
+    targets_dy2 = (gt_boxes[:, 3] - anchors[:, 3]) / anchor_heights
+    targets_dx3 = (gt_boxes[:, 4] - anchors[:, 0]) / anchor_widths
+    targets_dy3 = (gt_boxes[:, 5] - anchors[:, 1]) / anchor_heights
+    targets_dx4 = (gt_boxes[:, 6] - anchors[:, 2]) / anchor_widths
+    targets_dy4 = (gt_boxes[:, 7] - anchors[:, 3]) / anchor_heights
+    targets_dx5 = (gt_boxes[:, 8] - anchors[:, 0]) / anchor_widths
+    targets_dy5 = (gt_boxes[:, 9] - anchors[:, 1]) / anchor_heights
+    targets_dx6 = (gt_boxes[:, 10] - anchors[:, 2]) / anchor_widths
+    targets_dy6 = (gt_boxes[:, 11] - anchors[:, 3]) / anchor_heights
+    targets_dx7 = (gt_boxes[:, 12] - anchors[:, 0]) / anchor_widths
+    targets_dy7 = (gt_boxes[:, 13] - anchors[:, 1]) / anchor_heights
+    targets_dx8 = (gt_boxes[:, 14] - anchors[:, 2]) / anchor_widths
+    targets_dy8 = (gt_boxes[:, 15] - anchors[:, 3]) / anchor_heights
+
+    targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
+    targets = targets.T
+
+    targets = (targets - mean) / std
+    #print(np.mean(gt_boxes, axis=0), np.var(gt_boxes, axis=0))
+
+    return targets
+
+
+def box3D_transform_sym(anchors, gt_boxes, mean=None, std=None):
+    """Compute bounding-box regression targets for an image."""
+
+    if mean is None:
+        mean = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    if std is None:
+        std = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+
+    if isinstance(mean, (list, tuple)):
+        mean = np.array(mean)
+    elif not isinstance(mean, np.ndarray):
+        raise ValueError('Expected mean to be a np.ndarray, list or tuple. Received: {}'.format(type(mean)))
+
+    if isinstance(std, (list, tuple)):
+        std = np.array(std)
+    elif not isinstance(std, np.ndarray):
+        raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
+
+    anchor_widths  = anchors[:, 2] - anchors[:, 0]
+    anchor_heights = anchors[:, 3] - anchors[:, 1]
+
     sym_targets = np.empty((gt_boxes.shape[0], 8, 16))
     for idx in range(gt_boxes.shape[1]):
 
@@ -630,6 +656,14 @@ def toPix_array(translation, fx=None, fy=None, cx=None, cy=None):
 
     xpix = ((translation[:, 0] * fx) / translation[:, 2]) + cx
     ypix = ((translation[:, 1] * fy) / translation[:, 2]) + cy
+
+    return np.stack((xpix, ypix), axis=1)
+
+
+def toPix_noncenter(translation, fx=None, fy=None, cx=None, cy=None):
+
+    xpix = ((translation[:, 0] * fx) / translation[:, 2])
+    ypix = ((translation[:, 1] * fy) / translation[:, 2])
 
     return np.stack((xpix, ypix), axis=1)
 

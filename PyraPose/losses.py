@@ -119,33 +119,6 @@ def focal_mask(alpha=0.25, gamma=2.0):
     return _focal_mask
 
 
-def cross(weight=50.0):
-
-    def _cross(y_true, y_pred):
-        labels         = y_true[:, :, :-1]
-        anchor_state   = y_true[:, :, -1]  # -1 for ignore, 0 for background, 1 for object
-        classification = y_pred
-
-        # filter out "ignore" anchors
-        indices        = backend.where(keras.backend.not_equal(anchor_state, -1))
-        labels         = backend.gather_nd(labels, indices)
-        classification = backend.gather_nd(classification, indices)
-
-        #cls_loss = weight * keras.losses.binary_crossentropy(labels, classification)
-        cls_loss = weight * keras.losses.categorical_crossentropy(labels, classification)
-
-        # compute the normalizer: the number of positive anchors
-        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])  # usually for regression
-        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        #normalizer = backend.where(keras.backend.equal(anchor_state, 1))       # usually for classification
-        #normalizer = keras.backend.cast(keras.backend.shape(normalizer)[0], keras.backend.floatx())
-        #normalizer = keras.backend.maximum(keras.backend.cast_to_floatx(1.0), normalizer)
-
-        return keras.backend.sum(cls_loss) / normalizer
-
-    return _cross
-
-
 def smooth_l1(sigma=3.0):
     """ Create a smooth L1 loss functor.
 
@@ -248,78 +221,6 @@ def smooth_l1_pose(sigma=3.0):
     return _smooth_l1_pose
 
 
-def weighted_mse(weight=60.0):
-
-    def _wMSE(y_true, y_pred):
-
-        regression        = y_pred
-        regression_target = y_true[:, :, :, :-1]
-        anchor_state      = y_true[:, :, :, -1]
-
-        # somethings fucky here
-        #### filter out "ignore" anchors
-        indices           = backend.where(keras.backend.equal(anchor_state, 1))
-        regression        = backend.gather_nd(regression, indices)
-        regression_target = backend.gather_nd(regression_target, indices)
-
-        regression_loss = weight * keras.losses.mean_squared_error(regression, regression_target)
-
-        #### compute the normalizer: the number of positive anchors
-        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
-        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return regression_loss / normalizer
-
-    return _wMSE
-
-
-def weighted_l1(weight=1.6):
-
-    def _wl1(y_true, y_pred):
-
-        regression        = y_pred
-        regression_target = y_true[:, :, :, :-1]
-        anchor_state      = y_true[:, :, :, -1]
-
-        # somethings fucky here
-        #### filter out "ignore" anchors
-        indices           = backend.where(keras.backend.equal(anchor_state, 1))
-        regression        = backend.gather_nd(regression, indices)
-        regression_target = backend.gather_nd(regression_target, indices)
-
-        regression_loss = weight * keras.losses.mean_absolute_error(regression, regression_target)
-
-        #### compute the normalizer: the number of positive anchors
-        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
-        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return keras.backend.sum(regression_loss) / normalizer
-
-    return _wl1
-
-
-def weighted_msle(weight=5.0):
-
-    def _msle(y_true, y_pred):
-
-        regression        = y_pred
-        regression_target = y_true[:, :, :, :-1]
-        anchor_state      = y_true[:, :, :, -1]
-
-        # somethings fucky here
-        #### filter out "ignore" anchors
-        indices           = backend.where(keras.backend.equal(anchor_state, 1))
-        regression        = backend.gather_nd(regression, indices)
-        regression_target = backend.gather_nd(regression_target, indices)
-
-        regression_loss = weight * keras.losses.mean_squared_logarithmic_error(regression, regression_target)
-
-        #### compute the normalizer: the number of positive anchors
-        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
-        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return regression_loss / normalizer
-
-    return _msle
-
-
 def orthogonal_l1(weight=0.125, sigma=3.0):
 
     weight_xy = 0.8
@@ -336,9 +237,6 @@ def orthogonal_l1(weight=0.125, sigma=3.0):
         indices           = backend.where(keras.backend.equal(anchor_state, 1))
         regression        = backend.gather_nd(regression, indices)
         regression_target = backend.gather_nd(regression_target, indices)
-        print('anchor_state: ', anchor_state)
-        print('regression: ', regression)
-        print('regression target: ', regression_target)
 
         x1 = (regression[:, 0] - regression[:, 6]) - (regression[:, 2] - regression[:, 4])
         y1 = (regression[:, 1] - regression[:, 7]) - (regression[:, 3] - regression[:, 5])
@@ -536,7 +434,6 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         print('sym_orthogonal_l1::regression_target: ', regression_target)
 
         regression_loss = backend.vectorized_map(orthogonal_l1_local, (regression, regression_target))
-        print('sym_orthogonal_l1::regression_loss: ', regression_loss)
 
         #### compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
@@ -546,6 +443,60 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         return weight * regression_loss
 
     return _sym_orth_l1
+
+
+def project_points(inputs):
+
+    #xpix = (translation[:, 0] * fx) / translation[:, 2]
+    #ypix = (translation[:, 1] * fy) / translation[:, 2]
+
+    regression, target_intrinsics, target_pose = inputs
+    x_values = regression[::2]
+    y_values = regression[1::2]
+
+    xVal = (x_values * target_pose[11]) / target_intrinsics[0]
+    yVal = (y_values * target_pose[11]) / target_intrinsics[1]
+    point_array = [xVal[0], yVal[0], xVal[1], yVal[1], xVal[2], yVal[2], xVal[3], yVal[3], xVal[4], yVal[4], xVal[5], yVal[5]]
+
+    return point_array
+
+
+def transformer_smooth_l1(weight=0.125, sigma=3.0):
+
+    weight_xy = 0.8
+    sigma_squared = sigma ** 2
+
+    def _transformer_smooth_l1(y_true, y_pred):
+
+        regression        = y_pred
+        regression_target = y_true[:, :, :-1]
+        target_intrinsics = y_true[:, :, 16:20]
+        target_pose = y_true[:, :, 20:36]
+        anchor_state      = y_true[:, :, -1]
+
+        #### filter out "ignore" anchors
+        indices           = backend.where(keras.backend.equal(anchor_state, 1))
+        regression        = backend.gather_nd(regression, indices)
+        regression_target = backend.gather_nd(regression_target, indices)
+
+        regression_projected = backend.vectorized_map(project_points, (regression, target_intrinsics, target_pose))
+
+        regression_diff = regression_projected - regression_target
+        regression_diff = keras.backend.abs(regression_diff)
+        regression_loss = backend.where(
+            keras.backend.less(regression_diff, 1.0 / sigma_squared),
+            0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
+            regression_diff - 0.5 / sigma_squared
+        )
+
+        #### compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        regression_loss = keras.backend.sum(regression_loss) / normalizer
+
+        return weight * regression_loss
+
+    return _transformer_smooth_l1
 
 
 
