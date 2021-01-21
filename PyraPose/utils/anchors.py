@@ -19,6 +19,7 @@ import keras
 import transforms3d as tf3d
 import cv2
 from PIL import Image
+import copy
 
 from ..utils.compute_overlap import compute_overlap
 
@@ -67,6 +68,23 @@ AnchorParameters.default = AnchorParameters(
 #    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
 #    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
 #)
+
+
+def draw_axis(img, poses):
+    # unit is mm
+    points = np.float32([[100, 0, 0], [0, 100, 0], [0, 0, 100], [0, 0, 0]]).reshape(-1, 3)
+
+    rotMat = tf3d.quaternions.quat2mat(poses[3:7])
+    rot, _ = cv2.Rodrigues(rotMat)
+    tra = np.expand_dims(poses[0:3], axis=1) #* 1000.0
+    # [572.4114, 573.57043, 325.26110828, 242.04899594]
+    K = np.float32([572.4114, 0., 325.26110828, 0., 573.57043, 242.04899594, 0., 0., 1.]).reshape(3,3)
+    axisPoints, _ = cv2.projectPoints(points, rot, tra, K, (0, 0, 0, 0))
+
+    img = cv2.line(img, tuple(axisPoints[3].ravel()), tuple(axisPoints[0].ravel()), (255,0,0), 3)
+    img = cv2.line(img, tuple(axisPoints[3].ravel()), tuple(axisPoints[1].ravel()), (0,255,0), 3)
+    img = cv2.line(img, tuple(axisPoints[3].ravel()), tuple(axisPoints[2].ravel()), (0,0,255), 3)
+    return img
 
 
 def anchor_targets_bbox(
@@ -127,6 +145,8 @@ def anchor_targets_bbox(
         #image_raw[..., 1] += 116.779
         #image_raw[..., 2] += 123.68
 
+        #image_raw_sym = copy.deepcopy(image_raw)
+
         #rind = np.random.randint(0, 1000)
         #image_raw = image_raw.astype(np.uint8)
         #viz_img = False
@@ -150,7 +170,7 @@ def anchor_targets_bbox(
             #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
             calculated_boxes = np.empty((0, 8, 16))
-            for idx, pose in enumerate(annotations['poses']):
+            for idx, pose_anno in enumerate(annotations['poses']):
 
                 # mask part
                 cls = int(annotations['labels'][idx])
@@ -204,9 +224,9 @@ def anchor_targets_bbox(
                 # debug
                 '''
 
-                rot = tf3d.quaternions.quat2mat(pose[3:])
+                rot = tf3d.quaternions.quat2mat(pose_anno[3:])
                 rot = np.asarray(rot, dtype=np.float32)
-                tra = pose[:3]
+                tra = pose_anno[:3]
                 tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
                 tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
@@ -217,26 +237,13 @@ def anchor_targets_bbox(
                 eight_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=8, axis=1)
                 calculated_boxes = np.concatenate([calculated_boxes, eight_boxes], axis=0)
 
-                for sdx, sym in enumerate(annotations['symmetries']):
-                    rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
-                    tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
-                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
-
-                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
-                                        fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
-                                        cy=annotations['cam_params'][idx][3])
-                    box3D = np.reshape(box3D, (16))
-                    calculated_boxes[idx, sdx, :] = box3D
-
                 '''
                 pose = box3D.reshape((16)).astype(np.int16)
 
-                image_raw = image
-
                 colEst = (255, 0, 0)
 
-                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 5)
+                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (0, 0, 255), 5)
+                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (0, 0, 255), 5)
                 image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
                 image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
                 image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
@@ -252,7 +259,48 @@ def anchor_targets_bbox(
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
 
                                      5)
-                               
+                draw_axis(image_raw, pose_anno)
+                '''
+
+                for sdx, sym in enumerate(annotations['symmetries']):
+                    rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
+                    tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
+                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
+                                        fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
+                                        cy=annotations['cam_params'][idx][3])
+                    box3D = np.reshape(box3D, (16))
+                    calculated_boxes[idx, sdx, :] = box3D
+
+                    '''
+                    pose = box3D.reshape((16)).astype(np.int16)
+
+                    #image_raw = image
+
+                    colEst = (255, 0, 0)
+
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (0, 0, 255), 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (0, 0, 255), 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                                     5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                                     5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                                     5)
+                    image_raw_sym = cv2.line(image_raw_sym, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+
+                                     5)
+                    draw_axis(image_raw_sym, pose_anno)
+
+
+                
                 cls_ind = np.where(annotations['labels']==cls) # index of cls
                 if not len(cls_ind[0]) == 0:
                     viz_img = True
@@ -282,8 +330,10 @@ def anchor_targets_bbox(
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
             #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
             #cv2.imwrite(name, image_raw)
+            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'nosym_RGB.jpg'
+            #cv2.imwrite(name, image_raw_sym)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
             #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'

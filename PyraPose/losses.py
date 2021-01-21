@@ -525,14 +525,14 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         oct7 = orthogonal_l1_local(regression, regression_target[:, 7, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
 
-        oct0 = keras.backend.print_tensor(oct0, message='Value of 0')
-        oct1 = keras.backend.print_tensor(oct1, message='Value of 1')
-        oct2 = keras.backend.print_tensor(oct2, message='Value of 2')
-        oct3 = keras.backend.print_tensor(oct3, message='Value of 3')
-        oct4 = keras.backend.print_tensor(oct4, message='Value of 4')
-        oct5 = keras.backend.print_tensor(oct5, message='Value of 5')
-        oct6 = keras.backend.print_tensor(oct6, message='Value of 6')
-        oct7 = keras.backend.print_tensor(oct7, message='Value of 7')
+        #oct0 = keras.backend.print_tensor(oct0, message='Value of 0')
+        #oct1 = keras.backend.print_tensor(oct1, message='Value of 1')
+        #oct2 = keras.backend.print_tensor(oct2, message='Value of 2')
+        #oct3 = keras.backend.print_tensor(oct3, message='Value of 3')
+        #oct4 = keras.backend.print_tensor(oct4, message='Value of 4')
+        #oct5 = keras.backend.print_tensor(oct5, message='Value of 5')
+        #oct6 = keras.backend.print_tensor(oct6, message='Value of 6')
+        #oct7 = keras.backend.print_tensor(oct7, message='Value of 7')
 
         hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=0)
         #print('hypotheses: ', hypotheses)
