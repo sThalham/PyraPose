@@ -413,65 +413,72 @@ def orthogonal_l1(weight=0.125, sigma=3.0):
     return _orth_l1
 
 
-def orthogonal_l1_local(regression, regression_target, indices, weight=0.125, sigma_squared=9.0, weight_xy=0.8):
+def orthogonality_loss_hyps(inputs):
+    weight_xy = 0.8
+    sigma_squared = 9.0
 
-    x1 = (regression[:, 0] - regression[:, 6]) - (regression[:, 2] - regression[:, 4])
-    y1 = (regression[:, 1] - regression[:, 7]) - (regression[:, 3] - regression[:, 5])
-    x2 = (regression[:, 0] - regression[:, 6]) - (regression[:, 8] - regression[:, 14])
-    y2 = (regression[:, 1] - regression[:, 7]) - (regression[:, 9] - regression[:, 15])
-    x3 = (regression[:, 0] - regression[:, 2]) - (regression[:, 6] - regression[:, 4])
-    y3 = (regression[:, 1] - regression[:, 3]) - (regression[:, 7] - regression[:, 5])
-    x4 = (regression[:, 0] - regression[:, 2]) - (regression[:, 8] - regression[:, 10])
-    y4 = (regression[:, 1] - regression[:, 3]) - (regression[:, 9] - regression[:, 11])  # up to here ok
-    x5 = (regression[:, 0] - regression[:, 8]) - (regression[:, 2] - regression[:, 10])
-    y5 = (regression[:, 1] - regression[:, 9]) - (regression[:, 3] - regression[:, 11])
-    x6 = (regression[:, 0] - regression[:, 8]) - (regression[:, 6] - regression[:, 14])
-    y6 = (regression[:, 1] - regression[:, 9]) - (regression[:, 7] - regression[:, 15])  # half way done
-    x7 = (regression[:, 12] - regression[:, 10]) - (regression[:, 14] - regression[:, 8])
-    y7 = (regression[:, 13] - regression[:, 11]) - (regression[:, 15] - regression[:, 9])
-    x8 = (regression[:, 12] - regression[:, 10]) - (regression[:, 4] - regression[:, 2])
-    y8 = (regression[:, 13] - regression[:, 11]) - (regression[:, 5] - regression[:, 3])
-    x9 = (regression[:, 12] - regression[:, 4]) - (regression[:, 10] - regression[:, 2])
-    y9 = (regression[:, 13] - regression[:, 5]) - (regression[:, 11] - regression[:, 3])
-    x10 = (regression[:, 12] - regression[:, 4]) - (regression[:, 14] - regression[:, 6])
-    y10 = (regression[:, 13] - regression[:, 5]) - (regression[:, 15] - regression[:, 7])
-    x11 = (regression[:, 12] - regression[:, 14]) - (regression[:, 4] - regression[:, 6])
-    y11 = (regression[:, 13] - regression[:, 15]) - (regression[:, 5] - regression[:, 7])
-    x12 = (regression[:, 12] - regression[:, 14]) - (regression[:, 10] - regression[:, 8])
-    y12 = (regression[:, 13] - regression[:, 15]) - (regression[:, 11] - regression[:, 9])
+    regression, regression_target = inputs
+
+    #print('orthogonal_loss_hyps::regression: ', regression)
+    #print('orthogonal_loss_hyps::regression_target: ', regression_target)
+
+    x1 = (regression[0] - regression[6]) - (regression[2] - regression[4])
+    y1 = (regression[1] - regression[7]) - (regression[3] - regression[5])
+    x2 = (regression[0] - regression[6]) - (regression[8] - regression[14])
+    y2 = (regression[1] - regression[7]) - (regression[9] - regression[15])
+    x3 = (regression[0] - regression[2]) - (regression[6] - regression[4])
+    y3 = (regression[1] - regression[3]) - (regression[7] - regression[5])
+    x4 = (regression[0] - regression[2]) - (regression[8] - regression[10])
+    y4 = (regression[1] - regression[3]) - (regression[9] - regression[11])  # up to here ok
+    x5 = (regression[0] - regression[8]) - (regression[2] - regression[10])
+    y5 = (regression[1] - regression[9]) - (regression[3] - regression[11])
+    x6 = (regression[0] - regression[8]) - (regression[6] - regression[14])
+    y6 = (regression[1] - regression[9]) - (regression[7] - regression[15])  # half way done
+    x7 = (regression[12] - regression[10]) - (regression[14] - regression[8])
+    y7 = (regression[13] - regression[11]) - (regression[15] - regression[9])
+    x8 = (regression[12] - regression[10]) - (regression[4] - regression[2])
+    y8 = (regression[13] - regression[11]) - (regression[5] - regression[3])
+    x9 = (regression[12] - regression[4]) - (regression[10] - regression[2])
+    y9 = (regression[13] - regression[5]) - (regression[11] - regression[3])
+    x10 = (regression[12] - regression[4]) - (regression[14] - regression[6])
+    y10 = (regression[13] - regression[5]) - (regression[15] - regression[7])
+    x11 = (regression[12] - regression[14]) - (regression[4] - regression[6])
+    y11 = (regression[13] - regression[15]) - (regression[5] - regression[7])
+    x12 = (regression[12] - regression[14]) - (regression[10] - regression[8])
+    y12 = (regression[3] - regression[15]) - (regression[11] - regression[9])
     orths = keras.backend.stack(
-        [x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7, x8, y8, x9, y9, x10, y10, x11, y11, x12, y12], axis=1)
+        [x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7, x8, y8, x9, y9, x10, y10, x11, y11, x12, y12], axis=0)
 
-    xt1 = (regression_target[:, 0] - regression_target[:, 6]) - (regression_target[:, 2] - regression_target[:, 4])
-    yt1 = (regression_target[:, 1] - regression_target[:, 7]) - (regression_target[:, 3] - regression_target[:, 5])
-    xt2 = (regression_target[:, 0] - regression_target[:, 6]) - (regression_target[:, 8] - regression_target[:, 14])
-    yt2 = (regression_target[:, 1] - regression_target[:, 7]) - (regression_target[:, 9] - regression_target[:, 15])
-    xt3 = (regression_target[:, 0] - regression_target[:, 2]) - (regression_target[:, 6] - regression_target[:, 4])
-    yt3 = (regression_target[:, 1] - regression_target[:, 3]) - (regression_target[:, 7] - regression_target[:, 5])
-    xt4 = (regression_target[:, 0] - regression_target[:, 2]) - (regression_target[:, 8] - regression_target[:, 10])
-    yt4 = (regression_target[:, 1] - regression_target[:, 3]) - (
-                regression_target[:, 9] - regression_target[:, 11])  # up to here ok
-    xt5 = (regression_target[:, 0] - regression_target[:, 8]) - (regression_target[:, 2] - regression_target[:, 10])
-    yt5 = (regression_target[:, 1] - regression_target[:, 9]) - (regression_target[:, 3] - regression_target[:, 11])
-    xt6 = (regression_target[:, 0] - regression_target[:, 8]) - (regression_target[:, 6] - regression_target[:, 14])
-    yt6 = (regression_target[:, 1] - regression_target[:, 9]) - (
-                regression_target[:, 7] - regression_target[:, 15])  # half way done
-    xt7 = (regression_target[:, 12] - regression_target[:, 10]) - (regression_target[:, 14] - regression_target[:, 8])
-    yt7 = (regression_target[:, 13] - regression_target[:, 11]) - (regression_target[:, 15] - regression_target[:, 9])
-    xt8 = (regression_target[:, 12] - regression_target[:, 10]) - (regression_target[:, 4] - regression_target[:, 2])
-    yt8 = (regression_target[:, 13] - regression_target[:, 11]) - (regression_target[:, 5] - regression_target[:, 3])
-    xt9 = (regression_target[:, 12] - regression_target[:, 4]) - (regression_target[:, 10] - regression_target[:, 2])
-    yt9 = (regression_target[:, 13] - regression_target[:, 5]) - (regression_target[:, 11] - regression_target[:, 3])
-    xt10 = (regression_target[:, 12] - regression_target[:, 4]) - (regression_target[:, 14] - regression_target[:, 6])
-    yt10 = (regression_target[:, 13] - regression_target[:, 5]) - (regression_target[:, 15] - regression_target[:, 7])
-    xt11 = (regression_target[:, 12] - regression_target[:, 14]) - (regression_target[:, 4] - regression_target[:, 6])
-    yt11 = (regression_target[:, 13] - regression_target[:, 15]) - (regression_target[:, 5] - regression_target[:, 7])
-    xt12 = (regression_target[:, 12] - regression_target[:, 14]) - (regression_target[:, 10] - regression_target[:, 8])
-    yt12 = (regression_target[:, 13] - regression_target[:, 15]) - (regression_target[:, 11] - regression_target[:, 9])
+    xt1 = (regression_target[0] - regression_target[6]) - (regression_target[2] - regression_target[4])
+    yt1 = (regression_target[1] - regression_target[7]) - (regression_target[3] - regression_target[5])
+    xt2 = (regression_target[0] - regression_target[6]) - (regression_target[8] - regression_target[14])
+    yt2 = (regression_target[1] - regression_target[7]) - (regression_target[9] - regression_target[15])
+    xt3 = (regression_target[0] - regression_target[2]) - (regression_target[6] - regression_target[4])
+    yt3 = (regression_target[1] - regression_target[3]) - (regression_target[7] - regression_target[5])
+    xt4 = (regression_target[0] - regression_target[2]) - (regression_target[8] - regression_target[10])
+    yt4 = (regression_target[1] - regression_target[3]) - (regression_target[9] - regression_target[11])  # up to here ok
+    xt5 = (regression_target[0] - regression_target[8]) - (regression_target[2] - regression_target[10])
+    yt5 = (regression_target[1] - regression_target[9]) - (regression_target[3] - regression_target[11])
+    xt6 = (regression_target[0] - regression_target[8]) - (regression_target[6] - regression_target[14])
+    yt6 = (regression_target[1] - regression_target[9]) - (regression_target[7] - regression_target[15])  # half way done
+    xt7 = (regression_target[12] - regression_target[10]) - (regression_target[14] - regression_target[8])
+    yt7 = (regression_target[13] - regression_target[11]) - (regression_target[15] - regression_target[9])
+    xt8 = (regression_target[12] - regression_target[10]) - (regression_target[4] - regression_target[2])
+    yt8 = (regression_target[13] - regression_target[11]) - (regression_target[5] - regression_target[3])
+    xt9 = (regression_target[12] - regression_target[4]) - (regression_target[10] - regression_target[2])
+    yt9 = (regression_target[13] - regression_target[5]) - (regression_target[11] - regression_target[3])
+    xt10 = (regression_target[12] - regression_target[4]) - (regression_target[14] - regression_target[6])
+    yt10 = (regression_target[13] - regression_target[5]) - (regression_target[15] - regression_target[7])
+    xt11 = (regression_target[12] - regression_target[14]) - (regression_target[4] - regression_target[6])
+    yt11 = (regression_target[13] - regression_target[15]) - (regression_target[5] - regression_target[7])
+    xt12 = (regression_target[12] - regression_target[14]) - (regression_target[10] - regression_target[8])
+    yt12 = (regression_target[13] - regression_target[15]) - (regression_target[11] - regression_target[9])
     orths_target = keras.backend.stack(
         [xt1, yt1, xt2, yt2, xt3, yt3, xt4, yt4, xt5, yt5, xt6, yt6, xt7, yt7, xt8, yt8, xt9, yt9, xt10, yt10, xt11,
          yt11, xt12, yt12],
-        axis=1)
+        axis=0)
+
+    regression_orth = keras.losses.mean_absolute_error(orths, orths_target)
 
     regression_diff = regression - regression_target
     regression_diff = keras.backend.abs(regression_diff)
@@ -480,17 +487,69 @@ def orthogonal_l1_local(regression, regression_target, indices, weight=0.125, si
         0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
         regression_diff - 0.5 / sigma_squared
     )
-    regression_orth = keras.losses.mean_absolute_error(orths, orths_target)
+    regression_xy = keras.backend.sum(regression_xy)
+    #print('orthogonal_loss_hyps::regression_xy: ', regression_xy)
+    #print('orthogonal_loss_hyps::regression_orth: ', regression_orth)
+    #regression_orth = keras.backend.print_tensor(regression_orth, message='regression_orth: ')
+    #regression_xy = keras.backend.print_tensor(regression_xy, message='regression_xy: ')
 
-    #### compute the normalizer: the number of positive anchors
-    normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
-    normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-    regression_loss_xy = keras.backend.sum(regression_xy) / normalizer
-    regression_loss_orth = keras.backend.sum(regression_orth) / normalizer
-
-    return weight * (weight_xy * regression_loss_xy + (1 - weight_xy) * regression_loss_orth)
+    return weight_xy * regression_xy + (1 - weight_xy) * regression_orth
 
 
+def orthogonal_l1_local(inputs):
+    regression, regression_target = inputs
+    #print('orthogonal_l1_local::regression: ', regression)
+    #print('orthogonal_l1_local::regression_target: ', regression_target)
+
+    loss_hypotheses = backend.vectorized_map(orthogonality_loss_hyps, (regression, regression_target))
+    print('orthogonal_l1_local::loss_hypotheses: ', loss_hypotheses)
+    min_loss_idx = keras.backend.argmin(loss_hypotheses, axis=0)
+    print('orthogonal_l1_local::min_loss_idx: ', min_loss_idx)
+    #loss_hypotheses = keras.backend.print_tensor(loss_hypotheses, message='loss_hypotheses: ')
+    #min_loss_idx = keras.backend.print_tensor(min_loss_idx, message='loss_min: ')
+    loss_min = backend.gather(loss_hypotheses, min_loss_idx)
+    print('orthogonal_l1_local::loss_min: ', loss_min)
+
+    return loss_min
+
+
+def sym_orthogonal_l1(weight=0.125, sigma=3.0):
+
+    weight_xy = 0.8
+    sigma_squared = sigma ** 2
+
+    def _sym_orth_l1(y_true, y_pred):
+
+        #y_pred = keras.backend.expand_dims(y_pred, axis=2) # hackiest !
+        y_pred = keras.backend.repeat_elements(x=y_pred, rep=8, axis=2)
+        print('y_pred: ', y_pred)
+        regression        = y_pred
+        regression_target = y_true[:, :, :, :-1]
+        anchor_state      = y_true[:, :, 0, -1]
+
+        #### filter out "ignore" anchors
+        indices           = backend.where(keras.backend.equal(anchor_state, 1))
+        regression        = backend.gather_nd(regression, indices)
+        regression_target = backend.gather_nd(regression_target, indices)
+
+        print('sym_orthogonal_l1::regression: ', regression)
+        print('sym_orthogonal_l1::regression_target: ', regression_target)
+
+        regression_loss = backend.vectorized_map(orthogonal_l1_local, (regression, regression_target))
+        print('sym_orthogonal_l1::regression_loss: ', regression_loss)
+
+        #### compute the normalizer: the number of positive anchors
+        normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
+        normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+        regression_loss = keras.backend.sum(regression_loss) / normalizer
+
+        return weight * regression_loss
+
+    return _sym_orth_l1
+
+
+
+'''    
 def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
     weight_xy = 0.8
@@ -525,14 +584,14 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         oct7 = orthogonal_l1_local(regression, regression_target[:, 7, :], indices,
                                    weight=weight, sigma_squared=sigma_squared, weight_xy=weight_xy)
 
-        #oct0 = keras.backend.print_tensor(oct0, message='Value of 0')
-        #oct1 = keras.backend.print_tensor(oct1, message='Value of 1')
-        #oct2 = keras.backend.print_tensor(oct2, message='Value of 2')
-        #oct3 = keras.backend.print_tensor(oct3, message='Value of 3')
-        #oct4 = keras.backend.print_tensor(oct4, message='Value of 4')
-        #oct5 = keras.backend.print_tensor(oct5, message='Value of 5')
-        #oct6 = keras.backend.print_tensor(oct6, message='Value of 6')
-        #oct7 = keras.backend.print_tensor(oct7, message='Value of 7')
+        oct0 = keras.backend.print_tensor(oct0, message='Value of 0')
+        oct1 = keras.backend.print_tensor(oct1, message='Value of 1')
+        oct2 = keras.backend.print_tensor(oct2, message='Value of 2')
+        oct3 = keras.backend.print_tensor(oct3, message='Value of 3')
+        oct4 = keras.backend.print_tensor(oct4, message='Value of 4')
+        oct5 = keras.backend.print_tensor(oct5, message='Value of 5')
+        oct6 = keras.backend.print_tensor(oct6, message='Value of 6')
+        oct7 = keras.backend.print_tensor(oct7, message='Value of 7')
 
         hypotheses = keras.backend.stack([oct0, oct1, oct2, oct3, oct4, oct5, oct6, oct7], axis=0)
         #print('hypotheses: ', hypotheses)
@@ -543,3 +602,5 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         return hypotheses
 
     return _sym_orth_l1
+    '''
+

@@ -141,7 +141,7 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
 
     #outputs = expand_dims()(outputs)
 
-    print('outputs: ', outputs)
+    #print('outputs: ', outputs)
 
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 

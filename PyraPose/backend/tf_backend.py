@@ -47,8 +47,16 @@ def scatter_nd(*args, **kwargs):
     return tensorflow.scatter_nd(*args, **kwargs)
 
 
+def gather(*args, **kwargs):
+    return tensorflow.gather(*args, **kwargs)
+
+
 def gather_nd(*args, **kwargs):
     return tensorflow.gather_nd(*args, **kwargs)
+
+
+def vectorized_map(*args, **kwargs):
+    return tensorflow.vectorized_map(*args, **kwargs)
 
 
 def meshgrid(*args, **kwargs):
