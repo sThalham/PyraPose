@@ -136,8 +136,11 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     outputs = keras.layers.Conv2D(num_anchors * 1 *  num_values, **options)(outputs) #, name='pyramid_regression3D'
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression3D_permute'
-    #outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
-    outputs = keras.layers.Reshape((-1, 1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
+
+    # MHP
+    #outputs = keras.layers.Reshape((-1, 1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
+    # Transformer
+    outputs = keras.layers.Reshape((-1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
 
     #outputs = expand_dims()(outputs)
 
@@ -343,7 +346,11 @@ def retinanet_bbox(
     mask = model.outputs[2]
     #other = model.outputs[3:]
 
-    boxes3D = layers.DenormBoxes3D(name='boxes3D')([anchors, regression3D])
+    # MHP
+    #boxes3D = layers.DenormBoxes3D(name='boxes3D')([anchors, regression3D])
+    # Tranformer
+    boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
+
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)

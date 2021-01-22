@@ -453,10 +453,17 @@ def project_points(inputs):
     regression, target_intrinsics, target_pose = inputs
     x_values = regression[::2]
     y_values = regression[1::2]
+    #print('regression: ', regression)
+    #print('target_intrinsics: ', target_intrinsics)
+    #print('target_pose: ', target_pose)
 
     xVal = (x_values * target_pose[11]) / target_intrinsics[0]
     yVal = (y_values * target_pose[11]) / target_intrinsics[1]
-    point_array = [xVal[0], yVal[0], xVal[1], yVal[1], xVal[2], yVal[2], xVal[3], yVal[3], xVal[4], yVal[4], xVal[5], yVal[5]]
+    #print('xVal: ', xVal)
+    #print('yVal: ', yVal)
+    point_array = [xVal[0], yVal[0], xVal[1], yVal[1], xVal[2], yVal[2], xVal[3], yVal[3], xVal[4], yVal[4], xVal[5], yVal[5], xVal[6], yVal[6], xVal[7], yVal[7]]
+    point_array = keras.backend.stack(point_array, axis=0)
+    #print('point_array: ', point_array)
 
     return point_array
 
@@ -469,17 +476,30 @@ def transformer_smooth_l1(weight=0.125, sigma=3.0):
     def _transformer_smooth_l1(y_true, y_pred):
 
         regression        = y_pred
-        regression_target = y_true[:, :, :-1]
+        regression_target = y_true[:, :, :16]
         target_intrinsics = y_true[:, :, 16:20]
         target_pose = y_true[:, :, 20:36]
         anchor_state      = y_true[:, :, -1]
+
+        #print('regression_target: ', regression_target)
+        #print('target_intrinsics: ', target_intrinsics)
+        #print('target_pose: ', target_pose)
+        #print('anchor_state: ', anchor_state)
 
         #### filter out "ignore" anchors
         indices           = backend.where(keras.backend.equal(anchor_state, 1))
         regression        = backend.gather_nd(regression, indices)
         regression_target = backend.gather_nd(regression_target, indices)
+        target_intrinsics = backend.gather_nd(target_intrinsics, indices)
+        target_pose = backend.gather_nd(target_pose, indices)
+
+        #print('indices: ', indices)
+        #print('regression: ', regression)
+        print('regression_target: ', regression_target)
 
         regression_projected = backend.vectorized_map(project_points, (regression, target_intrinsics, target_pose))
+
+        print('regression_projected: ', regression_projected)
 
         regression_diff = regression_projected - regression_target
         regression_diff = keras.backend.abs(regression_diff)
