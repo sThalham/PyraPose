@@ -114,6 +114,11 @@ def create_generator(args):
             image_max_side=args.image_max_side,
             config=args.config
         )
+    elif args.dataset_type == 'custom':
+        # import here to prevent unnecessary dependency on cocoapi
+        from ..preprocessing.custom import CustomGenerator
+
+        validation_generator = args.custom_path
 
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
@@ -140,8 +145,11 @@ def parse_args(args):
     tless_parser = subparsers.add_parser('tless')
     tless_parser.add_argument('tless_path', help='Path to dataset directory (ie. /tmp/Tless).')
 
-    tless_parser = subparsers.add_parser('homebrewed')
-    tless_parser.add_argument('homebrewed_path', help='Path to dataset directory (ie. /tmp/Homebrewed).')
+    homebrewed_parser = subparsers.add_parser('homebrewed')
+    homebrewed_parser.add_argument('homebrewed_path', help='Path to dataset directory (ie. /tmp/Homebrewed).')
+
+    custom_parser = subparsers.add_parser('custom')
+    custom_parser.add_argument('custom_path', help='Path to dataset directory (ie. /tmp/Homebrewed).')
 
     parser.add_argument('model',              help='Path to RetinaNet model.')
     parser.add_argument('--convert-model',    help='Convert the model to an inference model (ie. the input is a training model).', action='store_true')
@@ -240,6 +248,10 @@ def main(args=None):
     elif args.dataset_type == 'homebrewed':
         from ..utils.homebrewed_eval import evaluate_homebrewed
         evaluate_homebrewed(generator, model, args.score_threshold)
+
+    elif args.dataset_type == 'custom':
+        from ..utils.custom_eval import evaluate_custom
+        evaluate_custom(generator, model, args.score_threshold)
 
     else:
          print('unknown dataset: ', args.dataset_type)
