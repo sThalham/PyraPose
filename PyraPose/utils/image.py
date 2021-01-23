@@ -175,10 +175,18 @@ def apply_transform(matrix, image, params, cpara):
             ]),
             iaa.Add((-10, 10), per_channel=0.5),
             iaa.Multiply((0.75, 1.25), per_channel=0.5),
-            iaa.FrequencyNoiseAlpha(
+            iaa.BlendAlphaFrequencyNoise(
                 exponent=(-4, 0),
-                first=iaa.Multiply((0.75, 1.25), per_channel=0.5),
-                second=iaa.LinearContrast((0.7, 1.3), per_channel=0.5))
+                foreground=iaa.Sequential([
+                iaa.Add((-10, 10), per_channel=0.5),
+                iaa.Multiply((0.75, 1.25), per_channel=0.5),
+                iaa.LinearContrast((0.7, 1.3), per_channel=0.5)
+                ]),
+                background=iaa.Sequential([
+                iaa.Add((-10, 10), per_channel=0.5),
+                iaa.Multiply((0.75, 1.25), per_channel=0.5),
+                iaa.LinearContrast((0.7, 1.3), per_channel=0.5)
+                ]))
         ]),
         # contrast
         iaa.SomeOf((0, 2), [
