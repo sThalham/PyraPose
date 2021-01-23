@@ -152,50 +152,59 @@ def apply_transform(matrix, image, params, cpara):
     # rgb
     # seq describes an object for rgb image augmentation using aleju/imgaug
     seq = iaa.Sequential([
-        # blur
-        iaa.SomeOf((0, 2), [
-            iaa.GaussianBlur((0.0, 2.0)),
-            iaa.AverageBlur(k=(3, 7)),
-            iaa.MedianBlur(k=(3, 7)),
-            iaa.BilateralBlur(d=(1, 7)),
-            iaa.MotionBlur(k=(3, 7))
-        ]),
-        # color
-        iaa.SomeOf((0, 2), [
-            # iaa.WithColorspace(),
-            iaa.AddToHueAndSaturation((-15, 15)),
-            # iaa.ChangeColorspace(to_colorspace[], alpha=0.5),
-            iaa.Grayscale(alpha=(0.0, 0.2))
-        ]),
-        # brightness
         iaa.OneOf([
-            iaa.Sequential([
-                iaa.Add((-10, 10), per_channel=0.5),
-                iaa.Multiply((0.75, 1.25), per_channel=0.5)
+            iaa.Sequential([iaa.Sometimes(0.5, iaa.CoarseDropout(p=0.05, size_percent=(0.02, 0.1)))]),
+            iaa.Sequential([iaa.Sometimes(0.5, iaa.Cutout(fill_mode="constant", cval=(0, 255), nb_iterations=(5, 20),
+                                                          size=(0.02, 0.1), squared=False))]),
+            iaa.Sequential([iaa.Sometimes(0.5, iaa.Cutout(fill_mode="gaussian", cval=(0, 255), nb_iterations=(5, 20),
+                                                          size=(0.02, 0.1), squared=False))])
+        ]),
+        iaa.Sequential([
+            # blur
+            iaa.SomeOf((0, 2), [
+                iaa.GaussianBlur((0.0, 2.0)),
+                iaa.AverageBlur(k=(3, 7)),
+                iaa.MedianBlur(k=(3, 7)),
+                iaa.BilateralBlur(d=(1, 7)),
+                iaa.MotionBlur(k=(3, 7))
             ]),
-            iaa.Add((-10, 10), per_channel=0.5),
-            iaa.Multiply((0.75, 1.25), per_channel=0.5),
-            iaa.BlendAlphaFrequencyNoise(
-                exponent=(-4, 0),
-                foreground=iaa.Sequential([
-                iaa.Add((-10, 10), per_channel=0.5),
-                iaa.Multiply((0.75, 1.25), per_channel=0.5),
-                iaa.LinearContrast((0.7, 1.3), per_channel=0.5)
+            # color
+            iaa.SomeOf((0, 2), [
+                # iaa.WithColorspace(),
+                iaa.AddToHueAndSaturation((-15, 15)),
+                # iaa.ChangeColorspace(to_colorspace[], alpha=0.5),
+                iaa.Grayscale(alpha=(0.0, 0.2))
+            ]),
+            # brightness
+            iaa.OneOf([
+                iaa.Sequential([
+                    iaa.Add((-10, 10), per_channel=0.5),
+                    iaa.Multiply((0.75, 1.25), per_channel=0.5)
                 ]),
-                background=iaa.Sequential([
                 iaa.Add((-10, 10), per_channel=0.5),
                 iaa.Multiply((0.75, 1.25), per_channel=0.5),
-                iaa.LinearContrast((0.7, 1.3), per_channel=0.5)
-                ]))
-        ]),
-        # contrast
-        iaa.SomeOf((0, 2), [
-            iaa.GammaContrast((0.75, 1.25), per_channel=0.5),
-            iaa.SigmoidContrast(gain=(0, 10), cutoff=(0.25, 0.75), per_channel=0.5),
-            iaa.LogContrast(gain=(0.75, 1), per_channel=0.5),
-            iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
-        ]),
-    ], random_order=True)
+                iaa.BlendAlphaFrequencyNoise(
+                    exponent=(-4, 0),
+                    foreground=iaa.Sequential([
+                    iaa.Add((-10, 10), per_channel=0.5),
+                    iaa.Multiply((0.75, 1.25), per_channel=0.5),
+                    iaa.LinearContrast((0.7, 1.3), per_channel=0.5)
+                    ]),
+                    background=iaa.Sequential([
+                    iaa.Add((-10, 10), per_channel=0.5),
+                    iaa.Multiply((0.75, 1.25), per_channel=0.5),
+                    iaa.LinearContrast((0.7, 1.3), per_channel=0.5)
+                    ]))
+            ]),
+            # contrast
+            iaa.SomeOf((0, 2), [
+                iaa.GammaContrast((0.75, 1.25), per_channel=0.5),
+                iaa.SigmoidContrast(gain=(0, 10), cutoff=(0.25, 0.75), per_channel=0.5),
+                iaa.LogContrast(gain=(0.75, 1), per_channel=0.5),
+                iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
+            ]),
+        ], random_order=True)
+    ])
     image = seq.augment_image(image)
     '''
     seq = iaa.Sequential([

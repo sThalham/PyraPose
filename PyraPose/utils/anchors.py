@@ -143,10 +143,10 @@ def anchor_targets_bbox(
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        #image_raw = image
-        #image_raw[..., 0] += 103.939
-        #image_raw[..., 1] += 116.779
-        #image_raw[..., 2] += 123.68
+        image_raw = image
+        image_raw[..., 0] += 103.939
+        image_raw[..., 1] += 116.779
+        image_raw[..., 2] += 123.68
 
         #image_raw_sym = copy.deepcopy(image_raw)
 
@@ -298,11 +298,8 @@ def anchor_targets_bbox(
                         #image_crop = image[0][int(bb[1]):int(bb[3]), int(bb[0]):int(bb[2]), :]
                         #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(cls) + '_' + str(jdx) + '_crop.jpg'
                         #cv2.imwrite(name, image_crop)
-            if viz_img == True:
-                #image_raw = image_raw[int(np.nanmin(true_anchors[:, 0])):int(np.nanmin(true_anchors[:, 1])), int(np.nanmax(true_anchors[:, 2])):int(np.nanmax(true_anchors[:, 3])), :]
-                name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-                cv2.imwrite(name, image_raw)
-            '''
+                '''
+
             # MHP
             regression_3D[index, :, :, :-1] = box3D_MHP(anchors, calculated_boxes[argmax_overlaps_inds, :])
             # Transformer Pose
