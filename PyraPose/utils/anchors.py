@@ -155,6 +155,128 @@ def anchor_targets_bbox(
         #viz_img = False
 
         if annotations['bboxes'].shape[0]:
+
+            # improved occlusion handling
+            # need to be before anchor overlap computation
+            image_aug = copy.deepcopy(image_raw)
+            for bdx, bbox in enumerate(annotations['bboxes']):
+                new_box = np.zeros((4))
+                box_cut = np.zeros((4))
+                # sampl
+
+                if np.random.uniform() < 0.2:
+                    # vert or horz
+                    if np.random.uniform() < 0.5:
+                        # vert
+                        cut_hi = (bbox[3] - bbox[1]) * (np.random.random()*0.2 + 0.3)
+                        if np.random.uniform() < 0.5:
+                            # up
+                            new_box[3] = bbox[3]
+                            box_cut[1] = bbox[1]
+                            if np.random.uniform() < 0.5:
+                                # full
+                                new_box[2] = bbox[2]
+                                new_box[1] = bbox[1] + cut_hi
+                                new_box[0] = bbox[0]
+                                box_cut[0] = bbox[0]
+                                box_cut[2] = bbox[2]
+                                box_cut[3] = bbox[3] - cut_hi
+                            else:
+                                cut_br = (bbox[2] - bbox[0]) * (np.random.random() * 0.2 + 0.5)
+                                new_box = bbox
+                                if np.random.uniform() < 0.5:
+                                    # left
+                                    box_cut[0] = bbox[0]
+                                    box_cut[2] = bbox[0] + cut_br
+                                    box_cut[3] = bbox[1] + cut_hi
+                                else:
+                                    # right
+                                    box_cut[0] = bbox[2] - cut_br
+                                    box_cut[2] = bbox[2]
+                                    box_cut[3] = bbox[1] + cut_hi
+                        else:
+                            # down
+                            new_box[1] = bbox[1]
+                            box_cut[3] = bbox[3]
+                            if np.random.uniform() < 0.5:
+                                # full
+                                new_box[2] = bbox[2]
+                                new_box[3] = bbox[1] - cut_hi
+                                new_box[0] = bbox[0]
+                                box_cut[0] = bbox[0]
+                                box_cut[2] = bbox[2]
+                                box_cut[1] = bbox[3] - cut_hi
+                            else:
+                                cut_br = (bbox[2] - bbox[0]) * (np.random.random() * 0.2 + 0.5)
+                                new_box = bbox
+                                if np.random.uniform() < 0.5:
+                                    # left
+                                    box_cut[0] = bbox[0]
+                                    box_cut[2] = bbox[0] + cut_br
+                                    box_cut[1] = bbox[3] - cut_hi
+                                else:
+                                    # right
+                                    box_cut[0] = bbox[2] - cut_br
+                                    box_cut[2] = bbox[2]
+                                    box_cut[1] = bbox[3] - cut_hi
+                    else:
+                        # horz
+                        cut_br = (bbox[2] - bbox[0]) * (np.random.random() * 0.2 + 0.4)
+                        if np.random.uniform() < 0.5:
+                            # left
+                            new_box[2] = bbox[2]
+                            box_cut[0] = bbox[0]
+                            if np.random.uniform() < 0.5:
+                                # full
+                                new_box[3] = bbox[3]
+                                new_box[1] = bbox[1]
+                                new_box[0] = bbox[0] + cut_br
+                                box_cut[1] = bbox[1]
+                                box_cut[2] = bbox[0] + cut_br
+                                box_cut[3] = bbox[3]
+                            else:
+                                cut_hi = (bbox[2] - bbox[0]) * (np.random.random() * 0.2 + 0.5)
+                                new_box = bbox
+                                if np.random.uniform() < 0.5:
+                                    # up
+                                    box_cut[1] = bbox[1]
+                                    box_cut[2] = bbox[0] + cut_br
+                                    box_cut[3] = bbox[1] + cut_hi
+                                else:
+                                    # down
+                                    box_cut[3] = bbox[3]
+                                    box_cut[2] = bbox[0] + cut_br
+                                    box_cut[1] = bbox[3] - cut_hi
+                        else:
+                            # right
+                            new_box[0] = bbox[0]
+                            box_cut[2] = bbox[2]
+                            if np.random.uniform() < 0.5:
+                                # full
+                                new_box[3] = bbox[3]
+                                new_box[1] = bbox[1]
+                                new_box[2] = bbox[2] - cut_br
+                                box_cut[1] = bbox[1]
+                                box_cut[0] = bbox[0] + cut_br
+                                box_cut[3] = bbox[3]
+                            else:
+                                cut_hi = (bbox[2] - bbox[0]) * (np.random.random() * 0.2 + 0.5)
+                                new_box = bbox
+                                if np.random.uniform() < 0.5:
+                                    # up
+                                    box_cut[0] = bbox[2] - cut_br
+                                    box_cut[1] = bbox[1]
+                                    box_cut[3] = bbox[1] + cut_hi
+                                else:
+                                    # down
+                                    box_cut[0] = bbox[2] - cut_br
+                                    box_cut[3] = bbox[3]
+                                    box_cut[1] = bbox[3] - cut_hi
+
+                    annotations['bboxes'][bdx] = new_box
+                    # sample cut
+                    image[int(box_cut[1]):int(box_cut[3]), int(box_cut[0]):int(box_cut[2]), :] = 0
+
             # obtain indices of gt annotations with the greatest overlap
             positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
 
@@ -233,6 +355,9 @@ def anchor_targets_bbox(
                 pose = pose[:7]
                 # debug
                 '''
+                image_raw = image
+                bb = annotations['bboxes'][idx]
+                cv2.rectangle(image_raw, (int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3])), (255, 255, 255), 3)
                 # MHP
                 rot = tf3d.quaternions.quat2mat(pose_anno[3:])
                 rot = np.asarray(rot, dtype=np.float32)
@@ -246,16 +371,17 @@ def anchor_targets_bbox(
                 eight_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=8, axis=1)
                 calculated_boxes = np.concatenate([calculated_boxes, eight_boxes], axis=0)
 
-                for sdx, sym in enumerate(annotations['symmetries']):
-                    rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
-                    tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
-                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+                if 'symmetries' in annotations:
+                    for sdx, sym in enumerate(annotations['symmetries']):
+                        rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
+                        tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
+                        tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
-                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
+                        box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
                                         fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
                                         cy=annotations['cam_params'][idx][3])
-                    box3D = np.reshape(box3D, (16))
-                    calculated_boxes[idx, sdx, :] = box3D
+                        box3D = np.reshape(box3D, (16))
+                        calculated_boxes[idx, sdx, :] = box3D
 
                 '''
                 # Transformer loss
@@ -306,9 +432,11 @@ def anchor_targets_bbox(
             #regression_3D[index, :, :16] = box3D_transformer(anchors, calculated_boxes[argmax_overlaps_inds, :])
 
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-            #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
-            #cv2.imwrite(name, image_raw)
+            rind = np.random.randint(0, 1000)
+            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
+            cv2.imwrite(name, image_raw)
+            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'aug_RGB.jpg'
+            cv2.imwrite(name, image_aug)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'nosym_RGB.jpg'
             #cv2.imwrite(name, image_raw_sym)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
