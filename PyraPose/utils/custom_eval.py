@@ -10,6 +10,7 @@ from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import os
+from ..utils.anchors import anchors_for_shape
 
 from PIL import Image
 
@@ -175,8 +176,10 @@ def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
 
 def boxoverlap(a, b):
-    a = np.array([a[0], a[1], a[0] + a[2], a[1] + a[3]])
-    b = np.array([b[0], b[1], b[0] + b[2], b[1] + b[3]])
+    #a = np.array([a[0], a[1], a[0] + a[2], a[1] + a[3]])
+    #b = np.array([b[0], b[1], b[0] + b[2], b[1] + b[3]])
+    a = np.array([a[0], a[1], a[2], a[3]])
+    b = np.array([b[0], b[1], b[2], b[3]])
 
     x1 = np.amax(np.array([a[0], b[0]]))
     y1 = np.amax(np.array([a[1], b[1]]))
@@ -204,7 +207,7 @@ def evaluate_custom(generator, model, threshold=0.5):
     test_path = generator
     mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
     mesh_path = '/home/stefan/data/Meshes/metal_Markus/plate_final.ply'
-    results_path = '/home/stefan/data/metal_Markus/results_22012021'
+    results_path = '/home/stefan/data/metal_Markus/results_25012021'
 
     '''
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
@@ -246,14 +249,9 @@ def evaluate_custom(generator, model, threshold=0.5):
     pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
     print('max model: ', np.nanmax(model_vsd['pts']))
     print('min model: ', np.nanmin(model_vsd['pts']))
-    #open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
-    #    radius=0.1, max_nn=30))
-    # open3d.draw_geometries([pcd_model])
-    #model_vsd_mm = copy.deepcopy(model_vsd)
-    #model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
-    #pcd_model = open3d.read_point_cloud(ply_path)
 
-    #return pcd_model, model_vsd, model_vsd_mm
+    anchor_params = anchors_for_shape((480, 640))
+    print(anchor_params.shape)
 
     for img_idx, img_name in enumerate(os.listdir(test_path)):
         img_path = os.path.join(test_path, img_name)
@@ -282,10 +280,52 @@ def evaluate_custom(generator, model, threshold=0.5):
             obj_mask = mask[0, :, inv_cls]
 
             cls_indices = np.where(cls_mask > threshold)
-            print('valid hyps: ', len(cls_indices[0]))
-
             if len(cls_indices[0]) < 1:
                 continue
+
+            pos_anchors = anchor_params[cls_indices, :]
+            print('pos_anchors: ', pos_anchors.shape)
+            pos_anchors = pos_anchors[0]
+            print('pos_anchors: ', pos_anchors.shape)
+            per_obj_hyps = []
+
+            print('anchors beginning: ', pos_anchors.shape[0])
+            while pos_anchors.shape[0] > 0:
+
+                # fstb = np.random.randint(pos_anchors.shape[0])
+                obj_anc = pos_anchors[0]
+                pos_anchors = pos_anchors[1:]
+
+                obj_ancs = [obj_anc]
+                same_obj = True
+                while same_obj == True:
+                    same_obj = False
+                    indcs2rm = []
+                    for adx in range(pos_anchors.shape[0]):
+                        box_b = pos_anchors[adx, :]
+
+                        print('len obj_ancs', len(obj_ancs))
+                        for qdx in range(len(obj_ancs)):
+                            iou = boxoverlap(obj_ancs[qdx], box_b)
+                            if iou > 0.5:
+                                obj_ancs.append(box_b)
+                                indcs2rm.append(adx)
+                                same_obj = True
+                                continue
+                        continue
+                    pos_anchors = np.delete(pos_anchors, indcs2rm, axis=0)
+                per_obj_hyps.append(obj_ancs)
+
+                obj_col = (np.random.random() * 255, np.random.random() * 255, np.random.random() * 255)
+                for bb in obj_ancs:
+                    cv2.rectangle(image, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                          (int(obj_col[0]), int(obj_col[1]), int(obj_col[2])), 3)
+
+            print('per_obj_hyps: ', len(per_obj_hyps))
+
+            pose_path = os.path.join(results_path, 'bbox_' + str(img_idx) + '.png')
+            cv2.imwrite(pose_path, image)
+            print('--------------')
 
             cls_img = np.where(obj_mask > 0.5, 1, 0)
             cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
@@ -363,10 +403,10 @@ def evaluate_custom(generator, model, threshold=0.5):
                     continue
                 image_pose_rep[int(model_image[idx, 1]), int(model_image[idx, 0]), :] = (75, 46, 254)
 
-            ori_mask = np.concatenate([image_ori, image_mask], axis=1)
-            box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
-            image_out = np.concatenate([ori_mask, box_rep], axis=0)
-            out_path = os.path.join(results_path, 'sample_' + str(img_idx) + '.png')
-            cv2.imwrite(out_path, image_out)
+        #ori_mask = np.concatenate([image_ori, image_mask], axis=1)
+        #box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
+        #image_out = np.concatenate([ori_mask, box_rep], axis=0)
+        #out_path = os.path.join(results_path, 'sample_' + str(img_idx) + '.png')
+        #cv2.imwrite(out_path, image_out)
 
-    print('Look at your work... are you proud of yourself?')
+    print('Look at what you did... are you proud of yourself?')

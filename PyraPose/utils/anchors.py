@@ -159,6 +159,10 @@ def anchor_targets_bbox(
             # improved occlusion handling
             # need to be before anchor overlap computation
             image_aug = copy.deepcopy(image_raw)
+            #####################
+            # begin of uselessness
+            #####################
+            '''
             for bdx, bbox in enumerate(annotations['bboxes']):
                 new_box = np.zeros((4))
                 box_cut = np.zeros((4))
@@ -276,6 +280,10 @@ def anchor_targets_bbox(
                     annotations['bboxes'][bdx] = new_box
                     # sample cut
                     image[int(box_cut[1]):int(box_cut[3]), int(box_cut[0]):int(box_cut[2]), :] = 0
+            '''
+            #####################
+            # end of uselessness
+            #####################
 
             # obtain indices of gt annotations with the greatest overlap
             positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
