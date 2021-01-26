@@ -10,6 +10,7 @@ from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import os
+import time
 from ..utils.anchors import anchors_for_shape
 
 from PIL import Image
@@ -207,7 +208,7 @@ def evaluate_custom(generator, model, threshold=0.5):
     test_path = generator
     mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
     mesh_path = '/home/stefan/data/Meshes/metal_Markus/plate_final.ply'
-    results_path = '/home/stefan/data/metal_Markus/results_25012021'
+    results_path = '/home/stefan/data/metal_Markus/occaug_results_26012021_m68'
 
     '''
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
@@ -274,6 +275,7 @@ def evaluate_custom(generator, model, threshold=0.5):
 
         boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))
 
+        clust_t = time.time()
         for inv_cls in range(scores.shape[2]):
             cls = inv_cls + 1
             cls_mask = scores[0, :, inv_cls]
@@ -284,48 +286,60 @@ def evaluate_custom(generator, model, threshold=0.5):
                 continue
 
             pos_anchors = anchor_params[cls_indices, :]
-            print('pos_anchors: ', pos_anchors.shape)
+            ind_anchors = cls_indices[0]
             pos_anchors = pos_anchors[0]
-            print('pos_anchors: ', pos_anchors.shape)
             per_obj_hyps = []
 
-            print('anchors beginning: ', pos_anchors.shape[0])
             while pos_anchors.shape[0] > 0:
-
-                # fstb = np.random.randint(pos_anchors.shape[0])
-                obj_anc = pos_anchors[0]
-                pos_anchors = pos_anchors[1:]
-
-                obj_ancs = [obj_anc]
+                # make sure to separate objects
+                start_i = np.random.randint(pos_anchors.shape[0])
+                obj_ancs = [pos_anchors[start_i]]
+                obj_inds = [ind_anchors[start_i]]
+                pos_anchors = np.delete(pos_anchors, start_i, axis=0)
+                ind_anchors = np.delete(ind_anchors, start_i, axis=0)
+                #print('ind_anchors: ', ind_anchors)
                 same_obj = True
                 while same_obj == True:
+                    # update matrices based on iou
                     same_obj = False
                     indcs2rm = []
                     for adx in range(pos_anchors.shape[0]):
+                        # loop through anchors
                         box_b = pos_anchors[adx, :]
-
-                        print('len obj_ancs', len(obj_ancs))
+                        if not np.all((box_b > 0)): # need x_max or y_max here? maybe irrelevant due to positivity
+                            indcs2rm.append(adx)
+                            continue
                         for qdx in range(len(obj_ancs)):
+                            # loop through anchors belonging to instance
                             iou = boxoverlap(obj_ancs[qdx], box_b)
-                            if iou > 0.5:
+                            if iou > 0.4:
+                                #print('anc_anchors: ', pos_anchors)
+                                #print('ind_anchors: ', ind_anchors)
+                                #print('adx: ', adx)
                                 obj_ancs.append(box_b)
+                                obj_inds.append(ind_anchors[adx])
                                 indcs2rm.append(adx)
                                 same_obj = True
-                                continue
-                        continue
+                                break
+                        if same_obj == True:
+                            break
+
+                    #print('pos_anchors: ', pos_anchors.shape)
+                    #print('ind_anchors: ', len(ind_anchors))
+                    #print('indcs2rm: ', indcs2rm)
                     pos_anchors = np.delete(pos_anchors, indcs2rm, axis=0)
-                per_obj_hyps.append(obj_ancs)
+                    ind_anchors = np.delete(ind_anchors, indcs2rm, axis=0)
 
-                obj_col = (np.random.random() * 255, np.random.random() * 255, np.random.random() * 255)
-                for bb in obj_ancs:
-                    cv2.rectangle(image, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                          (int(obj_col[0]), int(obj_col[1]), int(obj_col[2])), 3)
+                print('obj_inds per instance: ', obj_inds)
+                per_obj_hyps.append(obj_inds)
 
-            print('per_obj_hyps: ', len(per_obj_hyps))
+                #obj_col = (np.random.random() * 255, np.random.random() * 255, np.random.random() * 255)
+                #for bb in obj_ancs:
+                #    cv2.rectangle(image_ori, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                #          (int(obj_col[0]), int(obj_col[1]), int(obj_col[2])), 3)
+            #print('separate objects time: ', time.time() - clust_t)
 
-            pose_path = os.path.join(results_path, 'bbox_' + str(img_idx) + '.png')
-            cv2.imwrite(pose_path, image)
-            print('--------------')
+            #print('per_obj_hyps: ', len(per_obj_hyps))
 
             cls_img = np.where(obj_mask > 0.5, 1, 0)
             cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
@@ -337,76 +351,78 @@ def evaluate_custom(generator, model, threshold=0.5):
             cls_img[:, :, 2] *= 255
             image_mask = np.where(cls_img > 0, cls_img, image_mask)
 
-            k_hyp = len(cls_indices[0])
-            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
-            K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+            for per_ins_indices in per_obj_hyps:
 
-            ##############################
-            # pnp
-            pose_votes = boxes3D[0, cls_indices, :]
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                               imagePoints=est_points, cameraMatrix=K,
-                                                               distCoeffs=None, rvec=None, tvec=None,
-                                                               useExtrinsicGuess=False, iterationsCount=300,
-                                                               reprojectionError=5.0, confidence=0.99,
-                                                               flags=cv2.SOLVEPNP_ITERATIVE)
-            R_est, _ = cv2.Rodrigues(orvec)
-            t_est = otvec
-            print('R_est: ', R_est)
-            print('t_est: ', t_est)
+                print('per_ins: ', per_ins_indices)
+                print('len per_ins', len(per_ins_indices))
+                k_hyp = len(per_ins_indices)
+                ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+                K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
-            eDbox = R_est.dot(ori_points.T).T
-            # eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
-            eDbox = eDbox + np.repeat(t_est, 8, axis=1).T
-            est3D = toPix_array(eDbox)
-            eDbox = np.reshape(est3D, (16))
-            pose = eDbox.astype(np.uint16)
-            print('pose: ', pose)
+                ##############################
+                # pnp
+                pose_votes = boxes3D[0, per_ins_indices, :]
+                print('pose votes: ', pose_votes.shape)
+                est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+                obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+                obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+                retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                                   imagePoints=est_points, cameraMatrix=K,
+                                                                   distCoeffs=None, rvec=None, tvec=None,
+                                                                   useExtrinsicGuess=False, iterationsCount=300,
+                                                                   reprojectionError=5.0, confidence=0.99,
+                                                                   flags=cv2.SOLVEPNP_ITERATIVE)
+                R_est, _ = cv2.Rodrigues(orvec)
+                t_est = otvec
 
-            colEst = (255, 0, 0)
+                eDbox = R_est.dot(ori_points.T).T
+                # eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+                eDbox = eDbox + np.repeat(t_est, 8, axis=1).T
+                est3D = toPix_array(eDbox)
+                eDbox = np.reshape(est3D, (16))
+                pose = eDbox.astype(np.uint16)
 
-            image_pose = cv2.line(image_pose, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 3)
-            image_pose = cv2.line(image_pose, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
-                             3)
-            image_pose = cv2.line(image_pose, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
-                             3)
-            image_pose = cv2.line(image_pose, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
-                             3)
-            image_pose = cv2.line(image_pose, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
-                             3)
-            print(image_pose.shape)
-            #pose_path = os.path.join(results_path, 'pose_' + str(idx) + '.png')
-            #cv2.imwrite(pose_path, image_pose)
+                colEst = (255, 0, 0)
 
-            guess = np.zeros((4, 4), dtype=np.float32)
-            guess[:3, :3] = R_est
-            guess[:3, 3] = t_est.T #* 1000.0
-            guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
+                image_pose = cv2.line(image_pose, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 3)
+                image_pose = cv2.line(image_pose, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                                 3)
+                image_pose = cv2.line(image_pose, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                                 3)
+                image_pose = cv2.line(image_pose, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                                 3)
+                image_pose = cv2.line(image_pose, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+                                 3)
 
-            pcd_now = copy.deepcopy(pcd_model)
-            pcd_now.transform(guess)
-            cloud_points = np.asarray(pcd_now.points)
-            model_image = toPix_array(cloud_points)
-            for idx in range(model_image.shape[0]):
-                if int(model_image[idx, 1]) > 479 or int(model_image[idx, 0]) > 639 or int(
-                        model_image[idx, 1]) < 0 or int(model_image[idx, 0]) < 0:
-                    continue
-                image_pose_rep[int(model_image[idx, 1]), int(model_image[idx, 0]), :] = (75, 46, 254)
+                #pose_path = os.path.join(results_path, 'pose_' + str(idx) + '.png')
+                #cv2.imwrite(pose_path, image_pose)
 
-        #ori_mask = np.concatenate([image_ori, image_mask], axis=1)
-        #box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
-        #image_out = np.concatenate([ori_mask, box_rep], axis=0)
-        #out_path = os.path.join(results_path, 'sample_' + str(img_idx) + '.png')
-        #cv2.imwrite(out_path, image_out)
+                guess = np.zeros((4, 4), dtype=np.float32)
+                guess[:3, :3] = R_est
+                guess[:3, 3] = t_est.T #* 1000.0
+                guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
+
+                pcd_now = copy.deepcopy(pcd_model)
+                pcd_now.transform(guess)
+                cloud_points = np.asarray(pcd_now.points)
+                model_image = toPix_array(cloud_points)
+                for idx in range(model_image.shape[0]):
+                    if int(model_image[idx, 1]) > 479 or int(model_image[idx, 0]) > 639 or int(
+                            model_image[idx, 1]) < 0 or int(model_image[idx, 0]) < 0:
+                        continue
+                    image_pose_rep[int(model_image[idx, 1]), int(model_image[idx, 0]), :] = (75, 46, 254)
+
+        ori_mask = np.concatenate([image_ori, image_mask], axis=1)
+        box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
+        image_out = np.concatenate([ori_mask, box_rep], axis=0)
+        out_path = os.path.join(results_path, 'sample_' + str(img_idx) + '.png')
+        cv2.imwrite(out_path, image_out)
 
     print('Look at what you did... are you proud of yourself?')
