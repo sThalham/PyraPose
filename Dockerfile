@@ -1,6 +1,6 @@
 # tensorflow
 #FROM tensorflow/tensorflow:latest-gpu-py3
-FROM tensorflow/tensorflow:2.1.1-gpu
+FROM tensorflow/tensorflow:2.2.0-gpu
 
 ARG DEBIAN_FRONTEND=noninteractive
 

@@ -68,10 +68,20 @@ if __name__ == "__main__":
     #mesh_path = sys.argv[1]
     #mesh_path = '/home/stefan/data/Meshes/linemod_13' # linemod
     #mesh_path = '/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply' #fronius
-    mesh_path = '/home/stefan/data/Meshes/metal_Markus/'
+
+    # Fronius
+    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/Fronius'
     background = '/home/stefan/data/datasets/cocoval2017/'
-    target = '/home/stefan/data/train_data/metal_Markus/'
-    objsperimg = 4
+    target = '/home/stefan/data/train_data/fronius_train/'
+
+    # InDex
+    #mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/'
+    #background = '/home/stefan/data/datasets/cocoval2017/'
+    #target = '/home/stefan/data/train_data/index_cube/'
+
+    # metal Markus
+
+    objsperimg = 6
 
     #print(open3d.__version__)
     #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
@@ -90,7 +100,7 @@ if __name__ == "__main__":
     #dec_mesh.remove_non_manifold_edges()
     #open3d.io.write_triangle_mesh(filename="/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply/seite_rechts.ply", mesh=dec_mesh, write_ascii=True)
 
-    visu = False
+    visu = True
     resX = 640
     resY = 480
     fx = 572.41140
@@ -117,6 +127,20 @@ if __name__ == "__main__":
         categories.append(mesh_id)
         mesh_id += 1
 
+    '''
+    # InDex cube
+    threeD_boxes = np.ndarray((2, 8, 3), dtype=np.float32)
+    threeD_boxes[1, :, :] = np.array([[0.025, 0.025, 0.025],  # Metal [30, 210, 70] links
+                                      [0.025, 0.025, -0.025],
+                                      [0.025, -0.025, -0.025],
+                                      [0.025, -0.025, 0.025],
+                                      [-0.025, 0.025, 0.025],
+                                      [-0.025, 0.025, -0.025],
+                                      [-0.025, -0.025, -0.025],
+                                      [-0.025, -0.025, 0.025]])
+
+    # Metal Markus
+
     threeD_boxes = np.ndarray((2, 8, 3), dtype=np.float32)
     threeD_boxes[1, :, :] = np.array([[0.015, 0.105, 0.035],  # Metal [30, 210, 70] links
                                       [0.015, 0.105, -0.035],
@@ -126,12 +150,11 @@ if __name__ == "__main__":
                                       [-0.015, 0.105, -0.035],
                                       [-0.015, -0.105, -0.035],
                                       [-0.015, -0.105, 0.035]])
-
     '''
+
     # interlude for debugging
     mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
-    
 
     for key, value in yaml.load(open(mesh_info)).items():
         # for key, value in json.load(open(mesh_info)).items():
@@ -151,7 +174,7 @@ if __name__ == "__main__":
                                    [x_minus, y_minus, z_minus],
                                    [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo * fac
-    '''
+
 
     '''
     threeD_boxes = np.ndarray((4, 8, 3), dtype=np.float32)
@@ -217,7 +240,7 @@ if __name__ == "__main__":
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns[:10]:
+        for bg_img_path in syns:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
@@ -259,14 +282,14 @@ if __name__ == "__main__":
             mask_idxs = []
             poses = []
             
-            obj_ids = np.random.choice(categories, size=objsperimg, replace=True)
+            obj_ids = np.random.choice(categories, size=objsperimg, replace=False)
 
             right, top = False, False
             seq_obj = 0
             for objID in obj_ids:
                 # sample rotation and append
                 R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
-                z = 0.4 + np.random.rand() * 1.0
+                z = 0.6 + np.random.rand() * 1.0
                 #x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
                 #y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
                 if right == False and top == False:
@@ -323,11 +346,13 @@ if __name__ == "__main__":
                 # light, render and append
                 light_pose = [np.random.rand() * 3 - 1.0, np.random.rand() * 2 - 1.0, 0.0]
                 #light_color = [np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9]
+                # standard
                 light_color = [1.0, 1.0, 1.0]
-                light_ambient_weight = np.random.rand()
+                light_ambient_weight = 0.2 + np.random.rand() * 0.8
                 light_diffuse_weight = 0.75 + np.random.rand() * 0.25
                 light_spec_weight = 0.25 + np.random.rand() * 0.25
                 light_spec_shine = np.random.rand() * 3.0
+
                 ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
                 ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
                 rgb_img = ren.get_color_image(objID)
@@ -417,7 +442,7 @@ if __name__ == "__main__":
                     "mask_id": mask_id,
                     "area": area,
                     "iscrowd": 0,
-                    "feature_visibility": visib_fract
+                    "feature_visibility": visib_fract,
                 }
 
                 dict["annotations"].append(tempTA)

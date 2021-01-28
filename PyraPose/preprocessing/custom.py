@@ -82,7 +82,10 @@ class CustomGenerator(Generator):
                                        [x_minus, y_minus, z_minus],
                                        [x_minus, y_minus, z_plus]])
             self.TDboxes[int(key), :, :] = three_box_solo
-            self.sym_con = value['symmetries_discrete']
+            if 'symmetries_discrete' in value:
+                self.sym_con = value['symmetries_discrete']
+            else:
+                self.sym_con = np.empty((0, 9))
 
         super(CustomGenerator, self).__init__(**kwargs)
 
