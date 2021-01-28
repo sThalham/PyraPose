@@ -70,7 +70,7 @@ if __name__ == "__main__":
     #mesh_path = '/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply' #fronius
 
     # Fronius
-    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/Fronius'
+    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/Fronius/'
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/fronius_train/'
 
@@ -118,12 +118,10 @@ if __name__ == "__main__":
 
     for mesh_now in os.listdir(mesh_path):
         mesh_path_now = os.path.join(mesh_path, mesh_now)
-        print(mesh_path_now)
         if mesh_now[-4:] != '.ply':
             continue
         #mesh_id = int(mesh_now[-6:-4])
         ren.add_object(mesh_id, mesh_path_now)
-        print(mesh_id)
         categories.append(mesh_id)
         mesh_id += 1
 
@@ -153,7 +151,7 @@ if __name__ == "__main__":
     '''
 
     # interlude for debugging
-    mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
+    mesh_info = os.path.join(mesh_path, 'models_info.yml')
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
 
     for key, value in yaml.load(open(mesh_info)).items():
@@ -173,6 +171,8 @@ if __name__ == "__main__":
                                    [x_minus, y_plus, z_minus],
                                    [x_minus, y_minus, z_minus],
                                    [x_minus, y_minus, z_plus]])
+
+        print(key, three_box_solo)
         threeD_boxes[int(key), :, :] = three_box_solo * fac
 
 
