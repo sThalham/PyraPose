@@ -365,7 +365,7 @@ def anchor_targets_bbox(
                 '''
                 image_raw = image
                 bb = annotations['bboxes'][idx]
-                cv2.rectangle(image_raw, (int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3])), (255, 255, 255), 3)
+                cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])), (255, 255, 255), 3)
                 # MHP
                 rot = tf3d.quaternions.quat2mat(pose_anno[3:])
                 rot = np.asarray(rot, dtype=np.float32)
@@ -379,17 +379,20 @@ def anchor_targets_bbox(
                 eight_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=8, axis=1)
                 calculated_boxes = np.concatenate([calculated_boxes, eight_boxes], axis=0)
 
-                if 'symmetries' in annotations:
-                    for sdx, sym in enumerate(annotations['symmetries']):
-                        rot_sym = np.matmul(rot, np.array(sym).reshape((3,3)))
-                        tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
-                        tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
-                        box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
+                if np.sum(annotations['sym_dis'][idx]) != 0:
+                    print(cls, annotations['sym_dis'][idx].shape, np.sum(annotations['sym_dis'][idx]))
+                    for sdx in range(annotations['sym_dis'].shape[0]):
+                        if np.sum(annotations['sym_dis'][idx]) != 0:
+                            rot_sym = np.matmul(rot, np.array(annotations['sym_dis'][sdx]).reshape((3,3)))
+                            tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
+                            tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                            box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
                                         fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
                                         cy=annotations['cam_params'][idx][3])
-                        box3D = np.reshape(box3D, (16))
-                        calculated_boxes[idx, sdx, :] = box3D
+                            box3D = np.reshape(box3D, (16))
+                            calculated_boxes[idx, sdx, :] = box3D
 
                 '''
                 # Transformer loss
@@ -443,8 +446,8 @@ def anchor_targets_bbox(
             rind = np.random.randint(0, 1000)
             name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
             cv2.imwrite(name, image_raw)
-            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'aug_RGB.jpg'
-            cv2.imwrite(name, image_aug)
+            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'aug_RGB.jpg'
+            #cv2.imwrite(name, image_aug)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'nosym_RGB.jpg'
             #cv2.imwrite(name, image_raw_sym)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))

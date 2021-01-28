@@ -70,7 +70,7 @@ if __name__ == "__main__":
     #mesh_path = '/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply' #fronius
 
     # Fronius
-    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/Fronius/'
+    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/Fronius_enum/'
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/fronius_train/'
 
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     #dec_mesh.remove_non_manifold_edges()
     #open3d.io.write_triangle_mesh(filename="/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply/seite_rechts.ply", mesh=dec_mesh, write_ascii=True)
 
-    visu = True
+    visu = False
     resX = 640
     resY = 480
     fx = 572.41140
@@ -120,7 +120,8 @@ if __name__ == "__main__":
         mesh_path_now = os.path.join(mesh_path, mesh_now)
         if mesh_now[-4:] != '.ply':
             continue
-        #mesh_id = int(mesh_now[-6:-4])
+        mesh_id = int(mesh_now[:-4])
+        #print(mesh_id, mesh_now)
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)
         mesh_id += 1
@@ -153,6 +154,8 @@ if __name__ == "__main__":
     # interlude for debugging
     mesh_info = os.path.join(mesh_path, 'models_info.yml')
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
+    #sym_cont = np.ndarray((34, 3), dtype=np.float32)
+    #sym_disc = np.ndarray((34, 9), dtype=np.float32)
 
     for key, value in yaml.load(open(mesh_info)).items():
         # for key, value in json.load(open(mesh_info)).items():
@@ -174,6 +177,13 @@ if __name__ == "__main__":
 
         print(key, three_box_solo)
         threeD_boxes[int(key), :, :] = three_box_solo * fac
+
+        #if "symmetries_continuous" in value:
+        #    sym_cont[int(key), :] = np.asarray(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
+        #elif "symmetries_discrete" in value:
+        #    sym_disc[int(key), :] = np.array(value['symmetries_discrete'])
+        #else:
+        #    pass
 
 
     '''
@@ -240,7 +250,7 @@ if __name__ == "__main__":
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns:
+        for bg_img_path in syns[:5]:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
@@ -292,6 +302,9 @@ if __name__ == "__main__":
                 z = 0.6 + np.random.rand() * 1.0
                 #x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
                 #y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
+                x = (0.45 * 2 * z) * np.random.rand() - (0.45 * z)
+                y = (0.3 * 2 * z) * np.random.rand() - (0.3 * z)
+                '''
                 if right == False and top == False:
                     x = (-0.45 * z) * np.random.rand()
                     y = (-0.3 * z) * np.random.rand()
@@ -312,6 +325,7 @@ if __name__ == "__main__":
                 if seq_obj > 0:
                     right = True
                 seq_obj += 1
+                '''
 
                 t = np.array([[x, y, z]]).T
                 rotations.append(R_ren)
@@ -431,6 +445,13 @@ if __name__ == "__main__":
                 annoID = annoID + 1
                 pose = poses[v_idx]
                 box3D = boxes3D[v_idx]
+
+                #sym_cont_anno = []
+                #sym_disc_anno = []
+                #if obj_id == 3:
+                #    sym_disc_anno = sym_disc[obj_id, :].tolist()
+
+                #print(sym_disc_anno)
 
                 tempTA = {
                     "id": annoID,
