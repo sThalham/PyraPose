@@ -64,9 +64,9 @@ class CustomGenerator(Generator):
 
         self.load_classes()
 
-        self.TDboxes = np.ndarray((16, 8, 3), dtype=np.float32)
-        self.sym_cont = np.ndarray((34, 3), dtype=np.float32)
-        self.sym_disc = np.ndarray((34, 3, 9), dtype=np.float32)
+        self.TDboxes = np.zeros((16, 8, 3), dtype=np.float32)
+        self.sym_cont = np.zeros((34, 3), dtype=np.float32)
+        self.sym_disc = np.zeros((34, 3, 9), dtype=np.float32)
 
         for key, value in yaml.load(open(self.mesh_info)).items():
             x_minus = value['min_x']
@@ -269,9 +269,7 @@ class CustomGenerator(Generator):
                 self.cx,
                 self.cy,
             ]]], axis=0)
-            print('array ', annotations['sym_dis'].shape)
-            print('samp ', self.sym_disc[objID, :, :].T.shape)
-            annotations['sym_dis'] = np.concatenate([annotations['sym_dis'], [self.sym_disc[objID, :, :]]], axis=0)
-            annotations['sym_con'] = np.concatenate([annotations['sym_con'], [self.sym_cont[objID, :, :]]], axis=0)
+            annotations['sym_dis'] = np.concatenate([annotations['sym_dis'], self.sym_disc[objID, :, :][np.newaxis, ...]], axis=0)
+            annotations['sym_con'] = np.concatenate([annotations['sym_con'], self.sym_cont[objID, :][np.newaxis, ...]], axis=0)
 
         return annotations
