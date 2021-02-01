@@ -462,7 +462,7 @@ def evaluate_custom(generator, model, threshold=0.5):
                 t_list = t_est.flatten().tolist()
                 light_pose = [1.0, 1.0, 0.0]
                 light_color = [1.0, 1.0, 1.0]
-                light_ambient_weight = 0.5
+                light_ambient_weight = 1.0
                 light_diffuse_weight = 0.75
                 light_spec_weight = 0.25
                 light_spec_shine = 1.0
@@ -472,8 +472,9 @@ def evaluate_custom(generator, model, threshold=0.5):
                 ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
                 ren.render_object(1, R_list, t_list, fxkin, fykin, cxkin, cykin)
                 pose_img = ren.get_color_image(1)
-                out_path = os.path.join(results_path, 'pose_' + str(img_idx) + '.png')
-                cv2.imwrite(out_path, pose_img)
+                #out_path = os.path.join(results_path, 'pose_' + str(img_idx) + '.png')
+                #cv2.imwrite(out_path, pose_img)
+                image_pose_rep = np.where(pose_img > 0, pose_img, image_pose_rep)
 
         ori_mask = np.concatenate([image_ori, image_mask], axis=1)
         box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
