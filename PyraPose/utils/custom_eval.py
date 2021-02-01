@@ -11,7 +11,18 @@ from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import os
 import time
+import math
+import sys
+from pathlib import Path
+
 from ..utils.anchors import anchors_for_shape
+
+
+bop_renderer_path = '/home/stefan/bop_renderer/build'
+sys.path.append(bop_renderer_path)
+
+import bop_renderer
+
 
 from PIL import Image
 
@@ -206,11 +217,18 @@ def boxoverlap(a, b):
 def evaluate_custom(generator, model, threshold=0.5):
 
     test_path = generator
-    mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
-    mesh_path = '/home/stefan/data/Meshes/metal_Markus/plate_final.ply'
-    results_path = '/home/stefan/data/metal_Markus/occaug_results_26012021_m68'
 
-    '''
+    # InDex cube
+    mesh_info = '/home/stefan/data/Meshes/Meshes_color_invert/InDex/models_info.yml'
+    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/InDex'
+    results_path = '/home/stefan/data/datasets/index/bookshelf_results'
+
+    #metal Markus
+    #mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
+    #mesh_path = '/home/stefan/data/Meshes/metal_Markus/plate_final.ply'
+    #results_path = '/home/stefan/data/metal_Markus/occaug_results_26012021_m68'
+
+
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
 
@@ -243,16 +261,33 @@ def evaluate_custom(generator, model, threshold=0.5):
                                       [-0.015, 0.105, -0.035],
                                       [-0.015, -0.105, -0.035],
                                       [-0.015, -0.105, 0.035]])
+    '''
 
-    model_vsd = ply_loader.load_ply(mesh_path)
-    pcd_model = open3d.geometry.PointCloud()
+    ren = bop_renderer.Renderer()
+    ren.init(640, 480)
+    categories = []
+    for mesh_now in os.listdir(mesh_path):
+        mesh_path_now = os.path.join(mesh_path, mesh_now)
+        if mesh_now[-4:] != '.ply':
+            continue
+        mesh_id = int(mesh_now[:-4])
+        mesh_id = 1
+        print(mesh_id, mesh_path_now)
+        ren.add_object(mesh_id, mesh_path_now)
+        categories.append(mesh_id)
+
+    #model_vsd = ply_loader.load_ply(mesh_path)
+    #pcd_model = open3d.geometry.PointCloud()
     #pcd_model = open3d.io.read_point_cloud(mesh_path)
-    pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
-    print('max model: ', np.nanmax(model_vsd['pts']))
-    print('min model: ', np.nanmin(model_vsd['pts']))
+    #pcd_model = open3d.io.read_triangle_mesh(mesh_path)
+    #open3d.visualization.draw_geometries([pcd_model])
+    #pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
+    #print('max model: ', np.nanmax(model_vsd['pts']))
+    #print('min model: ', np.nanmin(model_vsd['pts']))
+    #print('max model: ', np.nanmax(np.asarray(pcd_model.points)))
+    #print('min model: ', np.nanmin(np.asarray(pcd_model.points)))
 
     anchor_params = anchors_for_shape((480, 640))
-    print(anchor_params.shape)
 
     for img_idx, img_name in enumerate(os.listdir(test_path)):
         img_path = os.path.join(test_path, img_name)
@@ -353,8 +388,8 @@ def evaluate_custom(generator, model, threshold=0.5):
 
             for per_ins_indices in per_obj_hyps:
 
-                print('per_ins: ', per_ins_indices)
-                print('len per_ins', len(per_ins_indices))
+                #print('per_ins: ', per_ins_indices)
+                #print('len per_ins', len(per_ins_indices))
                 k_hyp = len(per_ins_indices)
                 ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
@@ -409,15 +444,36 @@ def evaluate_custom(generator, model, threshold=0.5):
                 guess[:3, 3] = t_est.T #* 1000.0
                 guess[3, :] = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32).T
 
-                pcd_now = copy.deepcopy(pcd_model)
-                pcd_now.transform(guess)
-                cloud_points = np.asarray(pcd_now.points)
-                model_image = toPix_array(cloud_points)
-                for idx in range(model_image.shape[0]):
-                    if int(model_image[idx, 1]) > 479 or int(model_image[idx, 0]) > 639 or int(
-                            model_image[idx, 1]) < 0 or int(model_image[idx, 0]) < 0:
-                        continue
-                    image_pose_rep[int(model_image[idx, 1]), int(model_image[idx, 0]), :] = (75, 46, 254)
+                # render pc
+                #pcd_now = copy.deepcopy(pcd_model)
+                #pcd_now.transform(guess)
+                #cloud_points = np.asarray(pcd_now.points)
+                #model_image = toPix_array(cloud_points)
+
+                #for idx in range(model_image.shape[0]):
+                #    if int(model_image[idx, 1]) > 479 or int(model_image[idx, 0]) > 639 or int(
+                #            model_image[idx, 1]) < 0 or int(model_image[idx, 0]) < 0:
+                #        continue
+                #    image_pose_rep[int(model_image[idx, 1]), int(model_image[idx, 0]), :] = (75, 46, 254)
+
+                # render bop
+                #print(tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi).shape)
+                R_list = R_est.flatten().tolist()
+                t_list = t_est.flatten().tolist()
+                light_pose = [1.0, 1.0, 0.0]
+                light_color = [1.0, 1.0, 1.0]
+                light_ambient_weight = 0.5
+                light_diffuse_weight = 0.75
+                light_spec_weight = 0.25
+                light_spec_shine = 1.0
+
+                print(R_list)
+                print(t_list)
+                ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
+                ren.render_object(1, R_list, t_list, fxkin, fykin, cxkin, cykin)
+                pose_img = ren.get_color_image(1)
+                out_path = os.path.join(results_path, 'pose_' + str(img_idx) + '.png')
+                cv2.imwrite(out_path, pose_img)
 
         ori_mask = np.concatenate([image_ori, image_mask], axis=1)
         box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)

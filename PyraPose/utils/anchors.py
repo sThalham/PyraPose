@@ -211,38 +211,38 @@ def anchor_targets_bbox(
                 box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
                 box3D = np.reshape(box3D, (16))
 
-
                 '''
+                image_raw = image
                 pose1 = box3D.reshape((16)).astype(np.int16)
 
                 colEst = (255, 0, 0)
 
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[0:2].ravel()), tuple(pose1[2:4].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[0:2].ravel()), tuple(pose1[2:4].ravel()),
                                      (0, 0, 255), 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[2:4].ravel()), tuple(pose1[4:6].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[2:4].ravel()), tuple(pose1[4:6].ravel()),
                                      colEst, 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[4:6].ravel()), tuple(pose1[6:8].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[4:6].ravel()), tuple(pose1[6:8].ravel()),
+                                    colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose1[6:8].ravel()), tuple(pose1[0:2].ravel()),
                                      colEst, 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[6:8].ravel()), tuple(pose1[0:2].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[0:2].ravel()), tuple(pose1[8:10].ravel()),
                                      colEst, 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[0:2].ravel()), tuple(pose1[8:10].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[2:4].ravel()), tuple(pose1[10:12].ravel()),
                                      colEst, 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[2:4].ravel()), tuple(pose1[10:12].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[4:6].ravel()), tuple(pose1[12:14].ravel()),
                                      colEst, 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[4:6].ravel()), tuple(pose1[12:14].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[6:8].ravel()), tuple(pose1[14:16].ravel()),
                                      colEst, 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[6:8].ravel()), tuple(pose1[14:16].ravel()),
-                                     colEst, 2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[8:10].ravel()), tuple(pose1[10:12].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[8:10].ravel()), tuple(pose1[10:12].ravel()),
                                      colEst,
                                      2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[10:12].ravel()), tuple(pose1[12:14].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[10:12].ravel()), tuple(pose1[12:14].ravel()),
                                      colEst,
                                      2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[12:14].ravel()), tuple(pose1[14:16].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[12:14].ravel()), tuple(pose1[14:16].ravel()),
                                      colEst,
                                      2)
-                image_raw_sym = cv2.line(image_raw_sym, tuple(pose1[14:16].ravel()), tuple(pose1[8:10].ravel()),
+                image_raw = cv2.line(image_raw, tuple(pose1[14:16].ravel()), tuple(pose1[8:10].ravel()),
                                      colEst,
 
                                      2)

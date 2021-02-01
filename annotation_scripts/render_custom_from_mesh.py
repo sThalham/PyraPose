@@ -72,16 +72,16 @@ if __name__ == "__main__":
     # Fronius
     #mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/Fronius_enum/'
     #background = '/home/stefan/data/datasets/cocoval2017/'
-    #target = '/home/stefan/data/train_data/fronius_train/'
+    #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
     mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/InDex/'
     background = '/home/stefan/data/datasets/cocoval2017/'
-    target = '/home/stefan/data/train_data/index_cube/'
+    target = '/home/stefan/data/train_data/indox/'
 
     # metal Markus
 
-    objsperimg = 4
+    objsperimg = 6
 
     #print(open3d.__version__)
     #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
@@ -121,7 +121,6 @@ if __name__ == "__main__":
         if mesh_now[-4:] != '.ply':
             continue
         mesh_id = int(mesh_now[:-4])
-        #print(mesh_id, mesh_now)
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)
         mesh_id += 1
@@ -302,11 +301,11 @@ if __name__ == "__main__":
                 # fronius
                 z = 0.6 + np.random.rand() * 1.0
                 # InDex
-                z = 0.3 + np.random.rand() * 1.0
-                #x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
-                #y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
-                x = (0.45 * 2 * z) * np.random.rand() - (0.45 * z)
-                y = (0.3 * 2 * z) * np.random.rand() - (0.3 * z)
+                #z = 0.3 + np.random.rand() * 1.0
+                x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
+                y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
+                #x = (0.45 * 2 * z) * np.random.rand() - (0.45 * z)
+                #y = (0.3 * 2 * z) * np.random.rand() - (0.3 * z)
 
                 # metal_Markus
                 '''
@@ -323,7 +322,7 @@ if __name__ == "__main__":
                     x = (0.45 * z) * np.random.rand()
                     y = (0.3 * z) * np.random.rand()
                 '''
-
+                '''
                 # InDex cube
                 if right == False and top == False:
                     x = ((-0.4 * z) * np.random.rand()) - 0.05
@@ -345,6 +344,7 @@ if __name__ == "__main__":
                 if seq_obj > 0:
                     right = True
                 seq_obj += 1
+                '''
 
                 t = np.array([[x, y, z]]).T
                 rotations.append(R_ren)
@@ -383,15 +383,17 @@ if __name__ == "__main__":
                 light_color = [1.0, 1.0, 1.0]
                 light_ambient_weight = 0.2 + np.random.rand() * 0.8
                 # Fronius
-                if objID == 1:
+                if objID != 1:
                     light_diffuse_weight = 0.75 + np.random.rand() * 0.25
                     light_spec_weight = 0.2 + np.random.rand() * 0.3
                     light_spec_shine = np.random.rand() * 2.0
                 else:
                     light_diffuse_weight = 0.15 + np.random.rand() * 0.25
                     light_spec_weight = 0.5 + np.random.rand() * 0.4
-                    light_spec_shine = np.random.rand() * 5.0
+                    light_spec_shine = np.random.rand() * 6.0
 
+                print(R_list)
+                print(t_list)
                 ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
                 ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
                 rgb_img = ren.get_color_image(objID)
