@@ -67,6 +67,8 @@ class LinemodGenerator(Generator):
         self.load_classes()
 
         self.TDboxes = np.ndarray((16, 8, 3), dtype=np.float32)
+        self.sym_cont = np.zeros((34, 3), dtype=np.float32)
+        self.sym_disc = np.zeros((34, 3, 9), dtype=np.float32)
 
         for key, value in yaml.load(open(self.mesh_info)).items():
             x_minus = value['min_x']
@@ -84,6 +86,15 @@ class LinemodGenerator(Generator):
                                        [x_minus, y_minus, z_minus],
                                        [x_minus, y_minus, z_plus]])
             self.TDboxes[int(key), :, :] = three_box_solo
+            if 'symmetries_discrete' in value:
+                for sdx, sym in enumerate(value['symmetries_discrete']):
+                    self.sym_disc[int(key), sdx, :] = np.array(sym)
+            else:
+                self.sym_disc[int(key), :, :] = np.zeros((3, 9))
+            if "symmetries_continuous" in value:
+                self.sym_cont[int(key), :] = np.array(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
+            else:
+                self.sym_cont[int(key), :] = np.zeros((3))
 
         super(LinemodGenerator, self).__init__(**kwargs)
 
@@ -221,7 +232,7 @@ class LinemodGenerator(Generator):
         # mask = None
         mask = cv2.imread(path, -1)
 
-        annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
+        annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,)), 'sym_dis': np.empty((0, 3, 9)), 'sym_con': np.empty((0, 3))}
 
         for idx, a in enumerate(anns):
             if self.set_name == 'train':
@@ -273,5 +284,9 @@ class LinemodGenerator(Generator):
                 self.cx,
                 self.cy,
             ]]], axis=0)
+            annotations['sym_dis'] = np.concatenate(
+                [annotations['sym_dis'], self.sym_disc[objID, :, :][np.newaxis, ...]], axis=0)
+            annotations['sym_con'] = np.concatenate([annotations['sym_con'], self.sym_cont[objID, :][np.newaxis, ...]],
+                                                    axis=0)
 
         return annotations

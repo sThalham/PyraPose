@@ -392,7 +392,7 @@ def orthogonality_loss_hyps(inputs):
     #regression_xy = keras.backend.print_tensor(regression_xy, message='regression_xy: ')
 
     #return weight_xy * regression_xy + (1 - weight_xy) * regression_orth
-    return regression_xy
+    return 0.85 * regression_xy
 
 
 def orthogonal_l1_local(inputs):
