@@ -391,7 +391,8 @@ def orthogonality_loss_hyps(inputs):
     #regression_orth = keras.backend.print_tensor(regression_orth, message='regression_orth: ')
     #regression_xy = keras.backend.print_tensor(regression_xy, message='regression_xy: ')
 
-    return weight_xy * regression_xy + (1 - weight_xy) * regression_orth
+    #return weight_xy * regression_xy + (1 - weight_xy) * regression_orth
+    return regression_xy
 
 
 def orthogonal_l1_local(inputs):
@@ -400,13 +401,13 @@ def orthogonal_l1_local(inputs):
     #print('orthogonal_l1_local::regression_target: ', regression_target)
 
     loss_hypotheses = backend.vectorized_map(orthogonality_loss_hyps, (regression, regression_target))
-    print('orthogonal_l1_local::loss_hypotheses: ', loss_hypotheses)
+    #print('orthogonal_l1_local::loss_hypotheses: ', loss_hypotheses)
     min_loss_idx = keras.backend.argmin(loss_hypotheses, axis=0)
-    print('orthogonal_l1_local::min_loss_idx: ', min_loss_idx)
+    #print('orthogonal_l1_local::min_loss_idx: ', min_loss_idx)
     #loss_hypotheses = keras.backend.print_tensor(loss_hypotheses, message='loss_hypotheses: ')
     #min_loss_idx = keras.backend.print_tensor(min_loss_idx, message='loss_min: ')
     loss_min = backend.gather(loss_hypotheses, min_loss_idx)
-    print('orthogonal_l1_local::loss_min: ', loss_min)
+    #print('orthogonal_l1_local::loss_min: ', loss_min)
 
     return loss_min
 
@@ -420,7 +421,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
         #y_pred = keras.backend.expand_dims(y_pred, axis=2) # hackiest !
         y_pred = keras.backend.repeat_elements(x=y_pred, rep=8, axis=2)
-        print('y_pred: ', y_pred)
+        #print('y_pred: ', y_pred)
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
         anchor_state      = y_true[:, :, 0, -1]
@@ -430,8 +431,8 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         regression        = backend.gather_nd(regression, indices)
         regression_target = backend.gather_nd(regression_target, indices)
 
-        print('sym_orthogonal_l1::regression: ', regression)
-        print('sym_orthogonal_l1::regression_target: ', regression_target)
+        #print('sym_orthogonal_l1::regression: ', regression)
+        #print('sym_orthogonal_l1::regression_target: ', regression_target)
 
         regression_loss = backend.vectorized_map(orthogonal_l1_local, (regression, regression_target))
 
