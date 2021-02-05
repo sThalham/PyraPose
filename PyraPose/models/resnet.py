@@ -85,10 +85,14 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
             inputs = keras.layers.Input(shape=(480, 640, 3))
 
     resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)
-
     filename = 'ResNet-50-model.keras.h5'
-    resource = 'https://github.com/fizyr/keras-models/releases/download/v0.0.1/{}'.format(filename)
     checksum = '3e9f4e4f77bbe2c9bec13b53ee1c2319'
+
+    #resnet = keras_resnet.models.ResNet101(inputs, include_top=False, freeze_bn=True)
+    #filename = 'ResNet-101-model.keras.h5'
+    #checksum = '05dc86924389e5b401a9ea0348a3213c'
+
+    resource = 'https://github.com/fizyr/keras-models/releases/download/v0.0.1/{}'.format(filename)
     weights = get_file(
             filename,
             resource,
