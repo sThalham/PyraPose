@@ -173,13 +173,13 @@ def create_BB(rgb):
 
 if __name__ == "__main__":
 
-    dataset = 'homebrewed'
+    dataset = 'linemod'
     #traintestval = 'val'
     visu = False
     specific_object_set = False
     spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/HB_BOP_val/"  # path to train samples, depth + rgb
+    root = "/home/stefan/data/datasets/LM_BOP_test/"  # path to train samples, depth + rgb
     target = '/home/stefan/data/train_data/linemod_PBR_BOP/'
 
     if dataset == 'linemod':
@@ -283,6 +283,7 @@ if __name__ == "__main__":
         with open(infoPath, 'r') as streamINFO:
             gtjson = json.load(streamINFO)
 
+        split_count = 0
         for samp in os.listdir(rgbPath):
 
             imgname = samp
@@ -351,11 +352,12 @@ if __name__ == "__main__":
             calib_K = []
             # if rnd == 1:
 
-            split_count = 0
+
             valtest = None
             if split_count < 3:
                 fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_dep.png'
                 valtest = 'val'
+                split_count += 1
             else:
                 fileName = target + 'images/' + 'test/' + imgNam[:-4] + '_dep.png'
                 split_count = 0
@@ -469,7 +471,7 @@ if __name__ == "__main__":
                     elif obj_id == 21:
                         obj_id = 5
 
-                if valtest = 'val':
+                if valtest == 'val':
                     annoID_val = annoID_val + 1
                     tempTA = {
                         "id": annoID_val,
@@ -484,7 +486,7 @@ if __name__ == "__main__":
                         "feature_visibility": visib_fract
                     }
                     dict_val["annotations"].append(tempTA)
-                else valtest = 'test':
+                elif valtest == 'test':
                     annoID_val = annoID_val + 1
                     tempTA = {
                         "id": annoID_test,
@@ -503,31 +505,55 @@ if __name__ == "__main__":
 
                 count = count + 1
 
-            tempTL = {
-                "url": "https://bop.felk.cvut.cz/home/",
-                "id": img_id,
-                "name": iname,
-            }
-            dict["licenses"].append(tempTL)
+            if valtest == 'val':
+                tempTL = {
+                    "url": "https://bop.felk.cvut.cz/home/",
+                    "id": img_id,
+                    "name": iname,
+                }
+                dict_val["licenses"].append(tempTL)
+            elif valtest == 'test':
+                tempTL = {
+                    "url": "https://bop.felk.cvut.cz/home/",
+                    "id": img_id,
+                    "name": iname,
+                }
+                dict_test["licenses"].append(tempTL)
 
             # mask_img = cv2.resize(mask_img, None, fx=1 / 4, fy=1 / 4, interpolation=cv2.INTER_NEAREST)
             mask_safe_path = fileName[:-8] + '_mask.png'
             cv2.imwrite(mask_safe_path, mask_img)
 
-            tempTV = {
-                "license": 2,
-                "url": "https://bop.felk.cvut.cz/home/",
-                "file_name": iname,
-                "height": resY,
-                "width": resX,
-                "fx": fxca,
-                "fy": fyca,
-                "cx": cxca,
-                "cy": cyca,
-                "date_captured": dateT,
-                "id": img_id,
-            }
-            dict["images"].append(tempTV)
+            if valtest == 'val':
+                tempTV = {
+                    "license": 2,
+                    "url": "https://bop.felk.cvut.cz/home/",
+                    "file_name": iname,
+                    "height": resY,
+                    "width": resX,
+                    "fx": fxca,
+                    "fy": fyca,
+                    "cx": cxca,
+                    "cy": cyca,
+                    "date_captured": dateT,
+                    "id": img_id,
+                }
+                dict_val["images"].append(tempTV)
+            elif valtest == 'test':
+                tempTV = {
+                    "license": 2,
+                    "url": "https://bop.felk.cvut.cz/home/",
+                    "file_name": iname,
+                    "height": resY,
+                    "width": resX,
+                    "fx": fxca,
+                    "fy": fyca,
+                    "cx": cxca,
+                    "cy": cyca,
+                    "date_captured": dateT,
+                    "id": img_id,
+                }
+                dict_test["images"].append(tempTV)
 
             if visu is True:
                 img = rgbImg
@@ -584,19 +610,31 @@ if __name__ == "__main__":
     if specific_object_set == True:
         catsInt = range(1, (len(spec_objs)+1))
 
-    for s in catsInt:
-        objName = str(s)
-        tempC = {
-            "id": s,
-            "name": objName,
-            "supercategory": "object"
-        }
-        dict["categories"].append(tempC)
+    if valtest == 'val':
+        for s in catsInt:
+            objName = str(s)
+            tempC = {
+                "id": s,
+                "name": objName,
+                "supercategory": "object"
+            }
+            dict_val["categories"].append(tempC)
+    elif valtest == 'test':
+        for s in catsInt:
+            objName = str(s)
+            tempC = {
+                "id": s,
+                "name": objName,
+                "supercategory": "object"
+            }
+            dict_test["categories"].append(tempC)
 
-    valAnno = target + 'annotations/instances_' + traintestval + '.json'
-
+    valAnno = target + 'annotations/instances_val.json'
     with open(valAnno, 'w') as fpT:
-        json.dump(dict, fpT)
+        json.dump(dict_val, fpT)
+    testAnno = target + 'annotations/instances_test.json'
+    with open(testAnno, 'w') as fpT:
+        json.dump(dict_test, fpT)
 
     print('everythings done')
 

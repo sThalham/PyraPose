@@ -111,6 +111,10 @@ class LinemodGenerator(Generator):
         for key, value in self.classes.items():
             self.labels_rev[value] = key
 
+    def get_mesh_info(self):
+
+        return self.mesh_info
+
     def size(self):
 
         return len(self.image_ids)
@@ -227,6 +231,8 @@ class LinemodGenerator(Generator):
             if self.set_name == 'train':
                 if a['feature_visibility'] < 0.5:
                     continue
+
+            print(a['category_id'])
 
             annotations['labels'] = np.concatenate([annotations['labels'], [self.inv_label_to_label(a['category_id'])]], axis=0)
             annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[

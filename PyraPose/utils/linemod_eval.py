@@ -667,3 +667,384 @@ def evaluate_linemod(generator, model, threshold=0.05):
     print('true detections: ', detections_all)
     print('recall: ', recall_all)
     print('precision: ', precision_all)
+
+
+
+
+def reannotate_linemod(generator, model, threshold=0.5):
+
+    #mesh_info = '/RGBDPose/Meshes/linemod_13/models_info.yml'
+    mesh_info = generator.get_mesh_info()
+    #mesh_info = '/home/sthalham/data/Meshes/linemod_13/models_info.yml'
+
+    threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
+    model_dia = np.zeros((31), dtype=np.float32)
+
+    for key, value in yaml.load(open(mesh_info)).items():
+        fac = 0.001
+        x_minus = value['min_x'] * fac
+        y_minus = value['min_y'] * fac
+        z_minus = value['min_z'] * fac
+        x_plus = value['size_x'] * fac + x_minus
+        y_plus = value['size_y'] * fac + y_minus
+        z_plus = value['size_z'] * fac + z_minus
+        three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                  [x_plus, y_plus, z_minus],
+                                  [x_plus, y_minus, z_minus],
+                                  [x_plus, y_minus, z_plus],
+                                  [x_minus, y_plus, z_plus],
+                                  [x_minus, y_plus, z_minus],
+                                  [x_minus, y_minus, z_minus],
+                                  [x_minus, y_minus, z_plus]])
+        threeD_boxes[int(key), :, :] = three_box_solo
+        model_dia[int(key)] = value['diameter'] * fac
+
+    pc1, mv1, mv1_mm = load_pcd('01')
+    pc2, mv2, mv2_mm = load_pcd('02')
+    pc4, mv4, mv4_mm = load_pcd('04')
+    pc5, mv5, mv5_mm = load_pcd('05')
+    pc6, mv6, mv6_mm = load_pcd('06')
+    pc8, mv8, mv8_mm = load_pcd('08')
+    pc9, mv9, mv9_mm = load_pcd('09')
+    pc10, mv10, mv10_mm = load_pcd('10')
+    pc11, mv11, mv11_mm = load_pcd('11')
+    pc12, mv12, mv12_mm = load_pcd('12')
+    pc13, mv13, mv13_mm = load_pcd('13')
+    pc14, mv14, mv14_mm = load_pcd('14')
+    pc15, mv15, mv15_mm = load_pcd('15')
+
+    allPoses = np.zeros((16), dtype=np.uint32)
+    truePoses = np.zeros((16), dtype=np.uint32)
+    falsePoses = np.zeros((16), dtype=np.uint32)
+    trueDets = np.zeros((16), dtype=np.uint32)
+
+    annoID_val = 0
+
+    print('g size: ', generator.size())
+
+    for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
+        image_raw = generator.load_image(index)
+        image = generator.preprocess_image(image_raw)
+        image, scale = generator.resize_image(image)
+
+        anno = generator.load_annotations(index)
+
+        if len(anno['labels']) < 1:
+            continue
+
+        checkLab = anno['labels']  # +1 to real_class
+        for lab in checkLab:
+            allPoses[int(lab) + 1] += 1
+
+        boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
+
+        mask_ind = 0
+        mask_img = np.zeros((480, 640), dtype=np.uint8)
+        for inv_cls in range(scores.shape[2]):
+
+            true_cat = inv_cls + 1
+            cls = true_cat
+
+            cls_mask = scores[0, :, inv_cls]
+
+            cls_indices = np.where(cls_mask > threshold)
+
+            if cls != (checkLab + 1):
+                # falsePoses[int(cls)] += 1
+                continue
+
+            if len(cls_indices[0]) < 10:
+                # print('not enough inlier')
+                continue
+            trueDets[int(cls)] += 1
+
+            obj_mask = mask[0, :, inv_cls]
+            mask_id = mask_ind + 1
+            mask_img = np.where(obj_mask > 0.5, mask_id, mask_img)
+            mask_ind += 1
+            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            #cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            #cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
+
+            '''
+            # mask from anchors
+            pot_mask = scores[0, :, inv_cls]
+            pot_mask_P3 = pot_mask[:43200]
+            pot_mask_P4 = pot_mask[43200:54000]
+            pot_mask_P4 = pot_mask[54000:]
+            print(pot_mask.shape)
+
+            sidx = 0
+            eidx = 0
+            mask_P3 = np.zeros((4800), dtype=np.float32)
+            for idx in range(4800):
+                eidx = eidx + 9
+                mask_P3[idx] = np.sum(pot_mask_P3[sidx:eidx])
+                sidx = eidx
+
+            print(mask_P3.shape)
+            print(np.nanmax(mask_P3))
+            mask_P3 = np.where(mask_P3 > 0.5 * (np.nanmax(mask_P3)), 255, 0)
+            cls_img = mask_P3.reshape((60, 80)).astype(np.uint8)
+            cls_img = cv2.resize(cls_img, (640, 480), interpolation=cv2.INTER_NEAREST)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pot_mask.jpg', cls_img)
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
+            '''
+
+            anno_ind = np.argwhere(anno['labels'] == checkLab)
+            t_tra = anno['poses'][anno_ind[0][0]][:3]
+            t_rot = anno['poses'][anno_ind[0][0]][3:]
+
+            if cls == 1:
+                model_vsd = mv1
+                model_vsd_mm = mv1_mm
+            elif cls == 2:
+                model_vsd = mv2
+                model_vsd_mm = mv2_mm
+            elif cls == 4:
+                model_vsd = mv4
+                model_vsd_mm = mv4_mm
+            elif cls == 5:
+                model_vsd = mv5
+                model_vsd_mm = mv5_mm
+            elif cls == 6:
+                model_vsd = mv6
+                model_vsd_mm = mv6_mm
+            elif cls == 8:
+                model_vsd = mv8
+                model_vsd_mm = mv8_mm
+            elif cls == 9:
+                model_vsd = mv9
+                model_vsd_mm = mv9_mm
+            elif cls == 10:
+                model_vsd = mv10
+                model_vsd_mm = mv10_mm
+            elif cls == 11:
+                model_vsd = mv11
+                model_vsd_mm = mv11_mm
+            elif cls == 12:
+                model_vsd = mv12
+                model_vsd_mm = mv12_mm
+            elif cls == 13:
+                model_vsd = mv13
+                model_vsd_mm = mv13_mm
+            elif cls == 14:
+                model_vsd = mv14
+                model_vsd_mm = mv14_mm
+            elif cls == 15:
+                model_vsd = mv15
+                model_vsd_mm = mv15_mm
+
+            k_hyp = len(cls_indices[0])
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+            ##############################
+            # pnp
+            pose_votes = boxes3D[0, cls_indices, :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                               imagePoints=est_points, cameraMatrix=K,
+                                                               distCoeffs=None, rvec=None, tvec=None,
+                                                               useExtrinsicGuess=False, iterationsCount=300,
+                                                               reprojectionError=5.0, confidence=0.99,
+                                                               flags=cv2.SOLVEPNP_ITERATIVE)
+            R_est, _ = cv2.Rodrigues(orvec)
+            t_est = otvec
+
+            t_rot = tf3d.quaternions.quat2mat(t_rot)
+            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+            t_gt = np.array(t_tra, dtype=np.float32)
+
+            t_gt = t_gt * 0.001
+            t_est = t_est.T  # * 0.001
+
+            if cls == 10 or cls == 11:
+                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+            else:
+                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+            if err_add < model_dia[true_cat] * 0.1:
+                truePoses[int(true_cat)] += 1
+
+            # create annotation
+            rot = tf3d.quaternions.mat2quat(R_est)
+            rot = np.asarray(rot, dtype=np.float32)
+            tra = t_est
+            pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
+
+            trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
+            R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+            tDbox = R.reshape(3, 3).dot(threeD_boxes[true_cat, :, :].T).T
+            tDbox = tDbox + np.repeat(trans[np.newaxis, :], 8, axis=0)
+            box3D = toPix_array(tDbox)
+            box3D = np.reshape(box3D, (16))
+            box3D = box3D.tolist()
+
+            annoID_val = annoID_val + 1
+            tempTA = {
+                "id": annoID_val,
+                "image_id": img_id,
+                "category_id": true_cat,
+                "bbox": obj_bb,
+                "pose": pose,
+                "segmentation": box3D,
+                "mask_id": mask_id,
+                "area": area,
+                "iscrowd": 0,
+                "feature_visibility": 1.0
+            }
+            dict_val["annotations"].append(tempTA)
+
+            tDbox = R_gt.dot(ori_points.T).T
+            tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
+            box3D = toPix_array(tDbox)
+            tDbox = np.reshape(box3D, (16))
+            tDbox = tDbox.astype(np.uint16)
+
+            eDbox = R_est.dot(ori_points.T).T
+            #eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+            eDbox = eDbox + np.repeat(t_est, 8, axis=0)
+            est3D = toPix_array(eDbox)
+            eDbox = np.reshape(est3D, (16))
+            pose = eDbox.astype(np.uint16)
+
+            '''
+            colGT = (255, 0, 0)
+            colEst = colEst = (0, 204, 0)
+
+            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
+                             colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
+                             colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
+                             colGT,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
+                             colGT,
+                             2)
+
+            image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 2)
+            image_raw = cv2.line(image_raw, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                             2)
+            image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+                             2)
+
+            hyp_mask = np.zeros((640, 480), dtype=np.float32)
+            for idx in range(k_hyp):
+                hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
+
+            hyp_mask = np.transpose(hyp_mask)
+            hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
+
+            image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
+            image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
+            image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
+            '''
+
+            '''
+            idx = 0
+            for i in range(k_hyp):
+                image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
+                image = cv2.circle(image, (est_points[idx+1, 0, 0], est_points[idx+1, 0, 1]), 3, (251, 194, 213), -2)
+                image = cv2.circle(image, (est_points[idx+2, 0, 0], est_points[idx+2, 0, 1]), 3, (222, 243, 41), -2)
+                image = cv2.circle(image, (est_points[idx+3, 0, 0], est_points[idx+3, 0, 1]), 3, (209, 31, 201), -2)
+                image = cv2.circle(image, (est_points[idx+4, 0, 0], est_points[idx+4, 0, 1]), 3, (8, 62, 53), -2)
+                image = cv2.circle(image, (est_points[idx+5, 0, 0], est_points[idx+5, 0, 1]), 3, (13, 243, 207), -2)
+                image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
+                image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
+                idx = idx+8
+            '''
+            '''
+            max_x = int(np.max(est_points[:, :, 0]) + 5)
+            min_x = int(np.min(est_points[:, :, 0]) - 5)
+            max_y = int(np.max(est_points[:, :, 1]) + 5)
+            min_y = int(np.min(est_points[:, :, 1]) - 5)
+
+            print(max_x, min_x, max_y, min_y)
+
+            image_crop = image_raw[min_y:max_y, min_x:max_x, :]
+            image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
+            '''
+
+            #name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+            #cv2.imwrite(name, image_raw)
+            #print('break')
+        tempTL = {
+            "url": "https://bop.felk.cvut.cz/home/",
+            "id": img_id,
+            "name": iname,
+        }
+        dict_val["licenses"].append(tempTL)
+
+        tempTV = {
+            "license": 2,
+            "url": "https://bop.felk.cvut.cz/home/",
+            "file_name": iname,
+            "height": 480,
+            "width": 640,
+            "fx": fxkin,
+            "fy": fykin,
+            "cx": cxkin,
+            "cy": cykin,
+            "date_captured": dateT,
+            "id": img_id,
+        }
+        dict_val["images"].append(tempTV)
+
+        mask_safe_path = fileName[:-8] + '_mask.png'
+        cv2.imwrite(mask_safe_path, mask_img)
+
+    recall = np.zeros((16), dtype=np.float32)
+    precision = np.zeros((16), dtype=np.float32)
+    detections = np.zeros((16), dtype=np.float32)
+    for i in range(1, (allPoses.shape[0])):
+        recall[i] = truePoses[i] / allPoses[i]
+        precision[i] = truePoses[i] / (truePoses[i] + falsePoses[i])
+        detections[i] = trueDets[i] / allPoses[i]
+
+        if np.isnan(recall[i]):
+            recall[i] = 0.0
+        if np.isnan(precision[i]):
+            precision[i] = 0.0
+
+    recall_all = np.sum(recall[1:]) / 13.0
+    precision_all = np.sum(precision[1:]) / 13.0
+    detections_all = np.sum(detections[1:]) / 13.0
+
+    return recall_all
+

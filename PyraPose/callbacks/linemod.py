@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import keras
-from ..utils.linemod_eval import evaluate_linemod
+from ..utils.linemod_eval import reannotate_linemod
 
 
 class LinemodEval(keras.callbacks.Callback):
@@ -36,12 +36,8 @@ class LinemodEval(keras.callbacks.Callback):
         super(LinemodEval, self).__init__()
 
     def on_epoch_end(self, epoch, logs=None):
-        logs = logs or {}
-        linemod_tag = ['recall [%]: ',
-                    'precision [%]: ',
-                    'mean pose difference [°]: ']
-
-        linemod_eval_stats = evaluate_linemod(self.generator, self.model, self.threshold)
+        performance = reannotate_linemod(self.generator, self.model, self.threshold)
+        print('Linemod validation and annotation: ', performance, ' ADD-recall')
         if linemod_eval_stats is not None and self.tensorboard is not None and self.tensorboard.writer is not None:
             import tensorflow as tf
             summary = tf.Summary()

@@ -64,7 +64,7 @@ def makedirs(path):
 
 def model_with_weights(model, weights, skip_mismatch):
     if weights is not None:
-        model.load_weights(weights, by_name=True, skip_mismatch=skip_mismatch)
+        model.load_weights(weights, by_name=False, skip_mismatch=skip_mismatch)
     return model
 
 
@@ -109,15 +109,13 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
     tensorboard_callback = None
 
-    if args.evaluation and validation_generator:
-        if args.dataset_type == 'coco':
-            from ..callbacks.coco import CocoEval
+    if args.self_supervision:
+        args.evaluation = True
 
-            # use prediction model for evaluation
-            evaluation = CocoEval(validation_generator, tensorboard=tensorboard_callback)
-        elif args.dataset_type == 'linemod':
+    if args.evaluation and validation_generator:
+        if args.dataset_type == 'linemod':
             from ..callbacks.linemod import LinemodEval
-            evaluation = LinemodEval(validation_generator, tensorboard=tensorboard_callback)
+            evaluation = LinemodEval(validation_generator)
 
         else:
             evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
@@ -305,7 +303,7 @@ def parse_args(args):
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
     parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
-    parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
+    parser.add_argument('--self-supervision', help='Compute the mAP using the weighted average of precisions among classes.', action='store_false')
 
     # Fit generator arguments
     parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=1)
@@ -375,12 +373,11 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
-
-
     # start training
     training_model.fit_generator(
         generator=train_generator,
-        steps_per_epoch=train_generator.size()/args.batch_size,
+        #steps_per_epoch=train_generator.size()/args.batch_size,
+        steps_per_epoch=10,
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,
