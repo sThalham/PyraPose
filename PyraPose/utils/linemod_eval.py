@@ -20,7 +20,7 @@ import numpy as np
 import transforms3d as tf3d
 import copy
 import cv2
-import open3d
+#import open3d
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
@@ -699,19 +699,19 @@ def reannotate_linemod(generator, model, threshold=0.5):
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
 
-    pc1, mv1, mv1_mm = load_pcd('01')
-    pc2, mv2, mv2_mm = load_pcd('02')
-    pc4, mv4, mv4_mm = load_pcd('04')
-    pc5, mv5, mv5_mm = load_pcd('05')
-    pc6, mv6, mv6_mm = load_pcd('06')
-    pc8, mv8, mv8_mm = load_pcd('08')
-    pc9, mv9, mv9_mm = load_pcd('09')
-    pc10, mv10, mv10_mm = load_pcd('10')
-    pc11, mv11, mv11_mm = load_pcd('11')
-    pc12, mv12, mv12_mm = load_pcd('12')
-    pc13, mv13, mv13_mm = load_pcd('13')
-    pc14, mv14, mv14_mm = load_pcd('14')
-    pc15, mv15, mv15_mm = load_pcd('15')
+    #pc1, mv1, mv1_mm = load_pcd('01')
+    #pc2, mv2, mv2_mm = load_pcd('02')
+    #pc4, mv4, mv4_mm = load_pcd('04')
+    #pc5, mv5, mv5_mm = load_pcd('05')
+    #pc6, mv6, mv6_mm = load_pcd('06')
+    #pc8, mv8, mv8_mm = load_pcd('08')
+    #pc9, mv9, mv9_mm = load_pcd('09')
+    #pc10, mv10, mv10_mm = load_pcd('10')
+    #pc11, mv11, mv11_mm = load_pcd('11')
+    #pc12, mv12, mv12_mm = load_pcd('12')
+    #pc13, mv13, mv13_mm = load_pcd('13')
+    #pc14, mv14, mv14_mm = load_pcd('14')
+    #pc15, mv15, mv15_mm = load_pcd('15')
 
     allPoses = np.zeros((16), dtype=np.uint32)
     truePoses = np.zeros((16), dtype=np.uint32)
@@ -720,7 +720,20 @@ def reannotate_linemod(generator, model, threshold=0.5):
 
     annoID_val = 0
 
-    print('g size: ', generator.size())
+    now = datetime.datetime.now()
+    dateT = str(now)
+    dict = {"info": {
+        "description": "linemod",
+        "version": "1.0",
+        "year": 2021,
+        "contributor": "Stefan Thalhammer",
+        "date_created": dateT
+    },
+        "licenses": [],
+        "images": [],
+        "annotations": [],
+        "categories": []
+    }
 
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
@@ -728,6 +741,9 @@ def reannotate_linemod(generator, model, threshold=0.5):
         image, scale = generator.resize_image(image)
 
         anno = generator.load_annotations(index)
+
+        img_id = generator.get_img_id(index)
+        iname = generator.get_dataset_path(index)
 
         if len(anno['labels']) < 1:
             continue
@@ -767,6 +783,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
             #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
             #cls_img = np.where(cls_img > 254, cls_img, image_raw)
             #cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
+            print(np.where(obj_mask > 0.5))
 
             '''
             # mask from anchors
@@ -799,6 +816,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
             t_tra = anno['poses'][anno_ind[0][0]][:3]
             t_rot = anno['poses'][anno_ind[0][0]][3:]
 
+            '''
             if cls == 1:
                 model_vsd = mv1
                 model_vsd_mm = mv1_mm
@@ -838,6 +856,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
             elif cls == 15:
                 model_vsd = mv15
                 model_vsd_mm = mv15_mm
+            '''
 
             k_hyp = len(cls_indices[0])
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -866,6 +885,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
             t_gt = t_gt * 0.001
             t_est = t_est.T  # * 0.001
 
+            '''
             if cls == 10 or cls == 11:
                 err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
             else:
@@ -873,6 +893,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
 
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
+            '''
 
             # create annotation
             rot = tf3d.quaternions.mat2quat(R_est)
@@ -901,7 +922,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 "iscrowd": 0,
                 "feature_visibility": 1.0
             }
-            dict_val["annotations"].append(tempTA)
+            dict["annotations"].append(tempTA)
 
             tDbox = R_gt.dot(ori_points.T).T
             tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
@@ -1004,12 +1025,13 @@ def reannotate_linemod(generator, model, threshold=0.5):
             #name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
             #cv2.imwrite(name, image_raw)
             #print('break')
+
         tempTL = {
             "url": "https://bop.felk.cvut.cz/home/",
             "id": img_id,
             "name": iname,
         }
-        dict_val["licenses"].append(tempTL)
+        dict["licenses"].append(tempTL)
 
         tempTV = {
             "license": 2,
@@ -1024,10 +1046,24 @@ def reannotate_linemod(generator, model, threshold=0.5):
             "date_captured": dateT,
             "id": img_id,
         }
-        dict_val["images"].append(tempTV)
+        dict["images"].append(tempTV)
 
         mask_safe_path = fileName[:-8] + '_mask.png'
         cv2.imwrite(mask_safe_path, mask_img)
+
+    for s in range(1, 16):
+        objName = str(s)
+        tempC = {
+            "id": s,
+            "name": objName,
+            "supercategory": "object"
+        }
+        dict["categories"].append(tempC)
+
+    valAnno = generator.get_path()
+
+    with open(valAnno, 'w') as fpT:
+        json.dump(dict, fpT)
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)

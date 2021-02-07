@@ -64,7 +64,7 @@ def makedirs(path):
 
 def model_with_weights(model, weights, skip_mismatch):
     if weights is not None:
-        model.load_weights(weights, by_name=False, skip_mismatch=skip_mismatch)
+        model.load_weights(weights, by_name=True, skip_mismatch=skip_mismatch)
     return model
 
 
@@ -377,7 +377,7 @@ def main(args=None):
     training_model.fit_generator(
         generator=train_generator,
         #steps_per_epoch=train_generator.size()/args.batch_size,
-        steps_per_epoch=10,
+        steps_per_epoch=3,
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,

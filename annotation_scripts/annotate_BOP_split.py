@@ -520,6 +520,9 @@ if __name__ == "__main__":
                 }
                 dict_test["licenses"].append(tempTL)
 
+            print('img_id: ', img_id)
+            print('iname: ', iname)
+
             # mask_img = cv2.resize(mask_img, None, fx=1 / 4, fy=1 / 4, interpolation=cv2.INTER_NEAREST)
             mask_safe_path = fileName[:-8] + '_mask.png'
             cv2.imwrite(mask_safe_path, mask_img)
@@ -610,24 +613,22 @@ if __name__ == "__main__":
     if specific_object_set == True:
         catsInt = range(1, (len(spec_objs)+1))
 
-    if valtest == 'val':
-        for s in catsInt:
-            objName = str(s)
-            tempC = {
-                "id": s,
-                "name": objName,
-                "supercategory": "object"
-            }
-            dict_val["categories"].append(tempC)
-    elif valtest == 'test':
-        for s in catsInt:
-            objName = str(s)
-            tempC = {
-                "id": s,
-                "name": objName,
-                "supercategory": "object"
-            }
-            dict_test["categories"].append(tempC)
+    for s in catsInt:
+        objName = str(s)
+        tempC = {
+            "id": s,
+            "name": objName,
+            "supercategory": "object"
+        }
+        dict_val["categories"].append(tempC)
+    for s in catsInt:
+        objName = str(s)
+        tempC = {
+            "id": s,
+            "name": objName,
+            "supercategory": "object"
+        }
+        dict_test["categories"].append(tempC)
 
     valAnno = target + 'annotations/instances_val.json'
     with open(valAnno, 'w') as fpT:

@@ -102,6 +102,7 @@ class LinemodGenerator(Generator):
         self.labels         = {}
         self.labels_inverse = {}
         for c in categories:
+            print('class: ', c['id'])
             self.labels[len(self.classes)] = c['id']
             self.labels_inverse[c['id']] = len(self.classes)
             self.classes[c['name']] = len(self.classes)
@@ -111,9 +112,21 @@ class LinemodGenerator(Generator):
         for key, value in self.classes.items():
             self.labels_rev[value] = key
 
+    def get_path(self):
+
+        return self.path
+
     def get_mesh_info(self):
 
         return self.mesh_info
+
+    def get_img_id(self, index):
+
+        return self.image_ids[index]
+
+    def get_image_ann(self, index):
+
+        return self.image_ann[index]['file_name']
 
     def size(self):
 
@@ -232,8 +245,6 @@ class LinemodGenerator(Generator):
                 if a['feature_visibility'] < 0.5:
                     continue
 
-            print(a['category_id'])
-
             annotations['labels'] = np.concatenate([annotations['labels'], [self.inv_label_to_label(a['category_id'])]], axis=0)
             annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[
                 a['bbox'][0],
@@ -265,12 +276,6 @@ class LinemodGenerator(Generator):
                 a['mask_id'],
             ]], axis=0)
             objID = a['category_id']
-            #if objID > 5:
-            #    objID = objID + 2
-            #elif objID > 2:
-            #    objID = objID + 1
-            #else:
-            #    objID = objID
             threeDbox = self.TDboxes[objID, :, :]
             annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
             annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[
