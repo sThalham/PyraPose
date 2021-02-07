@@ -174,13 +174,13 @@ def create_BB(rgb):
 if __name__ == "__main__":
 
     dataset = 'homebrewed'
-    traintestval = 'val'
+    #traintestval = 'val'
     visu = False
     specific_object_set = False
     spec_objs = [5, 8, 9, 10, 21]
 
     root = "/home/stefan/data/datasets/HB_BOP_val/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/hb_RGBD_val/'
+    target = '/home/stefan/data/train_data/linemod_PBR_BOP/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     now = datetime.datetime.now()
     dateT = str(now)
 
-    dict = {"info": {
+    dict_val = {"info": {
                 "description": dataset,
                 "url": "cmp.felk.cvut.cz/t-less/",
                 "version": "1.0",
@@ -255,7 +255,10 @@ if __name__ == "__main__":
             "categories": []
             }
 
-    annoID = 0
+    dict_test = copy.deepcopy(dict_val)
+
+    annoID_val = 0
+    annoID_test = 0
 
     count = 0
     syns = os.listdir(root)
@@ -348,7 +351,16 @@ if __name__ == "__main__":
             calib_K = []
             # if rnd == 1:
 
-            fileName = target + 'images/' + traintestval + '/' + imgNam[:-4] + '_dep.png'
+            split_count = 0
+            valtest = None
+            if split_count < 3:
+                fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_dep.png'
+                valtest = 'val'
+            else:
+                fileName = target + 'images/' + 'test/' + imgNam[:-4] + '_dep.png'
+                split_count = 0
+                valtest = 'test'
+
             myFile = Path(fileName)
             if myFile.exists():
                 print('File exists, skip encoding, ', fileName)
@@ -457,21 +469,38 @@ if __name__ == "__main__":
                     elif obj_id == 21:
                         obj_id = 5
 
-                annoID = annoID + 1
-                tempTA = {
-                    "id": annoID,
-                    "image_id": img_id,
-                    "category_id": obj_id,
-                    "bbox": obj_bb,
-                    "pose": pose,
-                    "segmentation": box3D,
-                    "mask_id": mask_id,
-                    "area": area,
-                    "iscrowd": 0,
-                    "feature_visibility": visib_fract
-                }
+                if valtest = 'val':
+                    annoID_val = annoID_val + 1
+                    tempTA = {
+                        "id": annoID_val,
+                        "image_id": img_id,
+                        "category_id": obj_id,
+                        "bbox": obj_bb,
+                        "pose": pose,
+                        "segmentation": box3D,
+                        "mask_id": mask_id,
+                        "area": area,
+                        "iscrowd": 0,
+                        "feature_visibility": visib_fract
+                    }
+                    dict_val["annotations"].append(tempTA)
+                else valtest = 'test':
+                    annoID_val = annoID_val + 1
+                    tempTA = {
+                        "id": annoID_test,
+                        "image_id": img_id,
+                        "category_id": obj_id,
+                        "bbox": obj_bb,
+                        "pose": pose,
+                        "segmentation": box3D,
+                        "mask_id": mask_id,
+                        "area": area,
+                        "iscrowd": 0,
+                        "feature_visibility": visib_fract
+                    }
+                    dict_test["annotations"].append(tempTA)
 
-                dict["annotations"].append(tempTA)
+
                 count = count + 1
 
             tempTL = {
