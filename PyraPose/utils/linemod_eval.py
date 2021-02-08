@@ -24,7 +24,11 @@ import cv2
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
+import datetime
 import sys
+from PIL import Image
+import os
+import json
 
 
 import progressbar
@@ -740,17 +744,20 @@ def reannotate_linemod(generator, model, threshold=0.5):
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
-        anno = generator.load_annotations(index)
+        #anno = generator.load_annotations(index)
 
         img_id = generator.get_img_id(index)
-        iname = generator.get_dataset_path(index)
+        iname = generator.get_image_path(index)
+        data_dir_path = generator.get_path()
+        #mask_path = os.path.join(data_path, iname[:-4], '_mask.png')
+        mask_path = os.path.join(data_dir_path, 'images/val', iname[:-4] + '_mask.png')
 
-        if len(anno['labels']) < 1:
-            continue
+        #if len(anno['labels']) < 1:
+        #    continue
 
-        checkLab = anno['labels']  # +1 to real_class
-        for lab in checkLab:
-            allPoses[int(lab) + 1] += 1
+        #checkLab = anno['labels']  # +1 to real_class
+        #for lab in checkLab:
+        #    allPoses[int(lab) + 1] += 1
 
         boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
@@ -765,9 +772,11 @@ def reannotate_linemod(generator, model, threshold=0.5):
 
             cls_indices = np.where(cls_mask > threshold)
 
-            if cls != (checkLab + 1):
-                # falsePoses[int(cls)] += 1
-                continue
+            #if cls != (checkLab + 1):
+            #    # falsePoses[int(cls)] += 1
+            #    continue
+
+            #print('true indices: ', len(cls_indices[0]))
 
             if len(cls_indices[0]) < 10:
                 # print('not enough inlier')
@@ -775,15 +784,32 @@ def reannotate_linemod(generator, model, threshold=0.5):
             trueDets[int(cls)] += 1
 
             obj_mask = mask[0, :, inv_cls]
+            obj_mask = obj_mask.reshape((60, 80))
+            obj_mask = np.asarray(Image.fromarray(obj_mask).resize((640, 480), Image.NEAREST))
+            where_true = np.where(obj_mask > 0.5)
+
+            if where_true[0].shape[0] > 0:
+                obj_bb = [int(np.nanmin(where_true[1])), int(np.nanmin(where_true[0])), int(np.nanmax(where_true[1]) - np.nanmin(where_true[1])), int(np.nanmax(where_true[0]) - np.nanmin(where_true[0]))]
+                area = obj_bb[2] * obj_bb[3]
+            else:
+                obj_bb = [0, 0, 0, 0]
+                area = 0.0
+
             mask_id = mask_ind + 1
             mask_img = np.where(obj_mask > 0.5, mask_id, mask_img)
             mask_ind += 1
-            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            #cv2.imwrite('/home/stefan/PyraPose_viz/pred_mask_' + str(index) + '.png',
+            #            (obj_mask * 15.0).astype(np.uint8))
             #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
             #cls_img = np.where(cls_img > 254, cls_img, image_raw)
             #cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
-            print(np.where(obj_mask > 0.5))
+            # print(np.nanmax(obj_mask))
+            # cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
+            # cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            # cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            # cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            # cls_img = np.where(cls_img > 254, cls_img, image_raw)
+
 
             '''
             # mask from anchors
@@ -812,9 +838,9 @@ def reannotate_linemod(generator, model, threshold=0.5):
             cv2.imwrite('/home/stefan/RGBDPose_viz/pred_mask.jpg', cls_img)
             '''
 
-            anno_ind = np.argwhere(anno['labels'] == checkLab)
-            t_tra = anno['poses'][anno_ind[0][0]][:3]
-            t_rot = anno['poses'][anno_ind[0][0]][3:]
+            #anno_ind = np.argwhere(anno['labels'] == checkLab)
+            #t_tra = anno['poses'][anno_ind[0][0]][:3]
+            #t_rot = anno['poses'][anno_ind[0][0]][3:]
 
             '''
             if cls == 1:
@@ -878,12 +904,12 @@ def reannotate_linemod(generator, model, threshold=0.5):
             R_est, _ = cv2.Rodrigues(orvec)
             t_est = otvec
 
-            t_rot = tf3d.quaternions.quat2mat(t_rot)
-            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
-            t_gt = np.array(t_tra, dtype=np.float32)
+            #t_rot = tf3d.quaternions.quat2mat(t_rot)
+            #R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+            #t_gt = np.array(t_tra, dtype=np.float32)
 
-            t_gt = t_gt * 0.001
-            t_est = t_est.T  # * 0.001
+            #t_gt = t_gt * 0.001
+            t_est = t_est  # * 0.001
 
             '''
             if cls == 10 or cls == 11:
@@ -904,10 +930,65 @@ def reannotate_linemod(generator, model, threshold=0.5):
             trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
             R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
             tDbox = R.reshape(3, 3).dot(threeD_boxes[true_cat, :, :].T).T
-            tDbox = tDbox + np.repeat(trans[np.newaxis, :], 8, axis=0)
+            tDbox = tDbox + np.repeat(trans, 8, axis=1).T
             box3D = toPix_array(tDbox)
             box3D = np.reshape(box3D, (16))
+            tDbox = box3D.astype(np.uint16)
             box3D = box3D.tolist()
+
+            pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
+                    np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
+            '''
+
+            colGT = (0, 204, 0)
+
+            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
+                                 colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
+                                 colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
+                                 colGT,
+                                 2)
+            image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
+                                 colGT,
+                                 2)
+
+            bb = np.array(obj_bb)
+            cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
+                          (255, 255, 255), 2)
+
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            bottomLeftCornerOfText = (int(bb[0]), int(bb[1]))
+            fontScale = 1
+            lineType = 2
+            gtText = str(true_cat)
+
+            fontColor2 = (255, 255, 255)
+            fontthickness2 = 3
+            cv2.putText(image_raw, gtText,
+                        bottomLeftCornerOfText,
+                        font,
+                        fontScale,
+                        fontColor2,
+                        fontthickness2,
+                        lineType)
+            '''
 
             annoID_val = annoID_val + 1
             tempTA = {
@@ -924,78 +1005,16 @@ def reannotate_linemod(generator, model, threshold=0.5):
             }
             dict["annotations"].append(tempTA)
 
-            tDbox = R_gt.dot(ori_points.T).T
-            tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
-            box3D = toPix_array(tDbox)
-            tDbox = np.reshape(box3D, (16))
-            tDbox = tDbox.astype(np.uint16)
+            #hyp_mask = np.zeros((640, 480), dtype=np.float32)
+            #for idx in range(k_hyp):
+            #    hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
 
-            eDbox = R_est.dot(ori_points.T).T
-            #eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
-            eDbox = eDbox + np.repeat(t_est, 8, axis=0)
-            est3D = toPix_array(eDbox)
-            eDbox = np.reshape(est3D, (16))
-            pose = eDbox.astype(np.uint16)
+            #hyp_mask = np.transpose(hyp_mask)
+            #hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
 
-            '''
-            colGT = (255, 0, 0)
-            colEst = colEst = (0, 204, 0)
-
-            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
-                             colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
-                             colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
-                             colGT,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
-                             colGT,
-                             2)
-
-            image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 2)
-            image_raw = cv2.line(image_raw, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
-                             2)
-            image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
-                             2)
-
-            hyp_mask = np.zeros((640, 480), dtype=np.float32)
-            for idx in range(k_hyp):
-                hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
-
-            hyp_mask = np.transpose(hyp_mask)
-            hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
-
-            image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
-            image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
-            image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
-            '''
+            #image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
+            #image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
+            #image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
 
             '''
             idx = 0
@@ -1022,9 +1041,12 @@ def reannotate_linemod(generator, model, threshold=0.5):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            #name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
-            #cv2.imwrite(name, image_raw)
-            #print('break')
+        cv2.imwrite(mask_path, mask_img)
+
+        #name = '/home/stefan/PyraPose_viz/self_anno_' + str(index) + '.jpg'
+        #cls_img = np.repeat(mask_img[:, :, np.newaxis], 3, 2)
+        #img_con = np.concatenate([image_raw, (cls_img * 10.0).astype(np.uint8)], axis=1)
+        #cv2.imwrite(name, img_con)
 
         tempTL = {
             "url": "https://bop.felk.cvut.cz/home/",
@@ -1048,9 +1070,6 @@ def reannotate_linemod(generator, model, threshold=0.5):
         }
         dict["images"].append(tempTV)
 
-        mask_safe_path = fileName[:-8] + '_mask.png'
-        cv2.imwrite(mask_safe_path, mask_img)
-
     for s in range(1, 16):
         objName = str(s)
         tempC = {
@@ -1060,11 +1079,12 @@ def reannotate_linemod(generator, model, threshold=0.5):
         }
         dict["categories"].append(tempC)
 
-    valAnno = generator.get_path()
+    valAnno = generator.get_anno_path()
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)
 
+    '''
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
     detections = np.zeros((16), dtype=np.float32)
@@ -1083,4 +1103,5 @@ def reannotate_linemod(generator, model, threshold=0.5):
     detections_all = np.sum(detections[1:]) / 13.0
 
     return recall_all
+    '''
 

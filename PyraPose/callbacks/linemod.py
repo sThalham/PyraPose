@@ -36,13 +36,6 @@ class LinemodEval(keras.callbacks.Callback):
         super(LinemodEval, self).__init__()
 
     def on_epoch_end(self, epoch, logs=None):
-        performance = reannotate_linemod(self.generator, self.model, self.threshold)
-        print('Linemod validation and annotation: ', performance, ' ADD-recall')
-        if linemod_eval_stats is not None and self.tensorboard is not None and self.tensorboard.writer is not None:
-            import tensorflow as tf
-            summary = tf.Summary()
-            for index, result in enumerate(linemod_eval_stats):
-                summary_value = summary.value.add()
-                summary_value.simple_value = result
-                summary_value.tag = '{}. {}'.format(index + 1, linemod_tag[index])
-                logs[linemod_tags[index]] = result
+        reannotate_linemod(self.generator, self.model, self.threshold)
+        self.generator.reinit()
+        #print('Linemod validation and annotation: ', performance, ' ADD-recall')

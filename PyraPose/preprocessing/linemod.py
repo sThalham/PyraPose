@@ -43,26 +43,26 @@ class LinemodGenerator(Generator):
         with open(self.path, 'r') as js:
             data = json.load(js)
 
-        self.image_ann = data["images"]
+        self.image_ann_source = data["images"]
         anno_ann = data["annotations"]
         cat_ann = data["categories"]
         self.cats = {}
-        self.image_ids = []
-        self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
+        self.image_ids_source = []
+        self.imgToAnns_source, self.catToImgs_source = defaultdict(list), defaultdict(list)
 
         for cat in cat_ann:
             self.cats[cat['id']] = cat
 
-        for img in self.image_ann:
+        for img in self.image_ann_source:
             if "fx" in img:
                 self.fx = img["fx"]
                 self.fy = img["fy"]
                 self.cx = img["cx"]
                 self.cy = img["cy"]
-            self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
+            self.image_ids_source.append(img['id'])  # to correlate indexing to self.image_ann
         for ann in anno_ann:
-            self.imgToAnns[ann['image_id']].append(ann)
-            self.catToImgs[ann['category_id']].append(ann['image_id'])
+            self.imgToAnns_source[ann['image_id']].append(ann)
+            self.catToImgs_source[ann['category_id']].append(ann['image_id'])
 
         self.load_classes()
 
@@ -85,7 +85,36 @@ class LinemodGenerator(Generator):
                                        [x_minus, y_minus, z_plus]])
             self.TDboxes[int(key), :, :] = three_box_solo
 
+            # required for self-supervised
+            self.image_ids = self.image_ids_source
+            self.imgToAnns = self.imgToAnns_source
+            self.catToImgs = self.catToImgs_source
+            self.image_ann = self.image_ann_source
+
         super(LinemodGenerator, self).__init__(**kwargs)
+
+    def reinit(self):
+
+        path = os.path.join(self.data_dir, 'annotations', 'instances_val.json')
+        with open(path, 'r') as js:
+            data = json.load(js)
+
+        # required for self-supervised
+        self.image_ids = self.image_ids_source
+        self.imgToAnns = self.imgToAnns_source
+        self.catToImgs = self.catToImgs_source
+        self.image_ann = self.image_ann_source
+
+        image_ann_target = data["images"]
+        anno_ann = data["annotations"]
+        self.image_ids_target = self.image_ids_source
+        self.imgToAnns_target, self.catToImgs_target = defaultdict(list), defaultdict(list)
+
+        for img in image_ann_target:
+            self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
+        for ann in anno_ann:
+            self.imgToAnns[ann['image_id']].append(ann)
+            self.catToImgs[ann['category_id']].append(ann['image_id'])
 
     def load_classes(self):
         """ Loads the class to label mapping (and inverse) for COCO.
@@ -112,9 +141,9 @@ class LinemodGenerator(Generator):
         for key, value in self.classes.items():
             self.labels_rev[value] = key
 
-    def get_path(self):
+    def get_image_path(self, index):
 
-        return self.path
+        return self.image_ann[index]['file_name']
 
     def get_mesh_info(self):
 
@@ -124,9 +153,13 @@ class LinemodGenerator(Generator):
 
         return self.image_ids[index]
 
-    def get_image_ann(self, index):
+    def get_path(self):
 
-        return self.image_ann[index]['file_name']
+        return self.data_dir
+
+    def get_anno_path(self):
+
+        return self.path
 
     def size(self):
 
@@ -189,6 +222,11 @@ class LinemodGenerator(Generator):
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = path[:-4] + '_rgb' + path[-4:]
+        if os.path.exists(path):
+            pass
+        else:
+            path = os.path.join(self.data_dir, 'images', 'val', image_info['file_name'])
+            path = path[:-4] + '_rgb' + path[-4:]
 
         return read_image_bgr(path)
 
@@ -201,6 +239,11 @@ class LinemodGenerator(Generator):
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = path[:-4] + '_dep' + path[-4:]
+        if os.path.exists(path):
+            pass
+        else:
+            path = os.path.join(self.data_dir, 'images', 'val', image_info['file_name'])
+            path = path[:-4] + '_dep' + path[-4:]
 
         return read_image_dep(path)
 
