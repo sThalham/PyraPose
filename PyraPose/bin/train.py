@@ -104,7 +104,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     return model, training_model, prediction_model
 
 
-def create_callbacks(model, training_model, prediction_model, validation_generator, args):
+def create_callbacks(model, training_model, prediction_model, validation_generator, train_generator, args):
     callbacks = []
 
     tensorboard_callback = None
@@ -115,7 +115,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
     if args.evaluation and validation_generator:
         if args.dataset_type == 'linemod':
             from ..callbacks.linemod import LinemodEval
-            evaluation = LinemodEval(validation_generator)
+            evaluation = LinemodEval(validation_generator, train_generator)
 
         else:
             evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
@@ -202,7 +202,7 @@ def create_generators(args, preprocess_image):
 
         validation_generator = LinemodGenerator(
             args.linemod_path,
-            'val',
+            'test',
             transform_generator=transform_generator,
             **common_args
         )
@@ -364,6 +364,7 @@ def main(args=None):
         training_model,
         prediction_model,
         validation_generator,
+        train_generator,
         args,
     )
 

@@ -354,7 +354,7 @@ if __name__ == "__main__":
 
 
             valtest = None
-            if split_count < 3:
+            if split_count < 15:
                 fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_dep.png'
                 valtest = 'val'
                 split_count += 1

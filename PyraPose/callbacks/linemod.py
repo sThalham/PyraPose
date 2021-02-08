@@ -21,7 +21,7 @@ from ..utils.linemod_eval import reannotate_linemod
 class LinemodEval(keras.callbacks.Callback):
     """ Performs COCO evaluation on each epoch.
     """
-    def __init__(self, generator, tensorboard=None, threshold=0.05):
+    def __init__(self, generator, train_generator, tensorboard=None, threshold=0.5):
         """ CocoEval callback intializer.
 
         Args
@@ -30,6 +30,7 @@ class LinemodEval(keras.callbacks.Callback):
             threshold   : The score threshold to use.
         """
         self.generator = generator
+        self.train_generator = train_generator
         self.threshold = threshold
         self.tensorboard = tensorboard
 
@@ -37,5 +38,5 @@ class LinemodEval(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         reannotate_linemod(self.generator, self.model, self.threshold)
-        self.generator.reinit()
-        #print('Linemod validation and annotation: ', performance, ' ADD-recall')
+        self.train_generator.reinit()
+        print('train length: ', self.train_generator.size())

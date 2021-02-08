@@ -900,7 +900,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
                                                                reprojectionError=5.0, confidence=0.99,
-                                                               flags=cv2.SOLVEPNP_ITERATIVE)
+                                                               flags=cv2.SOLVEPNP_EPNP)
             R_est, _ = cv2.Rodrigues(orvec)
             t_est = otvec
 
@@ -1080,6 +1080,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
         dict["categories"].append(tempC)
 
     valAnno = generator.get_anno_path()
+    valAnno = valAnno[:-9] + 'pseudo.json'
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)
