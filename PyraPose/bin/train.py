@@ -379,13 +379,28 @@ def main(args=None):
         generator=train_generator,
         #steps_per_epoch=train_generator.size()/args.batch_size,
         steps_per_epoch=10,
-        epochs=args.epochs,
+        #epochs=args.epochs,
+        epochs=1,
         verbose=1,
         callbacks=callbacks,
         workers=args.workers,
         use_multiprocessing=use_multiprocessing,
         max_queue_size=args.max_queue_size
     )
+
+    debug_epochs = 10
+    for epoch_step in range(debug_epochs):
+        training_model.fit_generator(
+            generator=train_generator,
+            # steps_per_epoch=train_generator.size()/args.batch_size,
+            steps_per_epoch=10,
+            epochs=1,
+            verbose=1,
+            callbacks=callbacks,
+            workers=args.workers,
+            use_multiprocessing=use_multiprocessing,
+            max_queue_size=args.max_queue_size
+        )
 
 
 if __name__ == '__main__':

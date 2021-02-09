@@ -282,11 +282,11 @@ class Generator(keras.utils.Sequence):
         image = self.preprocess_image(image)
 
         # resize image
-        image, image_scale0 = self.resize_image(image)
+        image, image_scale = self.resize_image(image)
 
         # apply resizing to annotations too
-        annotations['bboxes'] *= image_scale0
-        annotations['segmentations'] *= image_scale0
+        annotations['bboxes'] *= image_scale
+        annotations['segmentations'] *= image_scale
 
         # convert to the wanted keras floatx
         image = keras.backend.cast_to_floatx(image)

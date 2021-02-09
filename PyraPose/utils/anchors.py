@@ -118,6 +118,8 @@ def anchor_targets_bbox(
 
         # w/o mask
         mask = annotations['mask'][0]
+        print('mask pre resize: ', mask.shape)
+        print('image pre shape: ', image.shape)
         image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
@@ -155,7 +157,9 @@ def anchor_targets_bbox(
                 # mask part
                 cls = int(annotations['labels'][idx])
                 mask_id = annotations['mask_ids'][idx]
+                print(mask.shape, image_shapes[0][1], image_shapes[0][0])
                 mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
+
                 mask_flat = mask_flat.flatten()
                 anchors_pyramid = np.where(mask_flat == int(mask_id))
                 anchors_spec = anchors_pyramid[0]

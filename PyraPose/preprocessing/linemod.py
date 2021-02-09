@@ -256,6 +256,8 @@ class LinemodGenerator(Generator):
         path = self.image_paths[image_index]
         path = path[:-4] + '_rgb' + path[-4:]
 
+        print('read path: ', path)
+
         return read_image_bgr(path)
 
     def load_image_dep(self, image_index):
@@ -304,8 +306,10 @@ class LinemodGenerator(Generator):
         #path = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = self.image_paths[image_index]
         path = path[:-4] + '_mask.png'  # + path[-4:]
+        #print('mask ', path)
         # mask = None
         mask = cv2.imread(path, -1)
+        #print('mask shape ', mask.shape)
 
         annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
