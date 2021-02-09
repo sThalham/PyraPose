@@ -338,6 +338,7 @@ if __name__ == "__main__":
 
             # create image number and name
             template_samp = '00000'
+            set = str(1) + set[1:]
             imgNum = set + template_samp[:-len(samp)] + samp
             img_id = int(imgNum)
             imgNam = imgNum + '.png'
@@ -519,9 +520,6 @@ if __name__ == "__main__":
                     "name": iname,
                 }
                 dict_test["licenses"].append(tempTL)
-
-            print('img_id: ', img_id)
-            print('iname: ', iname)
 
             # mask_img = cv2.resize(mask_img, None, fx=1 / 4, fy=1 / 4, interpolation=cv2.INTER_NEAREST)
             mask_safe_path = fileName[:-8] + '_mask.png'

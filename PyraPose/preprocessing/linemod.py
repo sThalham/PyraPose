@@ -34,7 +34,16 @@ class LinemodGenerator(Generator):
     """ Generate data from the LineMOD dataset.
     """
 
-    def __init__(self, data_dir, set_name, **kwargs):
+    def __init__(self, data_dir, set_name, self_dir=None, **kwargs):
+
+        #self.path_self = os.path.join(data_dir, 'annotations', 'instances_pseudo.json')
+        #if self_dir != None:
+        #    print('self.epoch: ', self_dir)
+        #else:
+        #    print('self.epoch doesn\'t exist')
+        #    dict = {}
+        #    with open(self.path_self, 'w') as fpT:
+        #        json.dump(dict, fpT)
 
         self.data_dir  = data_dir
         self.set_name  = set_name
@@ -43,26 +52,28 @@ class LinemodGenerator(Generator):
         with open(self.path, 'r') as js:
             data = json.load(js)
 
-        self.image_ann_source = data["images"]
+        self.image_ann = data["images"]
         anno_ann = data["annotations"]
         cat_ann = data["categories"]
         self.cats = {}
-        self.image_ids_source = []
-        self.imgToAnns_source, self.catToImgs_source = defaultdict(list), defaultdict(list)
+        self.image_ids = []
+        self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
 
         for cat in cat_ann:
             self.cats[cat['id']] = cat
 
-        for img in self.image_ann_source:
+        self.image_paths = []
+        for img in self.image_ann:
             if "fx" in img:
                 self.fx = img["fx"]
                 self.fy = img["fy"]
                 self.cx = img["cx"]
                 self.cy = img["cy"]
-            self.image_ids_source.append(img['id'])  # to correlate indexing to self.image_ann
+            self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
+            self.image_paths.append(os.path.join(self.data_dir, 'images', self.set_name, img['file_name']))
         for ann in anno_ann:
-            self.imgToAnns_source[ann['image_id']].append(ann)
-            self.catToImgs_source[ann['category_id']].append(ann['image_id'])
+            self.imgToAnns[ann['image_id']].append(ann)
+            self.catToImgs[ann['category_id']].append(ann['image_id'])
 
         self.load_classes()
 
@@ -85,52 +96,58 @@ class LinemodGenerator(Generator):
                                        [x_minus, y_minus, z_plus]])
             self.TDboxes[int(key), :, :] = three_box_solo
 
-            # required for self-supervised
-            self.image_ids = self.image_ids_source
-            self.imgToAnns = self.imgToAnns_source
-            self.catToImgs = self.catToImgs_source
-            self.image_ann = self.image_ann_source
+        if self_dir != None:
+            #self reannotation
+            path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
+            with open(path, 'r') as js:
+                data_pseudo = json.load(js)
 
-            print('gen length: ', self.size())
+            self.image_ann = data_pseudo["images"]
+            anno_ann = data_pseudo["annotations"]
+            self.image_ids = [] # remove
+            self.image_paths = []   # remove
+            self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list) # remove
+
+            for img in self.image_ann:
+                self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
+                self.image_paths.append(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
+                print(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
+
+            for ann in anno_ann:
+                self.imgToAnns[ann['image_id']].append(ann)
+                self.catToImgs[ann['category_id']].append(ann['image_id'])
+
+            #self.image_ann = self.image_ann + image_ann_pseudo
 
         super(LinemodGenerator, self).__init__(**kwargs)
 
-    def reinit(self):
+    def reinit(self, epoch, **kwargs):
 
+        print("reinit")
+        self_path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
+        self.__init__(self.data_dir, self.set_name, self_path, **kwargs)
+
+        print('data samples: ', len(self.image_ids))
+        '''
         path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
         with open(path, 'r') as js:
-            data = json.load(js)
-
-        '''
-        # required for self-supervised
-        self.image_ids = self.image_ids_source
-        self.imgToAnns = self.imgToAnns_source
-        self.catToImgs = self.catToImgs_source
-        self.image_ann = self.image_ann_source
-
-        image_ann_target = data["images"]
-        anno_ann = data["annotations"]
-        self.imgToAnns_target, self.catToImgs_target = defaultdict(list), defaultdict(list)
-
-        for img in image_ann_target:
-            self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
-        for ann in anno_ann:
-            self.imgToAnns[ann['image_id']].append(ann)
-            self.catToImgs[ann['category_id']].append(ann['image_id'])
-
-        self.image_ann = self.image_ann + image_ann_target
-        '''
+            data = json.load(json)
 
         self.image_ann = data["images"]
         anno_ann = data["annotations"]
         self.image_ids = []
+        self.image_paths = []
         self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
 
         for img in self.image_ann:
             self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
+            self.image_paths.append(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
+            print(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
         for ann in anno_ann:
             self.imgToAnns[ann['image_id']].append(ann)
             self.catToImgs[ann['category_id']].append(ann['image_id'])
+        '''
+
 
     def load_classes(self):
         """ Loads the class to label mapping (and inverse) for COCO.
@@ -235,14 +252,9 @@ class LinemodGenerator(Generator):
             image_info = (self.image_ann[id] for id in image_index)
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
-        path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        #path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = self.image_paths[image_index]
         path = path[:-4] + '_rgb' + path[-4:]
-        if os.path.exists(path):
-            pass
-        else:
-            path = os.path.join(self.data_dir, 'images', 'test', image_info['file_name'])
-            path = path[:-4] + '_rgb' + path[-4:]
-        print(path)
 
         return read_image_bgr(path)
 
@@ -253,13 +265,9 @@ class LinemodGenerator(Generator):
             image_info = (self.image_ann[id] for id in image_index)
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
-        path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        #path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = self.image_paths[image_index]
         path = path[:-4] + '_dep' + path[-4:]
-        if os.path.exists(path):
-            pass
-        else:
-            path = os.path.join(self.data_dir, 'images', 'val', image_info['file_name'])
-            path = path[:-4] + '_dep' + path[-4:]
 
         return read_image_dep(path)
 
@@ -270,7 +278,8 @@ class LinemodGenerator(Generator):
             image_info = (self.image_ann[id] for id in image_index)
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
-        path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        #path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = self.image_paths[image_index]
         # path = path[:-4] + '_dep.png'# + path[-4:]
         path = path[:-4] + '_dep_raw.png'
 
@@ -292,7 +301,8 @@ class LinemodGenerator(Generator):
             image_info = (self.image_ann[id] for id in image_index)
         elif type(image_index) == int:
             image_info = self.image_ann[image_index]
-        path = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        #path = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        path = self.image_paths[image_index]
         path = path[:-4] + '_mask.png'  # + path[-4:]
         # mask = None
         mask = cv2.imread(path, -1)

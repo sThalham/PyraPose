@@ -38,5 +38,5 @@ class LinemodEval(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         reannotate_linemod(self.generator, self.model, self.threshold)
-        self.train_generator.reinit()
+        self.train_generator.reinit(epoch)
         print('train length: ', self.train_generator.size())

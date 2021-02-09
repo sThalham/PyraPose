@@ -29,7 +29,7 @@ import sys
 from PIL import Image
 import os
 import json
-
+from ..utils.anchors import anchors_for_shape
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -131,7 +131,7 @@ def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia
         tf_pcd = np.matmul(reg_p2p.transformation, tf_pcd)
         pcd_temp_.transform(reg_p2p.transformation)
 
-    #open3d.draw_geometries([last_pcd_temp_, pcd_scene_])
+    #open3d.draw_geometries([last_pcd_temp_, pcd_scene_])from ..utils.anchors import anchors_for_shape
 
     if( np.abs(np.linalg.det(tf[:3,:3])-1)>0.001):
         tf[:3,0]=tf[:3,0]/np.linalg.norm(tf[:3,0])
@@ -739,6 +739,8 @@ def reannotate_linemod(generator, model, threshold=0.5):
         "categories": []
     }
 
+    anchor_params = anchors_for_shape((480, 640))
+
     for index in progressbar.progressbar(range(generator.size()), prefix='LineMOD evaluation: '):
         image_raw = generator.load_image(index)
         image = generator.preprocess_image(image_raw)
@@ -772,44 +774,66 @@ def reannotate_linemod(generator, model, threshold=0.5):
 
             cls_indices = np.where(cls_mask > threshold)
 
+            # multi-instance intermezzo for annotating
+            pos_anchors = anchor_params[cls_indices, :]
+            ind_anchors = cls_indices[0]
+            pos_anchors = pos_anchors[0]
+            per_obj_hyps = []
+
+            while pos_anchors.shape[0] > 0:
+                # make sure to separate objects
+                start_i = np.random.randint(pos_anchors.shape[0])
+                obj_ancs = [pos_anchors[start_i]]
+                obj_inds = [ind_anchors[start_i]]
+                pos_anchors = np.delete(pos_anchors, start_i, axis=0)
+                ind_anchors = np.delete(ind_anchors, start_i, axis=0)
+                # print('ind_anchors: ', ind_anchors)
+                same_obj = True
+                while same_obj == True:
+                    # update matrices based on iou
+                    same_obj = False
+                    indcs2rm = []
+                    for adx in range(pos_anchors.shape[0]):
+                        # loop through anchors
+                        box_b = pos_anchors[adx, :]
+                        if not np.all((box_b > 0)):  # need x_max or y_max here? maybe irrelevant due to positivity
+                            indcs2rm.append(adx)
+                            continue
+                        for qdx in range(len(obj_ancs)):
+                            # loop through anchors belonging to instance
+                            iou = boxoverlap(obj_ancs[qdx], box_b)
+                            if iou > 0.4:
+                                # print('anc_anchors: ', pos_anchors)
+                                # print('ind_anchors: ', ind_anchors)
+                                # print('adx: ', adx)
+                                obj_ancs.append(box_b)
+                                obj_inds.append(ind_anchors[adx])
+                                indcs2rm.append(adx)
+                                same_obj = True
+                                break
+                        if same_obj == True:
+                            break
+
+                    # print('pos_anchors: ', pos_anchors.shape)
+                    # print('ind_anchors: ', len(ind_anchors))
+                    # print('indcs2rm: ', indcs2rm)
+                    pos_anchors = np.delete(pos_anchors, indcs2rm, axis=0)
+                    ind_anchors = np.delete(ind_anchors, indcs2rm, axis=0)
+
+                per_obj_hyps.append(obj_inds)
+
+
             #if cls != (checkLab + 1):
             #    # falsePoses[int(cls)] += 1
             #    continue
 
             #print('true indices: ', len(cls_indices[0]))
 
-            if len(cls_indices[0]) < 10:
-                # print('not enough inlier')
-                continue
-            trueDets[int(cls)] += 1
+            #trueDets[int(cls)] += 1
 
-            obj_mask = mask[0, :, inv_cls]
-            obj_mask = obj_mask.reshape((60, 80))
-            obj_mask = np.asarray(Image.fromarray(obj_mask).resize((640, 480), Image.NEAREST))
-            where_true = np.where(obj_mask > 0.5)
 
-            if where_true[0].shape[0] > 0:
-                obj_bb = [int(np.nanmin(where_true[1])), int(np.nanmin(where_true[0])), int(np.nanmax(where_true[1]) - np.nanmin(where_true[1])), int(np.nanmax(where_true[0]) - np.nanmin(where_true[0]))]
-                area = obj_bb[2] * obj_bb[3]
-            else:
-                obj_bb = [0, 0, 0, 0]
-                area = 0.0
-
-            mask_id = mask_ind + 1
-            mask_img = np.where(obj_mask > 0.5, mask_id, mask_img)
-            mask_ind += 1
             #cv2.imwrite('/home/stefan/PyraPose_viz/pred_mask_' + str(index) + '.png',
             #            (obj_mask * 15.0).astype(np.uint8))
-            #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            #cls_img = np.where(cls_img > 254, cls_img, image_raw)
-            #cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
-            # print(np.nanmax(obj_mask))
-            # cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
-            # cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            # cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
-            # cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            # cls_img = np.where(cls_img > 254, cls_img, image_raw)
-
 
             '''
             # mask from anchors
@@ -884,162 +908,265 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 model_vsd_mm = mv15_mm
             '''
 
-            k_hyp = len(cls_indices[0])
-            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
-            K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+            for per_ins_indices in per_obj_hyps:
 
-            ##############################
-            # pnp
-            pose_votes = boxes3D[0, cls_indices, :]
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+                if len(per_ins_indices) < 10:
+                    # print('not enough inlier')
+                    continue
 
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                               imagePoints=est_points, cameraMatrix=K,
-                                                               distCoeffs=None, rvec=None, tvec=None,
-                                                               useExtrinsicGuess=False, iterationsCount=300,
-                                                               reprojectionError=5.0, confidence=0.99,
-                                                               flags=cv2.SOLVEPNP_EPNP)
-            R_est, _ = cv2.Rodrigues(orvec)
-            t_est = otvec
+                '''
+                if where_true[0].shape[0] > 0:
+                    true_anchors = anchor_params[per_ins_indices, :]
+                    a_min_x = np.nanmin(true_anchors[:, 0])
+                    a_min_y = np.nanmin(true_anchors[:, 1])
+                    a_max_x = np.nanmax(true_anchors[:, 2])
+                    a_max_y = np.nanmax(true_anchors[:, 3])
+                    mask_pixels_y = np.array(where_true[0] > a_min_y) & (where_true[0] < a_max_y)
+                    mask_pixels_x = np.array(where_true[1] > a_min_x) & (where_true[1] < a_max_x)
+                    mask_pixels_y = where_true[0][mask_pixels_y]
+                    mask_pixels_x = where_true[1][mask_pixels_x]
+                    obj_bb = [int(np.nanmin(mask_pixels_x)), int(np.nanmin(mask_pixels_y)),
+                              int(np.nanmax(mask_pixels_x) - np.nanmin(mask_pixels_x)),
+                              int(np.nanmax(mask_pixels_y) - np.nanmin(mask_pixels_y))]
+                    area = obj_bb[2] * obj_bb[3]
 
-            #t_rot = tf3d.quaternions.quat2mat(t_rot)
-            #R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
-            #t_gt = np.array(t_tra, dtype=np.float32)
+                else:
+                    obj_bb = [0, 0, 0, 0]
+                    area = 0.0
 
-            #t_gt = t_gt * 0.001
-            t_est = t_est  # * 0.001
+                '''
+                # bbox estimation
 
-            '''
-            if cls == 10 or cls == 11:
-                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-            else:
-                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                # highest score
+                #scores_obj = scores[0, per_ins_indices, inv_cls]
+                #print('scores_obj: ', scores_obj, scores_obj.shape)
+                #print('np.argmax[scores_obj]: ', np.argmax(scores_obj), np.argmax(scores_obj).shape)
+                #highest_ind = per_ins_indices[np.argmax(scores_obj)]
 
-            if err_add < model_dia[true_cat] * 0.1:
-                truePoses[int(true_cat)] += 1
-            '''
+                #max_anchor = anchor_params[highest_ind, :]
+                #a_min_x = max_anchor[0]
+                #a_min_y = max_anchor[1]
+                #a_max_x = max_anchor[2]
+                #a_max_y = max_anchor[3]
 
-            # create annotation
-            rot = tf3d.quaternions.mat2quat(R_est)
-            rot = np.asarray(rot, dtype=np.float32)
-            tra = t_est
-            pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
+                # all anchors heuristics
+                true_anchors = anchor_params[per_ins_indices, :]
+                a_min_x = np.nanmin(true_anchors[:, 0])
+                a_min_y = np.nanmin(true_anchors[:, 1])
+                a_max_x = np.nanmax(true_anchors[:, 2])
+                a_max_y = np.nanmax(true_anchors[:, 3])
+#
+                os_box_w = a_max_x - a_min_x
+                os_box_h = a_max_y - a_min_y
+                obj_center_x = a_min_x + 0.5 * os_box_w
+                obj_center_y = a_min_y + 0.5 * os_box_h
+                # handling image boundaries
+                #if a_min_x < 1:
+                #    obj_center_x = a_min_x + 0.25 * os_box_w
+                #elif a_min_x > 638:
+                #    obj_center_x = a_min_x + 0.75 * os_box_w
+                #if a_min_y < 1:
+                #    obj_center_y = a_min_y + 0.25 * os_box_h
+                #elif a_min_x > 478:
+                #    obj_center_y = a_min_y + 0.75 * os_box_h
+                box_min_x = int(obj_center_x - 0.25 * os_box_w)
+                box_max_x = int(obj_center_x + 0.25 * os_box_w)
+                box_min_y = int(obj_center_y - 0.25 * os_box_h)
+                box_max_y = int(obj_center_y + 0.25 * os_box_h)
+                obj_bb = [int(box_min_x), int(box_min_y), int(box_max_x - box_min_x), int(box_max_y - box_min_y)]
+                area = obj_bb[2] * obj_bb[3]
 
-            trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
-            R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
-            tDbox = R.reshape(3, 3).dot(threeD_boxes[true_cat, :, :].T).T
-            tDbox = tDbox + np.repeat(trans, 8, axis=1).T
-            box3D = toPix_array(tDbox)
-            box3D = np.reshape(box3D, (16))
-            tDbox = box3D.astype(np.uint16)
-            box3D = box3D.tolist()
+                # object masking
+                obj_mask = mask[0, :, inv_cls]
+                box_min_x_lr = box_min_x * 0.125
+                box_max_x_lr = box_max_x * 0.125
+                box_min_y_lr = box_min_y * 0.125
+                box_max_y_lr = box_max_y * 0.125
+                obj_mask = obj_mask.reshape((60, 80))
+                where_true = np.where(obj_mask > 0.5)
+                #obj_y = where_true[0][(where_true[0] > box_min_y_lr) & (where_true[0] < box_max_y_lr)]
+                #obj_x = where_true[1][(where_true[1] > box_min_x_lr) & (where_true[0] < box_max_x_lr)]
+                obj_y = (where_true[0] > box_min_y_lr) & (where_true[0] < box_max_y_lr)
+                obj_x = (where_true[1] > box_min_x_lr) & (where_true[1] < box_max_x_lr)
+                #print('obj_y: ', where_true[0], box_min_y_lr, box_max_y_lr)
+                #print('obj_x: ', where_true[1], box_min_x_lr, box_max_x_lr)
+                both_true = np.where(np.logical_and(obj_x, obj_y))[0]
 
-            pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
-                    np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
-            '''
+                obj_y = where_true[0][both_true]
+                obj_x = where_true[1][both_true]
 
-            colGT = (0, 204, 0)
+                obj_mask = np.zeros((60, 80))
+                for pdx, y in enumerate(obj_y):
+                    #print(y, obj_x[pdx])
+                    obj_mask[y, obj_x[pdx]] = 1
 
-            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
-                                 colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
-                                 colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
-                                 colGT,
-                                 2)
-            image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
-                                 colGT,
-                                 2)
+                ##########
+                # correct box with min and max of segmentation
+                ##########
 
-            bb = np.array(obj_bb)
-            cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
-                          (255, 255, 255), 2)
+                obj_mask = np.asarray(Image.fromarray(obj_mask).resize((640, 480), Image.NEAREST))
+                mask_id = mask_ind + 1
+                mask_img = np.where(obj_mask > 0.5, mask_id, mask_img)
+                mask_ind += 1
 
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            bottomLeftCornerOfText = (int(bb[0]), int(bb[1]))
-            fontScale = 1
-            lineType = 2
-            gtText = str(true_cat)
+                k_hyp = len(per_ins_indices)
+                #k_hyp = len(cls_indices[0])
+                ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+                K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
-            fontColor2 = (255, 255, 255)
-            fontthickness2 = 3
-            cv2.putText(image_raw, gtText,
-                        bottomLeftCornerOfText,
-                        font,
-                        fontScale,
-                        fontColor2,
-                        fontthickness2,
-                        lineType)
-            '''
+                ##############################
+                # pnp
+                pose_votes = boxes3D[0, per_ins_indices, :]
+                est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+                obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+                obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
 
-            annoID_val = annoID_val + 1
-            tempTA = {
-                "id": annoID_val,
-                "image_id": img_id,
-                "category_id": true_cat,
-                "bbox": obj_bb,
-                "pose": pose,
-                "segmentation": box3D,
-                "mask_id": mask_id,
-                "area": area,
-                "iscrowd": 0,
-                "feature_visibility": 1.0
-            }
-            dict["annotations"].append(tempTA)
+                retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                                   imagePoints=est_points, cameraMatrix=K,
+                                                                   distCoeffs=None, rvec=None, tvec=None,
+                                                                   useExtrinsicGuess=False, iterationsCount=300,
+                                                                   reprojectionError=5.0, confidence=0.99,
+                                                                   flags=cv2.SOLVEPNP_EPNP)
+                R_est, _ = cv2.Rodrigues(orvec)
+                t_est = otvec
 
-            #hyp_mask = np.zeros((640, 480), dtype=np.float32)
-            #for idx in range(k_hyp):
-            #    hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
+                #t_rot = tf3d.quaternions.quat2mat(t_rot)
+                #R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+                #t_gt = np.array(t_tra, dtype=np.float32)
 
-            #hyp_mask = np.transpose(hyp_mask)
-            #hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
+                #t_gt = t_gt * 0.001
+                t_est = t_est  # * 0.001
 
-            #image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
-            #image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
-            #image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
+                '''
+                if cls == 10 or cls == 11:
+                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                else:
+                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+    
+                if err_add < model_dia[true_cat] * 0.1:
+                    truePoses[int(true_cat)] += 1
+                '''
 
-            '''
-            idx = 0
-            for i in range(k_hyp):
-                image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
-                image = cv2.circle(image, (est_points[idx+1, 0, 0], est_points[idx+1, 0, 1]), 3, (251, 194, 213), -2)
-                image = cv2.circle(image, (est_points[idx+2, 0, 0], est_points[idx+2, 0, 1]), 3, (222, 243, 41), -2)
-                image = cv2.circle(image, (est_points[idx+3, 0, 0], est_points[idx+3, 0, 1]), 3, (209, 31, 201), -2)
-                image = cv2.circle(image, (est_points[idx+4, 0, 0], est_points[idx+4, 0, 1]), 3, (8, 62, 53), -2)
-                image = cv2.circle(image, (est_points[idx+5, 0, 0], est_points[idx+5, 0, 1]), 3, (13, 243, 207), -2)
-                image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
-                image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
-                idx = idx+8
-            '''
-            '''
-            max_x = int(np.max(est_points[:, :, 0]) + 5)
-            min_x = int(np.min(est_points[:, :, 0]) - 5)
-            max_y = int(np.max(est_points[:, :, 1]) + 5)
-            min_y = int(np.min(est_points[:, :, 1]) - 5)
+                # create annotation
+                rot = tf3d.quaternions.mat2quat(R_est)
+                rot = np.asarray(rot, dtype=np.float32)
+                tra = t_est
+                pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
 
-            print(max_x, min_x, max_y, min_y)
+                trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
+                R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+                tDbox = R.reshape(3, 3).dot(threeD_boxes[true_cat, :, :].T).T
+                tDbox = tDbox + np.repeat(trans, 8, axis=1).T
+                box3D = toPix_array(tDbox)
+                box3D = np.reshape(box3D, (16))
+                tDbox = box3D.astype(np.uint16)
+                box3D = box3D.tolist()
 
-            image_crop = image_raw[min_y:max_y, min_x:max_x, :]
-            image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
-            '''
+                pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
+                        np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
+
+                '''
+
+                colGT = (0, 204, 0)
+    
+                image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
+                                     colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
+                                     colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
+                                     colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
+                                     colGT,
+                                     2)
+    
+                bb = np.array(obj_bb)
+                cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
+                              (255, 255, 255), 2)
+    
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                bottomLeftCornerOfText = (int(bb[0]), int(bb[1]))
+                fontScale = 1
+                lineType = 2
+                gtText = str(true_cat)
+    
+                fontColor2 = (255, 255, 255)
+                fontthickness2 = 3
+                cv2.putText(image_raw, gtText,
+                            bottomLeftCornerOfText,
+                            font,
+                            fontScale,
+                            fontColor2,
+                            fontthickness2,
+                            lineType)
+                '''
+
+                annoID_val = annoID_val + 1
+                tempTA = {
+                    "id": annoID_val,
+                    "image_id": img_id,
+                    "category_id": true_cat,
+                    "bbox": obj_bb,
+                    "pose": pose,
+                    "segmentation": box3D,
+                    "mask_id": mask_id,
+                    "area": area,
+                    "iscrowd": 0,
+                    "feature_visibility": 1.0
+                }
+                dict["annotations"].append(tempTA)
+
+                #hyp_mask = np.zeros((640, 480), dtype=np.float32)
+                #for idx in range(k_hyp):
+                #    hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
+
+                #hyp_mask = np.transpose(hyp_mask)
+                #hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
+
+                #image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
+                #image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
+                #image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
+
+                '''
+                idx = 0
+                for i in range(k_hyp):
+                    image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
+                    image = cv2.circle(image, (est_points[idx+1, 0, 0], est_points[idx+1, 0, 1]), 3, (251, 194, 213), -2)
+                    image = cv2.circle(image, (est_points[idx+2, 0, 0], est_points[idx+2, 0, 1]), 3, (222, 243, 41), -2)
+                    image = cv2.circle(image, (est_points[idx+3, 0, 0], est_points[idx+3, 0, 1]), 3, (209, 31, 201), -2)
+                    image = cv2.circle(image, (est_points[idx+4, 0, 0], est_points[idx+4, 0, 1]), 3, (8, 62, 53), -2)
+                    image = cv2.circle(image, (est_points[idx+5, 0, 0], est_points[idx+5, 0, 1]), 3, (13, 243, 207), -2)
+                    image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
+                    image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
+                    idx = idx+8
+                '''
+                '''
+                max_x = int(np.max(est_points[:, :, 0]) + 5)
+                min_x = int(np.min(est_points[:, :, 0]) - 5)
+                max_y = int(np.max(est_points[:, :, 1]) + 5)
+                min_y = int(np.min(est_points[:, :, 1]) - 5)
+    
+                print(max_x, min_x, max_y, min_y)
+    
+                image_crop = image_raw[min_y:max_y, min_x:max_x, :]
+                image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
+                '''
 
         cv2.imwrite(mask_path, mask_img)
 
