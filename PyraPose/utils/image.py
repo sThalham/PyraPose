@@ -224,7 +224,7 @@ def apply_transform2mask(matrix, mask, params):
         borderMode=cv2.BORDER_CONSTANT,
         borderValue=0,
     )
-    return [mask]
+    return mask
 
 
 def adjust_pose_annotation(matrix, pose, cpara):

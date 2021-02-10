@@ -102,51 +102,29 @@ class LinemodGenerator(Generator):
             with open(path, 'r') as js:
                 data_pseudo = json.load(js)
 
-            self.image_ann = data_pseudo["images"]
+            image_ann_pseudo = data_pseudo["images"]
             anno_ann = data_pseudo["annotations"]
-            self.image_ids = [] # remove
-            self.image_paths = []   # remove
-            self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list) # remove
+            #self.image_ids = [] # remove
+            #self.image_paths = []   # remove
+            #self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list) # remove
 
-            for img in self.image_ann:
+            for img in image_ann_pseudo:
                 self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
-                self.image_paths.append(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
-                print(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
+                self.image_paths.append(os.path.join(self.data_dir, 'images', 'val', img['file_name']))
+                #print(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
 
             for ann in anno_ann:
                 self.imgToAnns[ann['image_id']].append(ann)
                 self.catToImgs[ann['category_id']].append(ann['image_id'])
 
-            #self.image_ann = self.image_ann + image_ann_pseudo
+            self.image_ann = self.image_ann + image_ann_pseudo
 
         super(LinemodGenerator, self).__init__(**kwargs)
 
     def reinit(self, epoch, **kwargs):
 
-        print("reinit")
         self_path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
         self.__init__(self.data_dir, self.set_name, self_path, **kwargs)
-
-        print('data samples: ', len(self.image_ids))
-        '''
-        path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
-        with open(path, 'r') as js:
-            data = json.load(json)
-
-        self.image_ann = data["images"]
-        anno_ann = data["annotations"]
-        self.image_ids = []
-        self.image_paths = []
-        self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
-
-        for img in self.image_ann:
-            self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
-            self.image_paths.append(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
-            print(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
-        for ann in anno_ann:
-            self.imgToAnns[ann['image_id']].append(ann)
-            self.catToImgs[ann['category_id']].append(ann['image_id'])
-        '''
 
 
     def load_classes(self):
@@ -256,8 +234,6 @@ class LinemodGenerator(Generator):
         path = self.image_paths[image_index]
         path = path[:-4] + '_rgb' + path[-4:]
 
-        print('read path: ', path)
-
         return read_image_bgr(path)
 
     def load_image_dep(self, image_index):
@@ -306,10 +282,7 @@ class LinemodGenerator(Generator):
         #path = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = self.image_paths[image_index]
         path = path[:-4] + '_mask.png'  # + path[-4:]
-        #print('mask ', path)
-        # mask = None
         mask = cv2.imread(path, -1)
-        #print('mask shape ', mask.shape)
 
         annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 

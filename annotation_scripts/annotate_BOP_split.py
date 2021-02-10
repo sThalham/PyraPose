@@ -353,9 +353,8 @@ if __name__ == "__main__":
             calib_K = []
             # if rnd == 1:
 
-
             valtest = None
-            if split_count < 15:
+            if split_count < 3:
                 fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_dep.png'
                 valtest = 'val'
                 split_count += 1

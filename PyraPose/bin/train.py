@@ -22,7 +22,8 @@ import sys
 import warnings
 
 import keras
-import keras.preprocessing.image
+#import keras.preprocessing.image
+#import tensorflow.keras.preprocessing.image as keras_preprocessing_image
 import tensorflow as tf
 
 # Allow relative imports when being executed as script.
@@ -202,7 +203,7 @@ def create_generators(args, preprocess_image):
 
         validation_generator = LinemodGenerator(
             args.linemod_path,
-            'test',
+            'val',
             transform_generator=transform_generator,
             **common_args
         )
@@ -392,8 +393,7 @@ def main(args=None):
     for epoch_step in range(debug_epochs):
         training_model.fit_generator(
             generator=train_generator,
-            # steps_per_epoch=train_generator.size()/args.batch_size,
-            steps_per_epoch=10,
+            steps_per_epoch=train_generator.size()/args.batch_size,
             epochs=1,
             verbose=1,
             callbacks=callbacks,

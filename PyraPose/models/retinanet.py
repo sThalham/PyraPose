@@ -1,5 +1,5 @@
 import keras
-import tensorflow as tf
+#import tensorflow as tf
 from .. import initializers
 from .. import layers
 from ..utils.anchors import AnchorParameters
@@ -28,10 +28,9 @@ def default_classification_model(
     outputs = inputs
     for i in range(4):
         outputs = keras.layers.Conv2D(
-        #outputs = keras.layers.SeparableConv2D(
             filters=classification_feature_size,
             activation='relu',
-            #name='pyramid_classification_{}'.format(i),
+            #kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
             kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
             bias_initializer='zeros',
             **options
@@ -40,8 +39,8 @@ def default_classification_model(
     outputs = keras.layers.Conv2D(
         filters=num_classes * num_anchors,
         kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        #kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
         bias_initializer=initializers.PriorProbability(probability=prior_probability),
-        #name='pyramid_classification',
         **options
     )(outputs)
 
@@ -78,6 +77,7 @@ def default_mask_model(
             filters=classification_feature_size,
             activation='relu',
             kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+            #kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
             bias_initializer='zeros',
             **options
         )(outputs)
@@ -85,6 +85,7 @@ def default_mask_model(
     outputs = keras.layers.Conv2D(
         filters=num_classes,
         kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        #kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
         bias_initializer=initializers.PriorProbability(probability=prior_probability),
         **options
     )(outputs)
@@ -104,6 +105,7 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
         'strides'            : 1,
         'padding'            : 'same',
         'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        #'kernel_initializer': keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
         'bias_initializer'   : 'zeros',
         'kernel_regularizer' : keras.regularizers.l2(0.001),
     }
@@ -116,10 +118,8 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     outputs = inputs
     for i in range(4):
         outputs = keras.layers.Conv2D(
-        #outputs = keras.layers.SeparableConv2D(
             filters=regression_feature_size,
             activation='relu',
-            #name='pyramid_regression3D_{}'.format(i),
             **options
         )(outputs)
 
@@ -176,8 +176,7 @@ def __create_FPN(C3, C4, C5, feature_size=256):
     return [P3, P4, P5]
 
 
-#def __create_sparceFPN(P3, P4, P5, feature_size=256):
-def __create_sparceFPN(C3_R, C4_R, C5_R, feature_size=256):
+def __create_PFPN(C3, C4, C5, feature_size=256):
 
     # only from here for FPN-fusion test 3
     #C3 = keras.layers.Add()([C3_R, C3_D])
@@ -189,9 +188,10 @@ def __create_sparceFPN(C3_R, C4_R, C5_R, feature_size=256):
     #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
     
     # 3x3 conv for test 4
-    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3_R)
-    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4_R)
-    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5_R)
+    print('C3: , ', C3)
+    P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
+    P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
+    P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
 
     P5_upsampled = layers.UpsampleLike()([P5, P4])
     P4_upsampled = layers.UpsampleLike()([P4, P3])
@@ -262,7 +262,7 @@ def retinanet(
     backbone_layers,
     num_classes,
     num_anchors             = None,
-    create_pyramid_features = __create_sparceFPN,
+    create_pyramid_features = __create_PFPN,
     submodels               = None,
     name                    = 'retinanet'
 ):

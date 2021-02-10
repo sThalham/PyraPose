@@ -28,7 +28,7 @@ class RedirectModel(keras.callbacks.Callback):
         self.callback.on_epoch_begin(epoch, logs=logs)
 
     def on_epoch_end(self, epoch, logs=None):
-        self.callback.on_epoch_end(epoch, logs=logs)
+        self.callback.on_epoch_end(epoch)# , logs=logs)
 
     def on_batch_begin(self, batch, logs=None):
         self.callback.on_batch_begin(batch, logs=logs)

@@ -117,17 +117,15 @@ def anchor_targets_bbox(
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
         # w/o mask
-        mask = annotations['mask'][0]
-        print('mask pre resize: ', mask.shape)
-        print('image pre shape: ', image.shape)
+        mask = annotations['mask']
         image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        image_raw = image
-        image_raw[..., 0] += 103.939
-        image_raw[..., 1] += 116.779
-        image_raw[..., 2] += 123.68
+        #image_raw = image
+        #image_raw[..., 0] += 103.939
+        #image_raw[..., 1] += 116.779
+        #image_raw[..., 2] += 123.68
 
         #rind = np.random.randint(0, 1000)
         #image_raw = image_raw.astype(np.uint8)
@@ -157,7 +155,6 @@ def anchor_targets_bbox(
                 # mask part
                 cls = int(annotations['labels'][idx])
                 mask_id = annotations['mask_ids'][idx]
-                print(mask.shape, image_shapes[0][1], image_shapes[0][0])
                 mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
 
                 mask_flat = mask_flat.flatten()
@@ -218,7 +215,7 @@ def anchor_targets_bbox(
                 box3D = np.reshape(box3D, (16))
                 calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
 
-
+                '''
                 pose = box3D.reshape((16)).astype(np.int16)
 
                 image_raw = image
@@ -243,7 +240,7 @@ def anchor_targets_bbox(
 
                                      5)
                 '''
-                               
+                '''          
                 cls_ind = np.where(annotations['labels']==cls) # index of cls
                 if not len(cls_ind[0]) == 0:
                     viz_img = True
@@ -272,9 +269,9 @@ def anchor_targets_bbox(
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-            rind = np.random.randint(0, 1000)
-            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            cv2.imwrite(name, image_raw)
+            #rind = np.random.randint(0, 1000)
+            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            #cv2.imwrite(name, image_raw)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
             #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'

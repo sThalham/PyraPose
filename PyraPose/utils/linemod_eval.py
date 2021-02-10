@@ -752,7 +752,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
         iname = generator.get_image_path(index)
         data_dir_path = generator.get_path()
         #mask_path = os.path.join(data_path, iname[:-4], '_mask.png')
-        mask_path = os.path.join(data_dir_path, 'images/test', iname[:-4] + '_mask.png')
+        mask_path = os.path.join(data_dir_path, 'images/val', iname[:-4] + '_mask.png')
 
         #if len(anno['labels']) < 1:
         #    continue
