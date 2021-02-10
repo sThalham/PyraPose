@@ -119,6 +119,8 @@ class LinemodGenerator(Generator):
 
             self.image_ann = self.image_ann + image_ann_pseudo
 
+        print('len image_ann: ', len(self.image_ann), type(self.image_ann))
+
         super(LinemodGenerator, self).__init__(**kwargs)
 
     def reinit(self, epoch, **kwargs):

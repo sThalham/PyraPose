@@ -8,7 +8,6 @@ import imgaug.augmenters as iaa
 import random
 from scipy import ndimage
 import transforms3d as tf3d
-import mmcv
 
 from .transform import change_transform_origin
 

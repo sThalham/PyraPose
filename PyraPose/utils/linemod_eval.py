@@ -1208,7 +1208,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
         dict["categories"].append(tempC)
 
     valAnno = generator.get_anno_path()
-    valAnno = valAnno[:-9] + 'pseudo.json'
+    valAnno = valAnno[:-8] + 'pseudo.json'
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)
