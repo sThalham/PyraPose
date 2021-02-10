@@ -123,11 +123,10 @@ class LinemodGenerator(Generator):
 
         super(LinemodGenerator, self).__init__(**kwargs)
 
-    def reinit(self, epoch, **kwargs):
+    def reinit(self, **kwargs):
 
         self_path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
         self.__init__(self.data_dir, self.set_name, self_path, **kwargs)
-
 
     def load_classes(self):
         """ Loads the class to label mapping (and inverse) for COCO.

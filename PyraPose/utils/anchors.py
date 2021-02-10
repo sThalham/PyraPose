@@ -205,6 +205,7 @@ def anchor_targets_bbox(
                 # debug
                 '''
 
+
                 rot = tf3d.quaternions.quat2mat(pose[3:])
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = pose[:3]

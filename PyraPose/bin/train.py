@@ -375,11 +375,11 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
-    # start training
+    # 1 stage of training: synthetic only
     training_model.fit_generator(
         generator=train_generator,
         #steps_per_epoch=train_generator.size()/args.batch_size,
-        steps_per_epoch=10,
+        steps_per_epoch=1000,
         #epochs=args.epochs,
         epochs=1,
         verbose=1,
@@ -389,8 +389,17 @@ def main(args=None):
         max_queue_size=args.max_queue_size
     )
 
+    # second stage of training: synthetic + real-world (/w pseudo-labels)
+    common_args = {
+        'batch_size'       : args.batch_size,
+        'image_min_side'   : args.image_min_side,
+        'image_max_side'   : args.image_max_side,
+        'preprocess_image' : backbone.preprocess_image, # change for testing /w and w/o augmentations
+    }
     debug_epochs = 10
     for epoch_step in range(debug_epochs):
+        # re-initialize and cache generator
+        train_generator.reinit(**common_args)
         training_model.fit_generator(
             generator=train_generator,
             steps_per_epoch=train_generator.size()/args.batch_size,
