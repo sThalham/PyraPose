@@ -110,7 +110,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
     tensorboard_callback = None
 
-    if args.self_supervision:
+    if args.self_supervision > 0:
         args.evaluation = True
 
     if args.evaluation and validation_generator:
@@ -304,7 +304,7 @@ def parse_args(args):
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
     parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
-    parser.add_argument('--self-supervision', help='Compute the mAP using the weighted average of precisions among classes.', action='store_false')
+    parser.add_argument('--self-supervision', help='Compute the mAP using the weighted average of precisions among classes.', type=int, default=50)
 
     # Fit generator arguments
     parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=1)
@@ -375,11 +375,12 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
+    print("STAGE 1/2: Supervised training for ", str(args.epochs), ' epochs')
+
     # 1 stage of training: synthetic only
     training_model.fit_generator(
         generator=train_generator,
-        #steps_per_epoch=train_generator.size()/args.batch_size,
-        steps_per_epoch=100,
+        steps_per_epoch=train_generator.size()/args.batch_size,
         #epochs=args.epochs,
         epochs=1,
         verbose=1,
@@ -397,6 +398,9 @@ def main(args=None):
         'preprocess_image' : backbone.preprocess_image, # change for testing /w and w/o augmentations
     }
     debug_epochs = 10
+
+    print("STAGE 2/2: Self-supervised training for ", str(args.self_supervision), ' epochs')
+
     for epoch_step in range(debug_epochs):
         # re-initialize and cache generator
         train_generator.reinit(**common_args)
