@@ -379,7 +379,7 @@ def main(args=None):
     training_model.fit_generator(
         generator=train_generator,
         #steps_per_epoch=train_generator.size()/args.batch_size,
-        steps_per_epoch=1000,
+        steps_per_epoch=100,
         #epochs=args.epochs,
         epochs=1,
         verbose=1,
@@ -410,6 +410,10 @@ def main(args=None):
             use_multiprocessing=use_multiprocessing,
             max_queue_size=args.max_queue_size
         )
+        epoch_1_safe = os.path.join(args.snapshot_path, '{backbone}_{dataset_type}_01.h5'.format(backbone=args.backbone,dataset_type=args.dataset_type))
+        current_safe = os.path.join(args.snapshot_path, '{backbone}_{dataset_type}_{epoch}.h5'.format(backbone=args.backbone,dataset_type=args.dataset_type, epoch=str(epoch_step)))
+        if os.path.isfile(epoch_1_safe):
+            os.rename(epoch_1_safe, current_safe)
 
 
 if __name__ == '__main__':

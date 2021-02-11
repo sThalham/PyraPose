@@ -1010,6 +1010,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 mask_img = np.where(obj_mask > 0.5, mask_id, mask_img)
                 mask_ind += 1
 
+
                 k_hyp = len(per_ins_indices)
                 #k_hyp = len(cls_indices[0])
                 ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -1017,27 +1018,29 @@ def reannotate_linemod(generator, model, threshold=0.5):
 
                 ##############################
                 # pnp
-                pose_votes = boxes3D[0, per_ins_indices, :]
-                est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-                obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-                obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
-
+                #pose_votes = boxes3D[0, per_ins_indices, :]
+                #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+                #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+                #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+                # single pnp
+                random_hyp = np.random.choice(per_ins_indices)
+                pose_votes = boxes3D[0, random_hyp, :]
+                est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+                #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+                obj_points = ori_points.reshape((8, 1, 3))
                 retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                                   imagePoints=est_points, cameraMatrix=K,
-                                                                   distCoeffs=None, rvec=None, tvec=None,
-                                                                   useExtrinsicGuess=False, iterationsCount=300,
-                                                                   reprojectionError=5.0, confidence=0.99,
-                                                                   flags=cv2.SOLVEPNP_EPNP)
+                                                               imagePoints=est_points, cameraMatrix=K,
+                                                               distCoeffs=None, rvec=None, tvec=None,
+                                                               useExtrinsicGuess=False, iterationsCount=300,
+                                                               reprojectionError=5.0, confidence=0.99,
+                                                               flags=cv2.SOLVEPNP_EPNP)
                 R_est, _ = cv2.Rodrigues(orvec)
                 t_est = otvec
-
                 #t_rot = tf3d.quaternions.quat2mat(t_rot)
                 #R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
                 #t_gt = np.array(t_tra, dtype=np.float32)
-
                 #t_gt = t_gt * 0.001
                 t_est = t_est  # * 0.001
-
                 '''
                 if cls == 10 or cls == 11:
                     err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
@@ -1047,13 +1050,11 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 if err_add < model_dia[true_cat] * 0.1:
                     truePoses[int(true_cat)] += 1
                 '''
-
                 # create annotation
                 rot = tf3d.quaternions.mat2quat(R_est)
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = t_est
                 pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
-
                 trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
                 R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
                 tDbox = R.reshape(3, 3).dot(threeD_boxes[true_cat, :, :].T).T
@@ -1062,41 +1063,39 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 box3D = np.reshape(box3D, (16))
                 tDbox = box3D.astype(np.uint16)
                 box3D = box3D.tolist()
-
                 pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
                         np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
 
                 '''
-
-                colGT = (0, 204, 0)
-    
-                image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
-                image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
+                colGT = (np.random.random()*255.0, np.random.random()*255.0, np.random.random()*255.0)
+                image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 1)
+                image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
                                      colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
                                      colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
                                      colGT,
-                                     2)
+                                     1)
                 image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
                                      colGT,
-                                     2)
-    
+                                     1)
+                '''
+                '''
                 bb = np.array(obj_bb)
                 cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
                               (255, 255, 255), 2)
@@ -1147,17 +1146,17 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 '''
                 idx = 0
                 for i in range(k_hyp):
-                    image = cv2.circle(image, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
-                    image = cv2.circle(image, (est_points[idx+1, 0, 0], est_points[idx+1, 0, 1]), 3, (251, 194, 213), -2)
-                    image = cv2.circle(image, (est_points[idx+2, 0, 0], est_points[idx+2, 0, 1]), 3, (222, 243, 41), -2)
-                    image = cv2.circle(image, (est_points[idx+3, 0, 0], est_points[idx+3, 0, 1]), 3, (209, 31, 201), -2)
-                    image = cv2.circle(image, (est_points[idx+4, 0, 0], est_points[idx+4, 0, 1]), 3, (8, 62, 53), -2)
-                    image = cv2.circle(image, (est_points[idx+5, 0, 0], est_points[idx+5, 0, 1]), 3, (13, 243, 207), -2)
-                    image = cv2.circle(image, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
-                    image = cv2.circle(image, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx, 0, 0], est_points[idx, 0, 1]), 3, (13, 243, 207), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx+1, 0, 0], est_points[idx+1, 0, 1]), 3, (251, 194, 213), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx+2, 0, 0], est_points[idx+2, 0, 1]), 3, (222, 243, 41), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx+3, 0, 0], est_points[idx+3, 0, 1]), 3, (209, 31, 201), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx+4, 0, 0], est_points[idx+4, 0, 1]), 3, (8, 62, 53), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx+5, 0, 0], est_points[idx+5, 0, 1]), 3, (13, 243, 207), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx+6, 0, 0], est_points[idx+6, 0, 1]), 3, (215, 41, 29), -2)
+                    image_raw = cv2.circle(image_raw, (est_points[idx+7, 0, 0], est_points[idx+7, 0, 1]), 3, (78, 213, 16), -2)
                     idx = idx+8
-                '''
-                '''
+
+                
                 max_x = int(np.max(est_points[:, :, 0]) + 5)
                 min_x = int(np.min(est_points[:, :, 0]) - 5)
                 max_y = int(np.max(est_points[:, :, 1]) + 5)
