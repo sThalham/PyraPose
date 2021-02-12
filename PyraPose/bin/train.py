@@ -398,12 +398,12 @@ def main(args=None):
         'image_max_side'   : args.image_max_side,
         'preprocess_image' : backbone.preprocess_image, # change for testing /w and w/o augmentations
     }
-    debug_epochs = 10
 
     print("STAGE 2/2: Self-supervised training for ", str(args.self_supervision), ' epochs')
 
     for epoch_step in range(debug_epochs):
         # re-initialize and cache generator
+        print('Self-supervised training: epoch ', str(epoch_step), '/', str(args.self_supervision))
         train_generator.reinit(**common_args)
         training_model.fit_generator(
             generator=train_generator,

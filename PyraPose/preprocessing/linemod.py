@@ -24,6 +24,7 @@ import numpy as np
 import itertools
 import yaml
 import cv2
+import random
 
 
 def _isArrayLike(obj):
@@ -49,6 +50,14 @@ class LinemodGenerator(Generator):
         self.cats = {}
         self.image_ids = []
         self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
+
+        if self_dir != None:
+            self_ath = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
+            with open(self_path, 'r') as js:
+                data_pseudo = json.load(js)
+
+            self.image_ann = self.image_ann + data_pseudo["images"]
+            anno_ann = anno_ann + data_pseudo["annotations"]
 
         for cat in cat_ann:
             self.cats[cat['id']] = cat
@@ -86,29 +95,6 @@ class LinemodGenerator(Generator):
                                        [x_minus, y_minus, z_minus],
                                        [x_minus, y_minus, z_plus]])
             self.TDboxes[int(key), :, :] = three_box_solo
-
-        if self_dir != None:
-            #self reannotation
-            path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
-            with open(path, 'r') as js:
-                data_pseudo = json.load(js)
-
-            image_ann_pseudo = data_pseudo["images"]
-            anno_ann = data_pseudo["annotations"]
-            #self.image_ids = [] # remove
-            #self.image_paths = []   # remove
-            #self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list) # remove
-
-            for img in image_ann_pseudo:
-                self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
-                self.image_paths.append(os.path.join(self.data_dir, 'images', 'val', img['file_name']))
-                #print(os.path.join(self.data_dir, 'images', 'test', img['file_name']))
-
-            for ann in anno_ann:
-                self.imgToAnns[ann['image_id']].append(ann)
-                self.catToImgs[ann['category_id']].append(ann['image_id'])
-
-            self.image_ann = self.image_ann + image_ann_pseudo
 
         super(LinemodGenerator, self).__init__(**kwargs)
 

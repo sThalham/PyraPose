@@ -278,9 +278,9 @@ def anchor_targets_bbox(
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
             #cv2.imwrite(name, mask_viz)
 
-        if annotations['target_domain'] == True:
-            mask_batch[index, :, -1] = 0
-            regression_3D[index, :, -1] = -1
+        #if annotations['target_domain'] == True:
+        #    mask_batch[index, :, -1] = 0
+        #    regression_3D[index, :, -1] = -1
 
         # ignore annotations outside of image
         if image.shape:
