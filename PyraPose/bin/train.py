@@ -401,7 +401,7 @@ def main(args=None):
 
     print("STAGE 2/2: Self-supervised training for ", str(args.self_supervision), ' epochs')
 
-    for epoch_step in range(debug_epochs):
+    for epoch_step in range(args.self_supervision):
         # re-initialize and cache generator
         print('Self-supervised training: epoch ', str(epoch_step), '/', str(args.self_supervision))
         train_generator.reinit(**common_args)

@@ -49,20 +49,9 @@ class LinemodGenerator(Generator):
         cat_ann = data["categories"]
         self.cats = {}
         self.image_ids = []
+        self.image_paths = []
         self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
 
-        if self_dir != None:
-            self_ath = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
-            with open(self_path, 'r') as js:
-                data_pseudo = json.load(js)
-
-            self.image_ann = self.image_ann + data_pseudo["images"]
-            anno_ann = anno_ann + data_pseudo["annotations"]
-
-        for cat in cat_ann:
-            self.cats[cat['id']] = cat
-
-        self.image_paths = []
         for img in self.image_ann:
             if "fx" in img:
                 self.fx = img["fx"]
@@ -71,6 +60,22 @@ class LinemodGenerator(Generator):
                 self.cy = img["cy"]
             self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
             self.image_paths.append(os.path.join(self.data_dir, 'images', self.set_name, img['file_name']))
+        
+        if self_dir != None:
+            self_path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
+            with open(self_path, 'r') as js:
+                data_pseudo = json.load(js)
+
+            self.image_ann_ss = data_pseudo["images"]
+            anno_ann = anno_ann + data_pseudo["annotations"]
+            for img in self.image_ann_ss:
+                self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
+                self.image_paths.append(os.path.join(self.data_dir, 'images', 'val', img['file_name']))
+            self.image_ann = self.image_ann + self.image_ann_ss
+
+        for cat in cat_ann:
+            self.cats[cat['id']] = cat
+
         for ann in anno_ann:
             self.imgToAnns[ann['image_id']].append(ann)
             self.catToImgs[ann['category_id']].append(ann['image_id'])
@@ -262,7 +267,6 @@ class LinemodGenerator(Generator):
 
         target_domain = np.full((1), False)
         if 'val' in path:
-            print(path)
             target_domain = True
 
         annotations     = {'mask': mask, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
