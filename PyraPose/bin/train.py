@@ -380,7 +380,8 @@ def main(args=None):
     # 1 stage of training: synthetic only
     training_model.fit_generator(
         generator=train_generator,
-        steps_per_epoch=train_generator.size()/args.batch_size,
+        #steps_per_epoch=train_generator.size()/args.batch_size,
+        steps_per_epoch=100,
         #epochs=args.epochs,
         epochs=1,
         verbose=1,

@@ -36,15 +36,6 @@ class LinemodGenerator(Generator):
 
     def __init__(self, data_dir, set_name, self_dir=None, **kwargs):
 
-        #self.path_self = os.path.join(data_dir, 'annotations', 'instances_pseudo.json')
-        #if self_dir != None:
-        #    print('self.epoch: ', self_dir)
-        #else:
-        #    print('self.epoch doesn\'t exist')
-        #    dict = {}
-        #    with open(self.path_self, 'w') as fpT:
-        #        json.dump(dict, fpT)
-
         self.data_dir  = data_dir
         self.set_name  = set_name
         self.path      = os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json')
@@ -118,8 +109,6 @@ class LinemodGenerator(Generator):
                 self.catToImgs[ann['category_id']].append(ann['image_id'])
 
             self.image_ann = self.image_ann + image_ann_pseudo
-
-        print('len image_ann: ', len(self.image_ann), type(self.image_ann))
 
         super(LinemodGenerator, self).__init__(**kwargs)
 
@@ -285,7 +274,12 @@ class LinemodGenerator(Generator):
         path = path[:-4] + '_mask.png'  # + path[-4:]
         mask = cv2.imread(path, -1)
 
-        annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
+        target_domain = np.full((1), False)
+        if 'val' in path:
+            print(path)
+            target_domain = True
+
+        annotations     = {'mask': mask, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
         for idx, a in enumerate(anns):
             if self.set_name == 'train':

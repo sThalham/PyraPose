@@ -216,6 +216,8 @@ class Generator(keras.utils.Sequence):
                 #    annotations['segmentations'][invalid_indices, :]
                 #))
                 for k in annotations_group[index].keys():
+                    if k == 'target_domain' or k== 'mask':
+                        continue
                     annotations_group[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
 
         return image_group, annotations_group
