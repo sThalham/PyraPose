@@ -70,7 +70,7 @@ class LinemodGenerator(Generator):
             anno_ann = anno_ann + data_pseudo["annotations"]
             for img in self.image_ann_ss:
                 self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
-                self.image_paths.append(os.path.join(self.data_dir, 'images', 'val', img['file_name']))
+                self.image_paths.append(os.path.join(self.data_dir, 'images', 'pseudo', img['file_name']))
             self.image_ann = self.image_ann + self.image_ann_ss
 
         for cat in cat_ann:

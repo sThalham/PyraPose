@@ -381,7 +381,7 @@ def main(args=None):
     training_model.fit_generator(
         generator=train_generator,
         #steps_per_epoch=train_generator.size()/args.batch_size,
-        steps_per_epoch=100,
+        steps_per_epoch=10,
         #epochs=args.epochs,
         epochs=1,
         verbose=1,
