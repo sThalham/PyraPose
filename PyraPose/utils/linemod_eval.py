@@ -1017,6 +1017,8 @@ def reannotate_linemod(generator, model, threshold=0.5):
 
         # sort poses with depth
         zeds = np.asarray(zeds, dtype=np.float32)
+        if zeds.shape[0] == 0:
+            continue
         low2high = np.argsort(zeds[:, 0])
         high2low = low2high[::-1]
         full_seg = []

@@ -98,6 +98,9 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
             'mask'          : losses.focal(),
+            '3Dbox_target'    : losses.orthogonal_l1(),
+            'cls_target'      : losses.focal(),
+            'mask_target'     : losses.focal(),
         },
         optimizer=keras.optimizers.Adam(lr=lr, clipnorm=0.001)
     )
@@ -175,6 +178,7 @@ def create_generators(args, preprocess_image):
             max_scaling=(1.2, 1.2),
         )
 
+    self_generator = None
     if args.dataset_type == 'ycbv':
         # import here to prevent unnecessary dependency on cocoapi
         from ..preprocessing.ycbv import YCBvGenerator
@@ -192,10 +196,16 @@ def create_generators(args, preprocess_image):
             **common_args
         )
     elif args.dataset_type == 'linemod':
-        if args.self_supervision > 0:
-            from ..preprocessing.linemod_self import LinemodGenerator
-        else:
-            from ..preprocessing.linemod import LinemodGenerator
+        from ..preprocessing.linemod_self import SelfLinemodGenerator
+
+        self_generator = SelfLinemodGenerator(
+            args.linemod_path,
+            'train',
+            'pseudo',
+            transform_generator=transform_generator,
+            **common_args
+        )
+        from ..preprocessing.linemod import LinemodGenerator
 
         train_generator = LinemodGenerator(
             args.linemod_path,
@@ -264,7 +274,7 @@ def create_generators(args, preprocess_image):
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
 
-    return train_generator, validation_generator
+    return train_generator, validation_generator, self_generator
 
 
 def parse_args(args):
@@ -298,7 +308,7 @@ def parse_args(args):
     parser.add_argument('--backbone', help='Backbone model used by retinanet.', default='resnet50', type=str)
     parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
-    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=20)
+    parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=100)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
@@ -307,7 +317,7 @@ def parse_args(args):
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
     parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
-    parser.add_argument('--self-supervision', help='Compute the mAP using the weighted average of precisions among classes.', type=int, default=50)
+    parser.add_argument('--self-supervision', help='Compute the mAP using the weighted average of precisions among classes.', type=int, default=100)
 
     # Fit generator arguments
     parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=1)
@@ -332,7 +342,7 @@ def main(args=None):
     #keras.backend.tensorflow_backend.set_session(get_session())
 
     # create the generators
-    train_generator, validation_generator = create_generators(args, backbone.preprocess_image)
+    train_generator, validation_generator, self_generator = create_generators(args, backbone.preprocess_image)
 
     # create the model
     if args.snapshot is not None:
@@ -378,15 +388,14 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
+    '''
     print("STAGE 1/2: Supervised training for ", str(args.epochs), ' epochs')
 
     # 1 stage of training: synthetic only
     training_model.fit_generator(
         generator=train_generator,
         steps_per_epoch=train_generator.size()/args.batch_size,
-        #steps_per_epoch=10,
-        #epochs=args.epochs,
-        epochs=1,
+        epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,
         workers=args.workers,
@@ -394,24 +403,17 @@ def main(args=None):
         max_queue_size=args.max_queue_size
     )
 
+    if args.dataset_type == 'linemod':
+        from ..utils.linemod_eval import reannotate_linemod
+        eval_model = retinanet_bbox(model=training_model)
+        reannotate_linemod(validation_generator, eval_model, 0.5)
     '''
-    # second stage of training: synthetic + real-world (/w pseudo-labels)
-    common_args = {
-        'batch_size'       : args.batch_size,
-        'image_min_side'   : args.image_min_side,
-        'image_max_side'   : args.image_max_side,
-        'preprocess_image' : backbone.preprocess_image, # change for testing /w and w/o augmentations
-    }
 
     print("STAGE 2/2: Self-supervised training for ", str(args.self_supervision), ' epochs')
 
-    for epoch_step in range(args.self_supervision):
-        # re-initialize and cache generator
-        print('Self-supervised training: epoch ', str(epoch_step), '/', str(args.self_supervision))
-        train_generator.reinit(**common_args)
-        training_model.fit_generator(
-            generator=train_generator,
-            steps_per_epoch=train_generator.size()/args.batch_size,
+    training_model.fit_generator(
+            generator=self_generator,
+            steps_per_epoch=self_generator.size()/args.batch_size,
             epochs=1,
             verbose=1,
             callbacks=callbacks,
@@ -419,11 +421,7 @@ def main(args=None):
             use_multiprocessing=use_multiprocessing,
             max_queue_size=args.max_queue_size
         )
-        epoch_1_safe = os.path.join(args.snapshot_path, '{backbone}_{dataset_type}_01.h5'.format(backbone=args.backbone,dataset_type=args.dataset_type))
-        current_safe = os.path.join(args.snapshot_path, '{backbone}_{dataset_type}_{epoch}.h5'.format(backbone=args.backbone,dataset_type=args.dataset_type, epoch=str(epoch_step)))
-        if os.path.isfile(epoch_1_safe):
-            os.rename(epoch_1_safe, current_safe)
-    '''
+
 
 if __name__ == '__main__':
     main()

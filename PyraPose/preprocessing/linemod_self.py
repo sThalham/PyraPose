@@ -31,7 +31,7 @@ def _isArrayLike(obj):
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
 
-class LinemodGenerator(Generator):
+class SelfLinemodGenerator(Generator):
     """ Generate data from the LineMOD dataset.
     """
 
@@ -39,6 +39,7 @@ class LinemodGenerator(Generator):
 
         self.data_dir  = data_dir
         self.set_name  = set_name
+        self.self_dir = self_dir
         self.path      = os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json')
         self.mesh_info = os.path.join(data_dir, 'annotations', 'models_info' + '.yml')
         with open(self.path, 'r') as js:
@@ -62,7 +63,7 @@ class LinemodGenerator(Generator):
             self.image_paths.append(os.path.join(self.data_dir, 'images', self.set_name, img['file_name']))
         
         if self_dir != None:
-            self_path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
+            self_path = os.path.join(self.data_dir, 'annotations', 'instances_' + self_dir + '.json')
             with open(self_path, 'r') as js:
                 data_pseudo = json.load(js)
 
@@ -70,7 +71,7 @@ class LinemodGenerator(Generator):
             anno_ann = anno_ann + data_pseudo["annotations"]
             for img in self.image_ann_ss:
                 self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
-                self.image_paths.append(os.path.join(self.data_dir, 'images', 'pseudo', img['file_name']))
+                self.image_paths.append(os.path.join(self.data_dir, 'images', self_dir, img['file_name']))
             self.image_ann = self.image_ann + self.image_ann_ss
 
         for cat in cat_ann:
@@ -101,7 +102,7 @@ class LinemodGenerator(Generator):
                                        [x_minus, y_minus, z_plus]])
             self.TDboxes[int(key), :, :] = three_box_solo
 
-        super(LinemodGenerator, self).__init__(**kwargs)
+        super(SelfLinemodGenerator, self).__init__(**kwargs)
 
     def reinit(self, **kwargs):
 
@@ -266,7 +267,7 @@ class LinemodGenerator(Generator):
         mask = cv2.imread(path, -1)
 
         target_domain = np.full((1), False)
-        if 'val' in path:
+        if self.self_dir in path:
             target_domain = True
 
         annotations     = {'mask': mask, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
