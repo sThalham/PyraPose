@@ -106,10 +106,14 @@ def anchor_targets_bbox(
 
     batch_size = len(image_group)
 
-    regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
+    #regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
+
+    labels_batch_target = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
+    regression_3D_target = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
+    mask_batch_target = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
 
@@ -132,151 +136,159 @@ def anchor_targets_bbox(
         #viz_img = False
 
         if annotations['bboxes'].shape[0]:
-            # obtain indices of gt annotations with the greatest overlap
-            positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
 
-            labels_batch[index, ignore_indices, -1]       = -1
-            labels_batch[index, positive_indices, -1]     = 1
+            if annotations['target_domain'] == True:
+                positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
 
-            regression_batch[index, ignore_indices, -1]   = -1
-            regression_batch[index, positive_indices, -1] = 1
+                labels_batch_target[index, ignore_indices, -1] = -1
+                labels_batch_target[index, positive_indices, -1] = 1
 
-            regression_3D[index, ignore_indices, -1] = -1
-            regression_3D[index, positive_indices, -1] = 1
+                regression_3D_target[index, ignore_indices, -1] = -1
+                regression_3D_target[index, positive_indices, -1] = 1
 
-            # compute target class labels
-            labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
+                # compute target class labels
+                labels_batch_target[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
-            regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
+                calculated_boxes = np.empty((0, 16))
+                for idx, pose in enumerate(annotations['poses']):
 
-            calculated_boxes = np.empty((0, 16))
-            for idx, pose in enumerate(annotations['poses']):
+                    # mask part
+                    cls = int(annotations['labels'][idx])
+                    mask_id = annotations['mask_ids'][idx]
+                    mask_flat = np.asarray(
+                        Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
 
-                # mask part
-                cls = int(annotations['labels'][idx])
-                mask_id = annotations['mask_ids'][idx]
-                mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
+                    mask_flat = mask_flat.flatten()
+                    anchors_pyramid = np.where(mask_flat == int(mask_id))
+                    anchors_spec = anchors_pyramid[0]
+                    if len(anchors_spec) > 1:
+                        mask_batch_target[index, anchors_spec, cls] = 1
+                        mask_batch_target[index, anchors_spec, -1] = 1
+                        # mask_viz[anchors_spec, :] = int(10*cls)
+                    # mask part
 
-                mask_flat = mask_flat.flatten()
-                anchors_pyramid = np.where(mask_flat == int(mask_id))
-                anchors_spec = anchors_pyramid[0]
-                if len(anchors_spec) > 1:
-                    mask_batch[index, anchors_spec, cls] = 1
-                    mask_batch[index, anchors_spec, -1] = 1
-                    #mask_viz[anchors_spec, :] = int(10*cls)
-                # mask part
+                    rot = tf3d.quaternions.quat2mat(pose[3:])
+                    rot = np.asarray(rot, dtype=np.float32)
+                    tra = pose[:3]
+                    tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
+                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
+                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
+                                        fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
+                                        cy=annotations['cam_params'][idx][3])
+                    box3D = np.reshape(box3D, (16))
+                    calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
+
+                regression_3D_target[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :],
+                                                               num_classes)
+
+            else:
+
+                # obtain indices of gt annotations with the greatest overlap
+                positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
+
+                labels_batch[index, ignore_indices, -1]       = -1
+                labels_batch[index, positive_indices, -1]     = 1
+
+                #regression_batch[index, ignore_indices, -1]   = -1
+                #regression_batch[index, positive_indices, -1] = 1
+
+                regression_3D[index, ignore_indices, -1] = -1
+                regression_3D[index, positive_indices, -1] = 1
+
+                # compute target class labels
+                labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
+
+                #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
+
+                calculated_boxes = np.empty((0, 16))
+                for idx, pose in enumerate(annotations['poses']):
+
+                    # mask part
+                    cls = int(annotations['labels'][idx])
+                    mask_id = annotations['mask_ids'][idx]
+                    mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
+
+                    mask_flat = mask_flat.flatten()
+                    anchors_pyramid = np.where(mask_flat == int(mask_id))
+                    anchors_spec = anchors_pyramid[0]
+                    if len(anchors_spec) > 1:
+                        mask_batch[index, anchors_spec, cls] = 1
+                        mask_batch[index, anchors_spec, -1] = 1
+                        #mask_viz[anchors_spec, :] = int(10*cls)
+                    # mask part
+
+                    rot = tf3d.quaternions.quat2mat(pose[3:])
+                    rot = np.asarray(rot, dtype=np.float32)
+                    tra = pose[:3]
+                    tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
+                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
+                    box3D = np.reshape(box3D, (16))
+                    calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
+
+                    '''
+                    pose = box3D.reshape((16)).astype(np.int16)
+    
+                    image_raw = image
+    
+                    colEst = (255, 0, 0)
+    
+                    image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 5)
+                    image_raw = cv2.line(image_raw, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                                         5)
+                    image_raw = cv2.line(image_raw, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                                         5)
+                    image_raw = cv2.line(image_raw, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                                         5)
+                    image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+    
+                                         5)
+                    '''
+                    '''          
+                    cls_ind = np.where(annotations['labels']==cls) # index of cls
+                    if not len(cls_ind[0]) == 0:
+                        viz_img = True
+                        ov_laps = argmax_overlaps_inds #cls index overlap per anchor location?
+                        am_laps = positive_indices
+                        ov_laps = ov_laps[am_laps]
+                        pru_anc = anchors[am_laps, :]
+                        anc_idx = ov_laps == cls_ind
+                        true_anchors = pru_anc[anc_idx[0,:], :]
+                        for jdx in range(true_anchors.shape[0]):
+                            bb = true_anchors[jdx, :]
+                            #print(bb)
+                            cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                                       (255, 255, 255), 2)
+                            #cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
+                            #              (255, 0, 0), 1)
+                            #image_crop = image[0][int(bb[1]):int(bb[3]), int(bb[0]):int(bb[2]), :]
+                            #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(cls) + '_' + str(jdx) + '_crop.jpg'
+                            #cv2.imwrite(name, image_crop)
+                if viz_img == True:
+                    #image_raw = image_raw[int(np.nanmin(true_anchors[:, 0])):int(np.nanmin(true_anchors[:, 1])), int(np.nanmax(true_anchors[:, 2])):int(np.nanmax(true_anchors[:, 3])), :]
+                    name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
+                    cv2.imwrite(name, image_raw)
                 '''
-                # debug
-                pose_aug = pose[7:]
-                rot = tf3d.quaternions.quat2mat(pose_aug[3:])
-                rot = np.asarray(rot, dtype=np.float32)
-                tra = pose_aug[:3]
-                tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
-                tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
-                box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1],
-                                    cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
-                box3D = np.reshape(box3D, (16))
-                pose1 = box3D.reshape((16)).astype(np.int16)
+                regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
+                #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
-                image_raw = image
-
-                colEst = (0, 0, 255)
-
-                image_raw = cv2.line(image_raw, tuple(pose1[0:2].ravel()), tuple(pose1[2:4].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[2:4].ravel()), tuple(pose1[4:6].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[4:6].ravel()), tuple(pose1[6:8].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[6:8].ravel()), tuple(pose1[0:2].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[0:2].ravel()), tuple(pose1[8:10].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[2:4].ravel()), tuple(pose1[10:12].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[4:6].ravel()), tuple(pose1[12:14].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[6:8].ravel()), tuple(pose1[14:16].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose1[8:10].ravel()), tuple(pose1[10:12].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose1[10:12].ravel()), tuple(pose1[12:14].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose1[12:14].ravel()), tuple(pose1[14:16].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose1[14:16].ravel()), tuple(pose1[8:10].ravel()), colEst,
-
-                                     5)
-                pose = pose[:7]
-                # debug
-                '''
-
-
-                rot = tf3d.quaternions.quat2mat(pose[3:])
-                rot = np.asarray(rot, dtype=np.float32)
-                tra = pose[:3]
-                tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
-                tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
-
-                box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
-                box3D = np.reshape(box3D, (16))
-                calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
-
-                '''
-                pose = box3D.reshape((16)).astype(np.int16)
-
-                image_raw = image
-
-                colEst = (255, 0, 0)
-
-                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 5)
-                image_raw = cv2.line(image_raw, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
-                                     5)
-                image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
-
-                                     5)
-                '''
-                '''          
-                cls_ind = np.where(annotations['labels']==cls) # index of cls
-                if not len(cls_ind[0]) == 0:
-                    viz_img = True
-                    ov_laps = argmax_overlaps_inds #cls index overlap per anchor location?
-                    am_laps = positive_indices
-                    ov_laps = ov_laps[am_laps]
-                    pru_anc = anchors[am_laps, :]
-                    anc_idx = ov_laps == cls_ind
-                    true_anchors = pru_anc[anc_idx[0,:], :]
-                    for jdx in range(true_anchors.shape[0]):
-                        bb = true_anchors[jdx, :]
-                        #print(bb)
-                        cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                                   (255, 255, 255), 2)
-                        #cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                        #              (255, 0, 0), 1)
-                        #image_crop = image[0][int(bb[1]):int(bb[3]), int(bb[0]):int(bb[2]), :]
-                        #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(cls) + '_' + str(jdx) + '_crop.jpg'
-                        #cv2.imwrite(name, image_crop)
-            if viz_img == True:
-                #image_raw = image_raw[int(np.nanmin(true_anchors[:, 0])):int(np.nanmin(true_anchors[:, 1])), int(np.nanmax(true_anchors[:, 2])):int(np.nanmax(true_anchors[:, 3])), :]
-                name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_RGB.jpg'
-                cv2.imwrite(name, image_raw)
-            '''
-
-            regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
-            #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-
-            #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image_raw)
-            #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
-            #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
-            #cv2.imwrite(name, mask_viz)
+                #rind = np.random.randint(0, 1000)
+                #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
+                #cv2.imwrite(name, image_raw)
+                #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
+                #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
+                #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
+                #cv2.imwrite(name, mask_viz)
 
         #if annotations['target_domain'] == True:
         #    mask_batch[index, :, -1] = 0
@@ -288,10 +300,12 @@ def anchor_targets_bbox(
             indices = np.logical_or(anchors_centers[:, 0] >= image.shape[1], anchors_centers[:, 1] >= image.shape[0])
 
             labels_batch[index, indices, -1]     = -1
-            regression_batch[index, indices, -1] = -1
+            #regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, -1] = -1
+            labels_batch_target[index, indices, -1] = -1
+            regression_3D_target[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, mask_batch
+    return regression_3D, labels_batch, mask_batch, regression_3D_target, labels_batch_target, mask_batch_target
 
 
 def compute_gt_annotations(

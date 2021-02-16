@@ -58,7 +58,7 @@ def default_mask_model(
     pyramid_feature_size=256,
     prior_probability=0.01,
     classification_feature_size=256,
-    name='classification_submodel'
+    name='mask'
 ):
     options = {
         'kernel_size' : 3,
@@ -96,7 +96,7 @@ def default_mask_model(
     outputs = keras.layers.Reshape((-1, num_classes))(outputs) # , name='pyramid_classification_reshape'
     outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
 
-    return keras.models.Model(inputs=inputs, outputs=outputs, name='mask')
+    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
 def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256, regression_feature_size=512, name='3Dregression_submodel'):
@@ -177,18 +177,8 @@ def __create_FPN(C3, C4, C5, feature_size=256):
 
 
 def __create_PFPN(C3, C4, C5, feature_size=256):
-
-    # only from here for FPN-fusion test 3
-    #C3 = keras.layers.Add()([C3_R, C3_D])
-    #C4 = keras.layers.Add()([C4_R, C4_D])
-    #C5 = keras.layers.Add()([C5_R, C5_D])
-
-    #P3 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C3)
-    #P4 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C4)
-    #P5 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=1, padding='same')(C5)
     
     # 3x3 conv for test 4
-    print('C3: , ', C3)
     P3 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C3)
     P4 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C4)
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
@@ -218,6 +208,13 @@ def default_submodels(num_classes, num_anchors):
     return [
         ('3Dbox', default_3Dregression_model(16, num_anchors)),
         ('cls', default_classification_model(num_classes, num_anchors))
+    ]
+
+
+def default_submodels_target(num_classes, num_anchors):
+    return [
+        ('3Dbox_target', default_3Dregression_model(16, num_anchors)),
+        ('cls_target', default_classification_model(num_classes, num_anchors))
     ]
 
 
@@ -273,30 +270,27 @@ def retinanet(
     if submodels is None:
 
         submodels = default_submodels(num_classes, num_anchors)
-        #submodels_2 = default_submodels_2(num_classes, num_anchors)
+        submodels_target = default_submodels_target(num_classes, num_anchors)
 
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     mask_head = default_mask_model(num_classes=num_classes)
+    mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
 
     b1, b2, b3 = backbone_layers
 
-    # feature fusion
-    #C3 = keras.layers.Add()([b1, b4])
-    #C4 = keras.layers.Add()([b2, b5])
-    #C5 = keras.layers.Add()([b3, b6])
-
-    #P3 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C3)
-    #P4 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C4)
-    #P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(C5)
-
-    #features = create_pyramid_features(P3, P4, P5)
     features = create_pyramid_features(b1, b2, b3)
     pyramids = __build_pyramid(submodels, features)
+    pyramids_target = __build_pyramid(submodels_target, features)
 
     masks = mask_head(features[0])
     pyramids.append(masks)
 
-    return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
+    masks_target = mask_head_target(features[0])
+    pyramids_target.append(masks_target)
+
+    outputs = pyramids + pyramids_target
+
+    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
 def retinanet_bbox(

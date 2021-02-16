@@ -167,7 +167,7 @@ def load_pcd(cat):
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.geometry.PointCloud()
     pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
-    pcd_model.estimate_normals(search_param=open3d.geometry.KDTreeSearchParamHybrid(
+    open3d.estimate_normals(pcd_model, search_param=open3d.geometry.KDTreeSearchParamHybrid(
         radius=0.1, max_nn=30))
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
@@ -565,7 +565,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             eDbox = np.reshape(est3D, (16))
             pose = eDbox.astype(np.uint16)
 
-            '''
             colGT = (255, 0, 0)
             colEst = colEst = (0, 204, 0)
 
@@ -623,7 +622,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
             image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
             image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
-            '''
+
 
             '''
             idx = 0
@@ -650,7 +649,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+            name = '/home/stefan/PyraPose_viz/img_' + str(index) + '.jpg'
             cv2.imwrite(name, image_raw)
             print('break')
 
@@ -679,8 +678,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
     print('true detections: ', detections_all)
     print('recall: ', recall_all)
     print('precision: ', precision_all)
-
-
 
 
 def reannotate_linemod(generator, model, threshold=0.5):
@@ -712,7 +709,26 @@ def reannotate_linemod(generator, model, threshold=0.5):
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
 
+    '''
+    print('loading with open3d')
+
+    pc1, mv1, mv1_mm = load_pcd('01')
+    pc2, mv2, mv2_mm = load_pcd('02')
+    pc4, mv4, mv4_mm = load_pcd('04')
+    pc5, mv5, mv5_mm = load_pcd('05')
+    pc6, mv6, mv6_mm = load_pcd('06')
+    pc8, mv8, mv8_mm = load_pcd('08')
+    pc9, mv9, mv9_mm = load_pcd('09')
+    pc10, mv10, mv10_mm = load_pcd('10')
+    pc11, mv11, mv11_mm = load_pcd('11')
+    pc12, mv12, mv12_mm = load_pcd('12')
+    pc13, mv13, mv13_mm = load_pcd('13')
+    pc14, mv14, mv14_mm = load_pcd('14')
+    pc15, mv15, mv15_mm = load_pcd('15')
+    '''
+
     ren = bop_renderer.Renderer()
+    print(ren)
     ren.init(640, 480)
     mesh_id = 1
     categories = []
@@ -728,19 +744,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
         categories.append(mesh_id)
         mesh_id += 1
 
-    #pc1, mv1, mv1_mm = load_pcd('01')
-    #pc2, mv2, mv2_mm = load_pcd('02')
-    #pc4, mv4, mv4_mm = load_pcd('04')
-    #pc5, mv5, mv5_mm = load_pcd('05')
-    #pc6, mv6, mv6_mm = load_pcd('06')
-    #pc8, mv8, mv8_mm = load_pcd('08')
-    #pc9, mv9, mv9_mm = load_pcd('09')
-    #pc10, mv10, mv10_mm = load_pcd('10')
-    #pc11, mv11, mv11_mm = load_pcd('11')
-    #pc12, mv12, mv12_mm = load_pcd('12')
-    #pc13, mv13, mv13_mm = load_pcd('13')
-    #pc14, mv14, mv14_mm = load_pcd('14')
-    #pc15, mv15, mv15_mm = load_pcd('15')
+    print('Meshes loaded')
 
     allPoses = np.zeros((16), dtype=np.uint32)
     truePoses = np.zeros((16), dtype=np.uint32)
@@ -771,7 +775,11 @@ def reannotate_linemod(generator, model, threshold=0.5):
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
-        #anno = generator.load_annotations(index)
+        anno = generator.load_annotations(index)
+
+        checkLab = anno['labels']  # +1 to real_class
+        for lab in checkLab:
+            allPoses[int(lab) + 1] += 1
 
         img_id = generator.get_img_id(index)
         iname = generator.get_image_path(index)
@@ -920,7 +928,9 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 #mask_img = np.where(obj_mask > 0.5, mask_id, mask_img)
                 #mask_ind += 1
                 '''
-
+                anno_ind = np.argwhere(anno['labels'] == checkLab)
+                t_tra = anno['poses'][anno_ind[0][0]][:3]
+                t_rot = anno['poses'][anno_ind[0][0]][3:]
 
                 k_hyp = len(per_ins_indices)
                 #k_hyp = len(cls_indices[0])
@@ -955,6 +965,55 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 est_poses.append(est_pose)
                 est_classes.append(cls)
                 zeds.append(t_est[2])
+
+                '''
+                # Eval
+                if cls == 1:
+                    model_vsd = mv1
+                elif cls == 2:
+                    model_vsd = mv2
+                elif cls == 4:
+                    model_vsd = mv4
+                elif cls == 5:
+                    model_vsd = mv5
+                elif cls == 6:
+                    model_vsd = mv6
+                elif cls == 8:
+                    model_vsd = mv8
+                elif cls == 9:
+                    model_vsd = mv9
+                elif cls == 10:
+                    model_vsd = mv10
+                elif cls == 11:
+                    model_vsd = mv11
+                elif cls == 12:
+                    model_vsd = mv12
+                elif cls == 13:
+                    model_vsd = mv13
+                elif cls == 14:
+                    model_vsd = mv14
+                elif cls == 15:
+                    model_vsd = mv15
+
+                if cls == (checkLab + 1):
+
+                    t_rot = tf3d.quaternions.quat2mat(t_rot)
+                    R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+                    t_gt = np.array(t_tra, dtype=np.float32)
+                    t_gt = t_gt * 0.001
+                    t_est = t_est.T  # * 0.001
+
+                    if cls == 10 or cls == 11:
+                        err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                    else:
+                        err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+                    if err_add < model_dia[true_cat] * 0.1:
+                        truePoses[int(true_cat)] += 1
+
+                    print(' ')
+                    print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+                '''
 
         # sort poses with depth
         zeds = np.asarray(zeds, dtype=np.float32)
@@ -1040,7 +1099,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
                 truePoses[int(true_cat)] += 1
             '''
             # create annotation
-            '''
+
             colGT = (np.random.random()*255.0, np.random.random()*255.0, np.random.random()*255.0)
             image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 1)
             image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 1)
@@ -1087,7 +1146,7 @@ def reannotate_linemod(generator, model, threshold=0.5):
                         fontColor2,
                         fontthickness2,
                         lineType)
-            '''
+
 
             annoID_val = annoID_val + 1
             tempTA = {
@@ -1138,10 +1197,10 @@ def reannotate_linemod(generator, model, threshold=0.5):
         cv2.imwrite(mask_path, mask_img)
         cv2.imwrite(img_path, image_raw)
 
-        #name = '/home/stefan/PyraPose_viz/self_anno_' + str(index) + '.jpg'
-        #cls_img = np.repeat(mask_img[:, :, np.newaxis], 3, 2)
-        #img_con = np.concatenate([image_raw, (cls_img * 10.0).astype(np.uint8)], axis=1)
-        #cv2.imwrite(name, img_con)
+        name = '/home/stefan/PyraPose_viz/self_anno_' + str(index) + '.jpg'
+        cls_img = np.repeat(mask_img[:, :, np.newaxis], 3, 2)
+        img_con = np.concatenate([image_raw, (cls_img * 10.0).astype(np.uint8)], axis=1)
+        cv2.imwrite(name, img_con)
 
         tempTL = {
             "url": "https://bop.felk.cvut.cz/home/",

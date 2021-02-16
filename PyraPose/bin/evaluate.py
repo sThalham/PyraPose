@@ -192,29 +192,9 @@ def main(args=None):
     print('Loading model, this may take a second...')
     model = models.load_model(args.model, backbone_name=args.backbone)
 
-    #filters3 = model.layers[355].get_weights()[0]
-    #f_min, f_max = filters3.min(), filters3.max()
-    #filters3 = (filters3 - f_min) / (f_max - f_min)
-
-    #n_filters, ix = 6, 1
-    #for i in range(n_filters):
-    #    f = filters3[:, :, :, i]
-    #    for j in range(3):
-    #        ax = pyplot.subplot(n_filters, 3, ix)
-    #        ax.set_xticks([])
-    #        ax.set_yticks([])
-    #        pyplot.imshow(f[:, :, j], cmap='brg')
-    #        ix += 1
-    #pyplot.show()
-
-    #filter4 = model.layers[355].get_weights()[0]
-    #filter5 = model.layers[355].get_weights()[0]
-
     # optionally convert the model
     if args.convert_model:
         model = models.convert_model(model, anchor_params=anchor_params)
-
-
 
     # print model summary
     print(model.summary())
@@ -222,8 +202,9 @@ def main(args=None):
     # start evaluation
 
     if args.dataset_type == 'linemod':
-        from ..utils.linemod_eval import evaluate_linemod
-        evaluate_linemod(generator, model, args.score_threshold)
+        from ..utils.linemod_eval import evaluate_linemod, reannotate_linemod
+        #evaluate_linemod(generator, model, args.score_threshold)
+        reannotate_linemod(generator, model, args.score_threshold)
 
     elif args.dataset_type == 'occlusion':
         from ..utils.occlusion_eval import evaluate_occlusion

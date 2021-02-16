@@ -65,7 +65,7 @@ def makedirs(path):
 
 def model_with_weights(model, weights, skip_mismatch):
     if weights is not None:
-        model.load_weights(weights, by_name=False, skip_mismatch=skip_mismatch)
+        model.load_weights(weights, by_name=True, skip_mismatch=skip_mismatch)
     return model
 
 
@@ -110,8 +110,8 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
     tensorboard_callback = None
 
-    if args.self_supervision > 0:
-        args.evaluation = True
+    #if args.self_supervision > 0:
+    #    args.evaluation = True
 
     if args.evaluation and validation_generator:
         if args.dataset_type == 'linemod':
@@ -192,7 +192,10 @@ def create_generators(args, preprocess_image):
             **common_args
         )
     elif args.dataset_type == 'linemod':
-        from ..preprocessing.linemod import LinemodGenerator
+        if args.self_supervision > 0:
+            from ..preprocessing.linemod_self import LinemodGenerator
+        else:
+            from ..preprocessing.linemod import LinemodGenerator
 
         train_generator = LinemodGenerator(
             args.linemod_path,
@@ -380,8 +383,8 @@ def main(args=None):
     # 1 stage of training: synthetic only
     training_model.fit_generator(
         generator=train_generator,
-        #steps_per_epoch=train_generator.size()/args.batch_size,
-        steps_per_epoch=10,
+        steps_per_epoch=train_generator.size()/args.batch_size,
+        #steps_per_epoch=10,
         #epochs=args.epochs,
         epochs=1,
         verbose=1,
@@ -391,6 +394,7 @@ def main(args=None):
         max_queue_size=args.max_queue_size
     )
 
+    '''
     # second stage of training: synthetic + real-world (/w pseudo-labels)
     common_args = {
         'batch_size'       : args.batch_size,
@@ -419,7 +423,7 @@ def main(args=None):
         current_safe = os.path.join(args.snapshot_path, '{backbone}_{dataset_type}_{epoch}.h5'.format(backbone=args.backbone,dataset_type=args.dataset_type, epoch=str(epoch_step)))
         if os.path.isfile(epoch_1_safe):
             os.rename(epoch_1_safe, current_safe)
-
+    '''
 
 if __name__ == '__main__':
     main()

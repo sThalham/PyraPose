@@ -397,9 +397,9 @@ if __name__ == "__main__":
                 if specific_object_set == True:
                     if obj_id not in spec_objs:
                         continue
-                if dataset == 'linemod':
-                    if obj_id == 7 or obj_id == 3:
-                        continue
+                #if dataset == 'linemod':
+                 #   if obj_id == 7 or obj_id == 3:
+                 #       continue
 
                 R = gtPose[i]["cam_R_m2c"]
                 T = gtPose[i]["cam_t_m2c"]
