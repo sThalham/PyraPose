@@ -203,8 +203,8 @@ def main(args=None):
 
     if args.dataset_type == 'linemod':
         from ..utils.linemod_eval import evaluate_linemod, reannotate_linemod
-        #evaluate_linemod(generator, model, args.score_threshold)
-        reannotate_linemod(generator, model, args.score_threshold)
+        evaluate_linemod(generator, model, args.score_threshold)
+        #reannotate_linemod(generator, model, args.score_threshold)
 
     elif args.dataset_type == 'occlusion':
         from ..utils.occlusion_eval import evaluate_occlusion

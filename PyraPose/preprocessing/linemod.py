@@ -60,7 +60,7 @@ class LinemodGenerator(Generator):
                 self.cy = img["cy"]
             self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
             self.image_paths.append(os.path.join(self.data_dir, 'images', self.set_name, img['file_name']))
-        
+
         if self_dir != None:
             self_path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
             with open(self_path, 'r') as js:

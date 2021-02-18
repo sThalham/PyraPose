@@ -167,7 +167,7 @@ def load_pcd(cat):
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.geometry.PointCloud()
     pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
-    open3d.estimate_normals(pcd_model, search_param=open3d.geometry.KDTreeSearchParamHybrid(
+    pcd_model.estimate_normals(search_param=open3d.geometry.KDTreeSearchParamHybrid(
         radius=0.1, max_nn=30))
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
@@ -289,6 +289,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         anno = generator.load_annotations(index)
 
+        print(anno['labels'])
         if len(anno['labels']) < 1:
             continue
 
@@ -320,7 +321,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)]
+        boxes3D, scores, mask, reg_aux, cls_aux, msk_aux = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)]
+
+        boxes3D = reg_aux
+        scores = cls_aux
+        mask = msk_aux
 
         for inv_cls in range(scores.shape[2]):
 

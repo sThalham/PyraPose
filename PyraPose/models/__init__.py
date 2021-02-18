@@ -29,6 +29,7 @@ class Backbone(object):
             '_orth_l1'         : losses.orthogonal_l1(),
             'RegressBoxes3D'   : layers.RegressBoxes3D(),
             'DenormBoxes3D'   : layers.DenormBoxes3D(),
+            '_smooth_reconstruction_l1' : losses.smooth_reconstruction_l1(),
         }
 
         self.backbone = backbone
@@ -76,7 +77,8 @@ def convert_model(model, nms=True, class_specific_filter=True, anchor_params=Non
 
 
 def assert_training_model(model):
-    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
+    #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
+    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'reconstruction'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', '3Dbox_target', 'cls_target', 'mask_target'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
 
 

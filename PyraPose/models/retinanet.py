@@ -131,6 +131,33 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
 
+def default_reconstruction_model(P3, P4, P5):
+    P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(P5)
+    P5 = keras.layers.BatchNormalization()(P5)
+    P5 = keras.layers.Activation('relu')(P5)
+    P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(P5)
+    P5 = keras.layers.BatchNormalization()(P5)
+    P5 = keras.layers.Activation('relu')(P5)
+    P5_upsampled = layers.UpsampleLike()([P5, P4])
+
+    P4 = keras.layers.Add()([P5_upsampled, P4])
+    P4 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu')(P4)
+    P4 = keras.layers.BatchNormalization()(P4)
+    P4 = keras.layers.Activation('relu')(P4)
+    P4_upsampled = layers.UpsampleLike()([P4, P3])
+
+    P3 = keras.layers.Add()([P4_upsampled, P3])
+    P3 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(P3)
+    P3 = keras.layers.BatchNormalization()(P3)
+    P3 = keras.layers.Activation('relu')(P3)
+    P3 = keras.layers.Conv2D(3, kernel_size=3, strides=1, padding='same')(P3)
+    P3 = keras.layers.BatchNormalization()(P3)
+    P3 = keras.layers.Activation('relu')(P3)
+    outputs = keras.layers.Reshape((60, 80, 3), name='reconstruction')(P3)
+
+    return outputs
+
+
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
     P5_upsampled = layers.UpsampleLike()([P5, C4])
@@ -274,21 +301,25 @@ def retinanet(
 
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     mask_head = default_mask_model(num_classes=num_classes)
-    mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
+    #mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
+    #recon_head = default_reconstruction_model()
 
     b1, b2, b3 = backbone_layers
 
     features = create_pyramid_features(b1, b2, b3)
     pyramids = __build_pyramid(submodels, features)
-    pyramids_target = __build_pyramid(submodels_target, features)
+    #pyramids_target = __build_pyramid(submodels_target, features)
 
     masks = mask_head(features[0])
     pyramids.append(masks)
 
-    masks_target = mask_head_target(features[0])
-    pyramids_target.append(masks_target)
+    recon = default_reconstruction_model(features[0], features[1], features[2])
+    pyramids.append(recon)
 
-    outputs = pyramids + pyramids_target
+    #masks_target = mask_head_target(features[0])
+    #pyramids_target.append(masks_target)
+
+    outputs = pyramids #+ pyramids_target
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
@@ -320,10 +351,14 @@ def retinanet_bbox(
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     mask = model.outputs[2]
-    #other = model.outputs[3:]
+    #reg_aux = model.outputs[3]
+    #cls_aux = model.outputs[3]
+    #msk_aux = model.outputs[5]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
+    #reg_aux = layers.RegressBoxes3D(name='reg3D')([anchors, reg_aux])
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
     return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask], name=name)
+    #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, cls_aux], name=name)

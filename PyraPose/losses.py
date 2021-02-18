@@ -408,18 +408,18 @@ def orthogonal_l1(weight=0.125, sigma=3.0):
     return _orth_l1
 
 
-def smooth_l1_xy(sigma=3.0, weight=0.1):
+def smooth_reconstruction_l1(loss_weight=1.0, sigma=3.0, weight=0.1):
     sigma_squared = sigma ** 2
 
-    def _smooth_l1_xy(y_true, y_pred):
+    def _smooth_reconstruction_l1(y_true, y_pred):
         # separate target and state
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
-        anchor_state      = y_true[:, :, :, -1]
+        anchor_state = y_true[:, :, :, -1]
 
-        # filter out "ignore" anchors
-        indices           = backend.where(keras.backend.equal(anchor_state, 1))
-        regression        = backend.gather_nd(regression, indices)
+        #### filter out "ignore" anchors
+        indices = backend.where(keras.backend.equal(anchor_state, 1))
+        regression = backend.gather_nd(regression, indices)
         regression_target = backend.gather_nd(regression_target, indices)
 
         # compute smooth L1 loss
@@ -436,7 +436,8 @@ def smooth_l1_xy(sigma=3.0, weight=0.1):
         # compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
-        return keras.backend.sum(regression_loss) / normalizer
 
-    return _smooth_l1_xy
+        return loss_weight * keras.backend.sum(regression_loss) / normalizer
+
+    return _smooth_reconstruction_l1
 

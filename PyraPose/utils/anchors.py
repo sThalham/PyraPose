@@ -111,9 +111,11 @@ def anchor_targets_bbox(
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
 
-    labels_batch_target = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
-    regression_3D_target = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
-    mask_batch_target = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
+    #labels_batch_target = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
+    #regression_3D_target = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
+    #mask_batch_target = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
+
+    reconstruction_batch = np.zeros((batch_size, 60, 80, 3 + 1), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
 
@@ -126,10 +128,10 @@ def anchor_targets_bbox(
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        image_raw = image
-        image_raw[..., 0] += 103.939
-        image_raw[..., 1] += 116.779
-        image_raw[..., 2] += 123.68
+        #image_raw = image
+        #image_raw[..., 0] += 103.939
+        #image_raw[..., 1] += 116.779
+        #image_raw[..., 2] += 123.68
 
         #rind = np.random.randint(0, 1000)
         #image_raw = image_raw.astype(np.uint8)
@@ -138,6 +140,12 @@ def anchor_targets_bbox(
         if annotations['bboxes'].shape[0]:
 
             if annotations['target_domain'] == True:
+
+                img_lr = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0]))
+                reconstruction_batch[index, :, :, :-1] = img_lr
+                reconstruction_batch[index, :, :, -1] = 1
+
+                '''
                 positive_indices, ignore_indices, argmax_overlaps_inds = compute_gt_annotations(anchors, annotations['bboxes'], negative_overlap, positive_overlap)
 
                 labels_batch_target[index, ignore_indices, -1] = -1
@@ -179,7 +187,6 @@ def anchor_targets_bbox(
                     box3D = np.reshape(box3D, (16))
                     calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
 
-                    '''
                     pose = box3D.reshape((16)).astype(np.int16)
 
                     image_raw = image
@@ -206,12 +213,11 @@ def anchor_targets_bbox(
                 rind = np.random.randint(0, 1000)
                 name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
                 cv2.imwrite(name, image_raw)
-                '''
+                
 
                 regression_3D_target[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :],
                                                                num_classes)
-
-
+                '''
             else:
 
                 # obtain indices of gt annotations with the greatest overlap
@@ -313,17 +319,32 @@ def anchor_targets_bbox(
                 #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
 
                 # necessary for self-supervision
-                regression_3D_target[index, :, :] = regression_3D[index, :, :]
-                labels_batch_target[index, :, :] = labels_batch[index, :, :]
-                mask_batch_target[index, :, :] = mask_batch[index, :, :]
+                #regression_3D_target[index, :, :] = regression_3D[index, :, :]
+                #labels_batch_target[index, :, :] = labels_batch[index, :, :]
+                #mask_batch_target[index, :, :] = mask_batch[index, :, :]
+
+                #img_lr = Image.fromarray(image).resize((80, 60), Image.NEAREST)
+                img_lr = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0]))
+                reconstruction_batch[index, :, :, :-1] = img_lr
+                reconstruction_batch[index, :, :, -1] = 1
+
+            #image_lr = img_lr
+            #image_lr[..., 0] += 103.939
+            #image_lr[..., 1] += 116.779
+            #image_lr[..., 2] += 123.68
 
             #rind = np.random.randint(0, 1000)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image_raw)
+            #cv2.imwrite(name, image_lr)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
             #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
             #cv2.imwrite(name, mask_viz)
+            print(annotations['target_domain'])
+            print(np.sum(reconstruction_batch[index, :, :, -1]))
+            print(np.sum(regression_3D[index, :, -1]))
+            print(np.sum(labels_batch[index, :, -1]))
+            print(np.sum(mask_batch[index, :, -1]))
 
         '''
         if annotations['target_domain'] == True:
@@ -340,10 +361,10 @@ def anchor_targets_bbox(
             labels_batch[index, indices, -1]     = -1
             #regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, -1] = -1
-            labels_batch_target[index, indices, -1] = -1
-            regression_3D_target[index, indices, -1] = -1
+            #labels_batch_target[index, indices, -1] = -1
+            #regression_3D_target[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, mask_batch, regression_3D_target, labels_batch_target, mask_batch_target
+    return regression_3D, labels_batch, mask_batch, reconstruction_batch
 
 
 def compute_gt_annotations(
