@@ -131,6 +131,39 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
     return keras.models.Model(inputs=inputs, outputs=outputs) #, name=name)
 
 
+def default_reconstruction_model(pyramid_feature_size=256, regression_feature_size=256, name='reconstruction'):
+    options = {
+        'kernel_size'        : 3,
+        'strides'            : 1,
+        'padding'            : 'same',
+        'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        #'kernel_initializer': keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer'   : 'zeros',
+        'kernel_regularizer' : keras.regularizers.l2(0.001),
+    }
+
+    if keras.backend.image_data_format() == 'channels_first':
+        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+    else:
+        inputs  = keras.layers.Input(shape=(60, 80, pyramid_feature_size))
+
+    outputs = inputs
+    for i in range(4):
+        outputs = keras.layers.Conv2D(
+            filters=regression_feature_size,
+            activation='relu',
+            **options
+        )(outputs)
+
+    outputs = keras.layers.Conv2D(3, **options)(outputs) #, name='pyramid_regression3D'
+    if keras.backend.image_data_format() == 'channels_first':
+        outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression3D_permute'
+    outputs = keras.layers.Reshape((60, 80,  3))(outputs) # , name='pyramid_regression3D_reshape'
+    outputs = keras.layers.Activation('sigmoid')(outputs) 
+
+    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
+
+'''
 def default_reconstruction_model(P3, P4, P5):
     P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(P5)
     P5 = keras.layers.BatchNormalization()(P5)
@@ -156,7 +189,7 @@ def default_reconstruction_model(P3, P4, P5):
     outputs = keras.layers.Reshape((60, 80, 3), name='reconstruction')(P3)
 
     return outputs
-
+'''
 
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
@@ -302,7 +335,7 @@ def retinanet(
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     mask_head = default_mask_model(num_classes=num_classes)
     #mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
-    #recon_head = default_reconstruction_model()
+    recon_head = default_reconstruction_model()
 
     b1, b2, b3 = backbone_layers
 
@@ -313,7 +346,7 @@ def retinanet(
     masks = mask_head(features[0])
     pyramids.append(masks)
 
-    recon = default_reconstruction_model(features[0], features[1], features[2])
+    recon = recon_head(features[0])
     pyramids.append(recon)
 
     #masks_target = mask_head_target(features[0])

@@ -408,7 +408,7 @@ def orthogonal_l1(weight=0.125, sigma=3.0):
     return _orth_l1
 
 
-def smooth_reconstruction_l1(loss_weight=1.0, sigma=3.0, weight=0.1):
+def smooth_reconstruction_l1(loss_weight=0.2, sigma=3.0, weight=0.1):
     sigma_squared = sigma ** 2
 
     def _smooth_reconstruction_l1(y_true, y_pred):
@@ -436,6 +436,8 @@ def smooth_reconstruction_l1(loss_weight=1.0, sigma=3.0, weight=0.1):
         # compute the normalizer: the number of positive anchors
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
+
+        normalizer = keras.backend.print_tensor(normalizer, message='Normalizer')
 
         return loss_weight * keras.backend.sum(regression_loss) / normalizer
 

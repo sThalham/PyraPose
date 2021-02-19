@@ -340,11 +340,12 @@ def anchor_targets_bbox(
             #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
             #cv2.imwrite(name, mask_viz)
-            print(annotations['target_domain'])
-            print(np.sum(reconstruction_batch[index, :, :, -1]))
-            print(np.sum(regression_3D[index, :, -1]))
-            print(np.sum(labels_batch[index, :, -1]))
-            print(np.sum(mask_batch[index, :, -1]))
+
+            #print(annotations['target_domain'])
+            #print(np.sum(reconstruction_batch[index, :, :, -1]))
+            #print(np.sum(regression_3D[index, :, -1]))
+            #print(np.sum(labels_batch[index, :, -1]))
+            #print(np.sum(mask_batch[index, :, -1]))
 
         '''
         if annotations['target_domain'] == True:
