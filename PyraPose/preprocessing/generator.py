@@ -34,6 +34,7 @@ from ..utils.image import (
     adjust_transform_for_image,
     adjust_transform_for_mask,
     apply_transform2mask,
+    apply_transform2depth,
     adjust_pose_annotation,
     apply_transform,
     preprocess_image,
@@ -216,7 +217,7 @@ class Generator(keras.utils.Sequence):
                 #    annotations['segmentations'][invalid_indices, :]
                 #))
                 for k in annotations_group[index].keys():
-                    if k == 'target_domain' or k== 'mask':
+                    if k == 'target_domain' or k== 'mask' or k== 'depth':
                         continue
                     annotations_group[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
 
@@ -249,6 +250,7 @@ class Generator(keras.utils.Sequence):
 
             image = apply_transform(transform, image, self.transform_parameters, K)
             annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters)
+            annotations['depth'] = apply_transform2depth(transform_mask, annotations['depth'], self.transform_parameters)
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()

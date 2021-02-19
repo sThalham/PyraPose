@@ -115,7 +115,7 @@ def anchor_targets_bbox(
     #regression_3D_target = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
     #mask_batch_target = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
 
-    reconstruction_batch = np.zeros((batch_size, 60, 80, 3 + 1), dtype=keras.backend.floatx())
+    reconstruction_batch = np.zeros((batch_size, 60, 80, 3 + 1 + 1), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
 
@@ -124,6 +124,7 @@ def anchor_targets_bbox(
 
         # w/o mask
         mask = annotations['mask']
+        depth = annotations['depth']
         image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
@@ -142,7 +143,10 @@ def anchor_targets_bbox(
             if annotations['target_domain'] == True:
 
                 img_lr = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0]))
-                reconstruction_batch[index, :, :, :-1] = img_lr
+                depth = cv2.resize(depth, (image_shapes[0][1], image_shapes[0][0]))
+                depth = np.where(np.isfinite(depth), depth / 20, 0.0) - 125.0
+                reconstruction_batch[index, :, :, :-2] = img_lr
+                reconstruction_batch[index, :, :, -2] = depth
                 reconstruction_batch[index, :, :, -1] = 1
 
                 '''
@@ -325,7 +329,10 @@ def anchor_targets_bbox(
 
                 #img_lr = Image.fromarray(image).resize((80, 60), Image.NEAREST)
                 img_lr = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0]))
-                reconstruction_batch[index, :, :, :-1] = img_lr
+                depth = cv2.resize(depth, (image_shapes[0][1], image_shapes[0][0]))
+                depth = np.where(np.isfinite(depth), depth / 20, 0.0) - 125.0
+                reconstruction_batch[index, :, :, :-2] = img_lr
+                reconstruction_batch[index, :, :, -2] = depth
                 reconstruction_batch[index, :, :, -1] = 1
 
             #image_lr = img_lr
@@ -335,7 +342,8 @@ def anchor_targets_bbox(
 
             #rind = np.random.randint(0, 1000)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
-            #cv2.imwrite(name, image_lr)
+            #viz_img = np.concatenate([image_lr, np.repeat((depth + 125.0).astype(np.uint8)[:, :, np.newaxis], repeats=3, axis=2)], axis=1)
+            #cv2.imwrite(name, viz_img)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
             #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
@@ -349,9 +357,16 @@ def anchor_targets_bbox(
 
         '''
         if annotations['target_domain'] == True:
-            print('reg3D: ', np.sum(regression_3D[index, :, :]))
-            print('labels: ', np.sum(labels_batch[index, :, :]))
-            print('masks: ', np.sum(mask_batch[index, :, :]))
+            image_lr = img_lr
+            image_lr[..., 0] += 103.939
+            image_lr[..., 1] += 116.779
+            image_lr[..., 2] += 123.68
+
+            rind = np.random.randint(0, 1000)
+            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
+            viz_img = np.concatenate(
+                [image_lr, np.repeat((depth + 125.0).astype(np.uint8)[:, :, np.newaxis], repeats=3, axis=2)], axis=1)
+            cv2.imwrite(name, viz_img)
         '''
 
         # ignore annotations outside of image

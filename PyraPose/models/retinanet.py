@@ -155,41 +155,61 @@ def default_reconstruction_model(pyramid_feature_size=256, regression_feature_si
             **options
         )(outputs)
 
-    outputs = keras.layers.Conv2D(3, **options)(outputs) #, name='pyramid_regression3D'
+    outputs = keras.layers.Conv2D(4, **options)(outputs) #, name='pyramid_regression3D'
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression3D_permute'
-    outputs = keras.layers.Reshape((60, 80,  3))(outputs) # , name='pyramid_regression3D_reshape'
-    outputs = keras.layers.Activation('sigmoid')(outputs) 
+    outputs = keras.layers.Reshape((60, 80,  4))(outputs) # , name='pyramid_regression3D_reshape'
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
-'''
-def default_reconstruction_model(P3, P4, P5):
-    P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(P5)
-    P5 = keras.layers.BatchNormalization()(P5)
-    P5 = keras.layers.Activation('relu')(P5)
-    P5 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(P5)
-    P5 = keras.layers.BatchNormalization()(P5)
-    P5 = keras.layers.Activation('relu')(P5)
-    P5_upsampled = layers.UpsampleLike()([P5, P4])
 
-    P4 = keras.layers.Add()([P5_upsampled, P4])
-    P4 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu')(P4)
-    P4 = keras.layers.BatchNormalization()(P4)
-    P4 = keras.layers.Activation('relu')(P4)
-    P4_upsampled = layers.UpsampleLike()([P4, P3])
+def default_reconstruction_decoder(pyramid_feature_size=256, regression_feature_size=256, name='reconstruction'):
+    options = {
+        'kernel_size'        : 3,
+        'strides'            : 1,
+        'padding'            : 'same',
+        'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        #'kernel_initializer': keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer'   : 'zeros',
+        'kernel_regularizer' : keras.regularizers.l2(0.001),
+    }
+    options_up = {
+        'kernel_size': 1,
+        'strides': 1,
+        'padding': 'same',
+        'kernel_initializer': keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        # 'kernel_initializer': keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer': 'zeros',
+        'kernel_regularizer': keras.regularizers.l2(0.001),
+    }
 
-    P3 = keras.layers.Add()([P4_upsampled, P3])
-    P3 = keras.layers.Conv2D(256, kernel_size=3, strides=1, padding='same')(P3)
-    P3 = keras.layers.BatchNormalization()(P3)
-    P3 = keras.layers.Activation('relu')(P3)
-    P3 = keras.layers.Conv2D(3, kernel_size=3, strides=1, padding='same')(P3)
-    P3 = keras.layers.BatchNormalization()(P3)
-    P3 = keras.layers.Activation('relu')(P3)
-    outputs = keras.layers.Reshape((60, 80, 3), name='reconstruction')(P3)
+    P3  = keras.layers.Input(shape=(60, 80, 512))
+    P4 = keras.layers.Input(shape=(30, 40, 1024))
+    P5 = keras.layers.Input(shape=(15, 20, 2048))
 
-    return outputs
-'''
+    inputs = [P3, P4, P5]
+
+    P5 = keras.layers.Conv2D(1024, **options, activation='relu')(P5)
+    P5 = keras.layers.Conv2D(1024, **options, activation='relu')(P5)
+    P5_up = layers.UpsampleLike()([P5, P4])
+    print('P5 up: ', P5_up)
+
+    P4 = keras.layers.Add()([P5_up, P4])
+    P4 = keras.layers.Conv2D(512, **options, activation='relu')(P4)
+    P4 = keras.layers.Conv2D(512, **options, activation='relu')(P4)
+    P4_up = layers.UpsampleLike()([P4, P3])
+    print('P4 up: ', P4_up)
+
+    P3 = keras.layers.Add()([P4_up, P3])
+    P3 = keras.layers.Conv2D(256, **options, activation='relu')(P3)
+    P3 = keras.layers.Conv2D(128, **options, activation='relu')(P3)
+    outputs = keras.layers.Conv2D(4, **options)(P3)
+
+    outputs = keras.layers.Reshape((60, 80, 4))(outputs)
+    #outputs = keras.layers.Activation('sigmoid')(outputs)
+
+    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
+
 
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
     P5 = keras.layers.Conv2D(feature_size, kernel_size=1, strides=1, padding='same')(C5)
@@ -336,6 +356,7 @@ def retinanet(
     mask_head = default_mask_model(num_classes=num_classes)
     #mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
     recon_head = default_reconstruction_model()
+    #recon_head = default_reconstruction_decoder()
 
     b1, b2, b3 = backbone_layers
 
@@ -347,6 +368,7 @@ def retinanet(
     pyramids.append(masks)
 
     recon = recon_head(features[0])
+    print('recon: ', recon)
     pyramids.append(recon)
 
     #masks_target = mask_head_target(features[0])

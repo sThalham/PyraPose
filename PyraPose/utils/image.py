@@ -226,6 +226,22 @@ def apply_transform2mask(matrix, mask, params):
     return mask
 
 
+def apply_transform2depth(matrix, mask, params):
+
+    #mask[:, 0] = mask[:, 1]
+    #mask[0, :] = mask[0, :]
+
+    mask = cv2.warpAffine(
+        mask,
+        matrix[:2, :],
+        dsize=(mask.shape[1], mask.shape[0]),
+        flags       = params.cvInterpolation(),
+        borderMode  = params.cvBorderMode(),
+        borderValue = params.cval,
+    )
+    return mask
+
+
 def adjust_pose_annotation(matrix, pose, cpara):
 
     trans_noaug = np.array([pose[0], pose[1], pose[2]])

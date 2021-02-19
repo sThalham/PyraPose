@@ -199,7 +199,7 @@ def create_generators(args, preprocess_image):
         self_generator = SelfLinemodGenerator(
             args.linemod_path,
             'train',
-            'pseudo',
+            'val',
             transform_generator=transform_generator,
             **common_args
         )
@@ -412,7 +412,7 @@ def main(args=None):
     training_model.fit_generator(
             generator=self_generator,
             steps_per_epoch=self_generator.size()/args.batch_size,
-            epochs=1,
+            epochs=args.self_supervision,
             verbose=1,
             callbacks=callbacks,
             workers=args.workers,

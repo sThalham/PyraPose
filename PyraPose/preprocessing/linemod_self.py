@@ -263,14 +263,18 @@ class SelfLinemodGenerator(Generator):
             image_info = self.image_ann[image_index]
         #path = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = self.image_paths[image_index]
-        path = path[:-4] + '_mask.png'  # + path[-4:]
-        mask = cv2.imread(path, -1)
+
+        mask_path = path[:-4] + '_mask.png'  # + path[-4:]
+        mask = cv2.imread(mask_path, -1)
+
+        dep_path = path[:-4] + '_dep.png'  # + path[-4:]
+        depth = cv2.imread(dep_path, -1)
 
         target_domain = np.full((1), False)
         if self.self_dir in path:
             target_domain = True
 
-        annotations     = {'mask': mask, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
+        annotations     = {'mask': mask, 'depth': depth, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
         for idx, a in enumerate(anns):
             if self.set_name == 'train':
