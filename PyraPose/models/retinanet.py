@@ -163,6 +163,32 @@ def default_reconstruction_model(pyramid_feature_size=256, regression_feature_si
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
 
+def default_discriminator(pyramid_feature_size=256, regression_feature_size=256, name='discriminator'):
+    options = {
+        'kernel_size'        : 5,
+        'strides'            : 2,
+        'padding'            : 'same',
+        'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer'   : 'zeros',
+        'activation'         : 'relu',
+    }
+
+    if keras.backend.image_data_format() == 'channels_first':
+        inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+    else:
+        inputs  = keras.layers.Input(shape=(60, 80, 3))
+
+    outputs = inputs
+    outputs = keras.layers.Conv2D(128, **options)(outputs)
+    outputs = keras.layers.Conv2D(256, **options)(outputs)
+    outputs = keras.layers.Conv2D(512, **options)(outputs)
+
+    outputs = keras.layers.Conv2D(1, **options)(outputs) #, name='pyramid_regression3D'
+    print('discriminator: ', outputs.shape)
+
+    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
+
+
 def default_reconstruction_decoder(pyramid_feature_size=256, regression_feature_size=256, name='reconstruction'):
     options = {
         'kernel_size'        : 3,
@@ -356,7 +382,7 @@ def retinanet(
     mask_head = default_mask_model(num_classes=num_classes)
     #mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
     recon_head = default_reconstruction_model()
-    #recon_head = default_reconstruction_decoder()
+    discriminator_head = default_discriminator()
 
     b1, b2, b3 = backbone_layers
 
