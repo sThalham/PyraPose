@@ -409,11 +409,18 @@ def main(args=None):
             fake_target = fake_targets[3]
 
             #with graph.as_default():
+
+            #for idx, layer in enumerate(discriminator_model.layers):
+            #    print(layer.name, layer.trainable)#.name, layer.trainable)
+
             loss_syn = discriminator_model.train_on_batch(x_t, valid)
             loss_fake = discriminator_model.train_on_batch(fake_target, fake)
             loss_dis = 0.5 * (loss_syn + loss_fake)
 
             pp_loss = training_model.train_on_batch(x=x_s, y=y_s)
+
+            #for idx, layer in enumerate(training_model.layers):
+            #    print(layer.name, layer.trainable)
 
             time_list.append(time.time() - start_time)
             time_list = time_list[-10:]
@@ -422,10 +429,10 @@ def main(args=None):
             print("[Epoch %d/%d] [Iteration %d/%d] 3Dbox: %f cls: %f mask: %f reconstruction: %f domain %f ETA: %s" % (epoch, args.epochs,
                                                                                                   iteration,
                                                                                                   train_iterations,
-                                                                                                  pp_loss[0],
                                                                                                   pp_loss[1],
                                                                                                   pp_loss[2],
                                                                                                   pp_loss[3],
+                                                                                                  pp_loss[4],
                                                                                                   loss_dis,
                                                                                                   eta))
 
