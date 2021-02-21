@@ -184,7 +184,7 @@ def default_discriminator(pyramid_feature_size=256, regression_feature_size=256,
     outputs = keras.layers.Conv2D(512, **options)(outputs)
 
     outputs = keras.layers.Conv2D(1, **options)(outputs) #, name='pyramid_regression3D'
-    print('discriminator: ', outputs.shape)
+    outputs = keras.layers.Reshape((-1, 1))(outputs)
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
@@ -353,7 +353,7 @@ def retinanet(
     domain = discriminator_head(recon)
     pyramids.append(domain)
 
-    return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
+    return keras.models.Model(inputs=inputs, outputs=pyramids, name=name), discriminator_head
 
 
 def retinanet_bbox(

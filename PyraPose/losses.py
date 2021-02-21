@@ -190,7 +190,7 @@ def smooth_l1(sigma=3.0):
         normalizer = keras.backend.maximum(1, keras.backend.shape(indices)[0])
         normalizer = keras.backend.cast(normalizer, dtype=keras.backend.floatx())
         loss = keras.backend.sum(regression_loss) / normalizer
-        return loss
+        return 5 * loss
 
     return _smooth_l1
 
@@ -416,7 +416,6 @@ def smooth_reconstruction_l1(loss_weight=0.2, sigma=3.0, weight=0.1):
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
         anchor_state = y_true[:, :, :, -1]
-        print('regression target: ', regression_target)
 
         #### filter out "ignore" anchors
         indices = backend.where(keras.backend.equal(anchor_state, 1))

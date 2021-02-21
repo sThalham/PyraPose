@@ -120,7 +120,6 @@ def anchor_targets_bbox(
 
         # w/o mask
         mask = annotations['mask']
-        depth = annotations['depth']
         image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 

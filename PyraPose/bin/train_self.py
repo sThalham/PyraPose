@@ -68,7 +68,7 @@ def makedirs(path):
 
 def model_with_weights(model, weights, skip_mismatch):
     if weights is not None:
-        model.load_weights(weights, by_name=True, skip_mismatch=skip_mismatch)
+        model[0].load_weights(weights, by_name=True, skip_mismatch=skip_mismatch)
     return model
 
 
@@ -86,16 +86,16 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     if multi_gpu > 1:
         from keras.utils import multi_gpu_model
         with tf.device('/cpu:0'):
-            model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, modifier=modifier), weights=weights, skip_mismatch=True)
+            model, discriminator_model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = multi_gpu_model(model, gpus=multi_gpu)
     else:
-        model          = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, modifier=modifier), weights=weights, skip_mismatch=True)
+        model, discriminator_model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = model
 
     # make prediction model
     prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
 
-    optimizer = keras.optimizers.Adam(lr=lr, clipnorm=0.001)
+    optimizer = tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001)
 
     # compile model
     training_model.compile(
@@ -109,7 +109,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
         optimizer=optimizer
     )
 
-    discriminator_model = default_discriminator()
+    #discriminator_model = default_discriminator()
     discriminator_model.compile(loss=losses.smooth_l1(), optimizer=optimizer)
 
     # For the combined model we will only train the generator
@@ -147,7 +147,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
             ),
             #verbose=1,
             #save_best_only=True,
-            #monitor="val_loss",
+            #monitor="val_loss",graph = tf.get_default_graph()
             #mode='auto'
         )
         checkpoint = RedirectModel(checkpoint, model)
@@ -264,7 +264,6 @@ def create_generators(args, preprocess_image):
             transform_generator=transform_generator,
             **common_args
         )
-
         validation_generator = HomebrewedGenerator(
             args.homebrewed_path,
             'val',
@@ -312,7 +311,7 @@ def parse_args(args):
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=100)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./models\')', default='./models')
-    parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
+    parser.add_argument('--tensorbgraph = tf.get_default_graph()oard-dir',  help='Log directory for Tensorboard output', default='./logs')
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
@@ -395,33 +394,34 @@ def main(args=None):
 
     time_list = []
 
+    train_iterations = int(train_generator.size()/args.batch_size)
+
     for epoch in range(args.epochs):
 
-        for iteration in range(int(train_generator.size()/args.batch_size)):
+        for iteration in range(train_iterations):
+        #for iteration in range(2):
 
             start_time = time.time()
             x_s, y_s = train_generator.__getsynt__()
             x_t = train_generator.__getreal__()
-            print(x_t.shape, valid.shape)
-            print(x_s.shape, fake.shape)
 
             fake_targets = training_model.predict(x_s)
-            print(len(fake_targets))
             fake_target = fake_targets[3]
-            print(fake_target.shape)
+
+            #with graph.as_default():
             loss_syn = discriminator_model.train_on_batch(x_t, valid)
             loss_fake = discriminator_model.train_on_batch(fake_target, fake)
             loss_dis = 0.5 * (loss_syn + loss_fake)
 
             pp_loss = training_model.train_on_batch(x=x_s, y=y_s)
 
-            time_list.append(time.time - start_time)
-            time_list = time_list[:-10]
-            eta = sum(time_list) / 10
+            time_list.append(time.time() - start_time)
+            time_list = time_list[-10:]
+            eta = ((sum(time_list) / 10) * (train_iterations - iteration)) / 3600
             # Plot the progress
             print("[Epoch %d/%d] [Iteration %d/%d] 3Dbox: %f cls: %f mask: %f reconstruction: %f domain %f ETA: %s" % (epoch, args.epochs,
                                                                                                   iteration,
-                                                                                                  args.batch_size,
+                                                                                                  train_iterations,
                                                                                                   pp_loss[0],
                                                                                                   pp_loss[1],
                                                                                                   pp_loss[2],
@@ -429,6 +429,9 @@ def main(args=None):
                                                                                                   loss_dis,
                                                                                                   eta))
 
+        safe_path = os.path.join(
+                args.snapshot_path, '{backbone}_{dataset_type}_{epoch}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type, epoch=epoch))
+        model.save(safe_path)
         train_generator.on_epoch_end()
 
 if __name__ == '__main__':
