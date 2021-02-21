@@ -39,12 +39,13 @@ class SelfLinemodGenerator(Generator):
 
         self.data_dir  = data_dir
         self.set_name  = set_name
-        self.self_dir = self_dir
+        self.domain = self_dir
         self.path      = os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json')
         self.mesh_info = os.path.join(data_dir, 'annotations', 'models_info' + '.yml')
         with open(self.path, 'r') as js:
             data = json.load(js)
 
+        # load source w/ annotations
         self.image_ann = data["images"]
         anno_ann = data["annotations"]
         cat_ann = data["categories"]
@@ -61,18 +62,6 @@ class SelfLinemodGenerator(Generator):
                 self.cy = img["cy"]
             self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
             self.image_paths.append(os.path.join(self.data_dir, 'images', self.set_name, img['file_name']))
-        
-        if self_dir != None:
-            self_path = os.path.join(self.data_dir, 'annotations', 'instances_' + self_dir + '.json')
-            with open(self_path, 'r') as js:
-                data_pseudo = json.load(js)
-
-            self.image_ann_ss = data_pseudo["images"]
-            anno_ann = anno_ann + data_pseudo["annotations"]
-            for img in self.image_ann_ss:
-                self.image_ids.append(img['id'])  # to correlate indexing to self.image_ann
-                self.image_paths.append(os.path.join(self.data_dir, 'images', self_dir, img['file_name']))
-            self.image_ann = self.image_ann + self.image_ann_ss
 
         for cat in cat_ann:
             self.cats[cat['id']] = cat
@@ -83,6 +72,20 @@ class SelfLinemodGenerator(Generator):
 
         self.load_classes()
 
+        if self.domain is not None:
+            # load target w/o annotations
+            self_path = os.path.join(self.data_dir, 'annotations', 'instances_' + self_dir + '.json')
+            with open(self_path, 'r') as js:
+                data_pseudo = json.load(js)
+
+            self.image_ann_ss = data_pseudo["images"]
+            self.image_ids_ss = []
+            self.image_paths_ss = []
+            for img in self.image_ann_ss:
+                self.image_ids_ss.append(img['id'])  # to correlate indexing to self.image_ann
+                self.image_paths_ss.append(os.path.join(self.data_dir, 'images', self_dir, img['file_name']))
+
+        # load 3D boxes
         self.TDboxes = np.ndarray((16, 8, 3), dtype=np.float32)
 
         for key, value in yaml.load(open(self.mesh_info)).items():
@@ -104,10 +107,6 @@ class SelfLinemodGenerator(Generator):
 
         super(SelfLinemodGenerator, self).__init__(**kwargs)
 
-    def reinit(self, **kwargs):
-
-        self_path = os.path.join(self.data_dir, 'annotations', 'instances_pseudo.json')
-        self.__init__(self.data_dir, self.set_name, self_path, **kwargs)
 
     def load_classes(self):
         """ Loads the class to label mapping (and inverse) for COCO.
@@ -156,6 +155,14 @@ class SelfLinemodGenerator(Generator):
     def size(self):
 
         return len(self.image_ids)
+
+    def size_ss(self):
+
+        return len(self.image_ids_ss)
+
+    def generator_domain(self):
+
+        return self.domain
 
     def num_classes(self):
 
@@ -271,7 +278,7 @@ class SelfLinemodGenerator(Generator):
         depth = cv2.imread(dep_path, -1)
 
         target_domain = np.full((1), False)
-        if self.self_dir in path:
+        if self.domain in path:
             target_domain = True
 
         annotations     = {'mask': mask, 'depth': depth, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
@@ -322,3 +329,4 @@ class SelfLinemodGenerator(Generator):
             ]]], axis=0)
 
         return annotations
+

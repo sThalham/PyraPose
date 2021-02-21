@@ -89,6 +89,8 @@ class Generator(keras.utils.Sequence):
 
         # Define groups
         self.group_images()
+        if self.generator_domain() is not None:
+            self.group_images_ss()
 
         # Shuffle when initializing
         if self.shuffle_groups:
@@ -97,11 +99,24 @@ class Generator(keras.utils.Sequence):
     def on_epoch_end(self):
         if self.shuffle_groups:
             random.shuffle(self.groups)
+        self.group_images()
+        if self.generator_domain() is not None:
+            self.group_images_ss()
 
     def size(self):
         """ Size of the dataset.
         """
         raise NotImplementedError('size method not implemented')
+
+    def size_ss(self):
+        """ Size of the dataset.
+        """
+        raise NotImplementedError('size_ss method not implemented')
+
+    def generator_domain(self):
+        """ Size of the dataset.
+        """
+        raise NotImplementedError('size_ss method not implemented')
 
     def num_classes(self):
         """ Number of classes in the dataset.
@@ -242,15 +257,9 @@ class Generator(keras.utils.Sequence):
                 transform_mask = adjust_transform_for_mask(next_transform, annotations['mask'],
                                                            self.transform_parameters.relative_translation)
 
-            # apply transformation to image            
-            if annotations['cam_params'].shape[0] > 1:
-                K = annotations['cam_params'][0, :]
-            else:
-                K = [572.4114, 573.57043, 325.26110828, 242.04899594]
-
-            image = apply_transform(transform, image, self.transform_parameters, K)
+            image = apply_transform(transform, image, self.transform_parameters)
             annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters)
-            annotations['depth'] = apply_transform2depth(transform_mask, annotations['depth'], self.transform_parameters)
+            #annotations['depth'] = apply_transform2depth(transform_mask, annotations['depth'], self.transform_parameters)
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()
@@ -274,10 +283,41 @@ class Generator(keras.utils.Sequence):
 
         return image_group, annotations_group
 
+    def random_transform_target_entry(self, image, transform=None):
+        """ Randomly transforms image and annotation.
+        """
+
+        # randomly transform both image and annotations
+        if transform is not None or self.transform_generator:
+            if transform is None:
+                #transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
+                next_transform = next(self.transform_generator)
+                transform = adjust_transform_for_image(next_transform, image,
+                                                       self.transform_parameters.relative_translation)
+
+            image = apply_transform(transform, image, self.transform_parameters)
+
+        return image
+
+    def random_transform_target(self, image_group):
+        """ Randomly transforms each image and its annotations.
+        """
+
+        for index in range(len(image_group)):
+            # transform a single group entry
+            image_group[index] = self.random_transform_target_entry(image_group[index])
+
+        return image_group
+
     def resize_image(self, image):
         """ Resize an image using image_min_side and image_max_side.
         """
         return resize_image(image, min_side=self.image_min_side, max_side=self.image_max_side)
+
+    def resize_image_target(self, image):
+        """ Resize an image using image_min_side and image_max_side.
+        """
+        return resize_image(image, min_side=60, max_side=80)
 
     def preprocess_group_entry(self, image, annotations):
         """ Preprocess image and its annotations.
@@ -308,6 +348,31 @@ class Generator(keras.utils.Sequence):
 
         return image_group, annotations_group
 
+    def preprocess_target_entry(self, image):
+        """ Preprocess image and its annotations.
+        """
+        # preprocess the image
+        image = self.preprocess_image(image)
+
+        # resize image
+        #image, image_scale = self.resize_image(image)
+        image, image_scale = resize_image(image, min_side=60, max_side=80)
+
+        # convert to the wanted keras floatx
+        image = keras.backend.cast_to_floatx(image)
+
+        return image
+
+    def preprocess_target(self, image_group):
+        """ Preprocess each image and its annotations in its group.
+        """
+
+        for index in range(len(image_group)):
+            # preprocess a single group entry
+            image_group[index] = self.preprocess_target_entry(image_group[index])
+
+        return image_group
+
     def group_images(self):
         """ Order the images according to self.order and makes groups of self.batch_size.
         """
@@ -320,6 +385,21 @@ class Generator(keras.utils.Sequence):
 
         # divide into groups, one group = one batch
         self.groups = [[order[x % len(order)] for x in range(i, i + self.batch_size)] for i in range(0, len(order), self.batch_size)]
+        self.len_group = np.arange(len(self.groups))
+
+    def group_images_ss(self):
+        """ Order the images according to self.order and makes groups of self.batch_size.
+        """
+        # determine the order of the images
+        order = list(range(self.size_ss()))
+        if self.group_method == 'random':
+            random.shuffle(order)
+        elif self.group_method == 'ratio':
+            order.sort(key=lambda x: self.image_aspect_ratio(x))
+
+        # divide into groups, one group = one batch
+        self.groups_ss = [[order[x % len(order)] for x in range(i, i + self.batch_size)] for i in range(0, len(order), self.batch_size)]
+        self.len_group_ss = np.arange(len(self.groups_ss))
 
     def compute_inputs(self, image_group):
         """ Compute inputs for the network using an image_group.
@@ -365,7 +445,7 @@ class Generator(keras.utils.Sequence):
         """ Compute inputs and target outputs for the network.
         """
         # load images and annotations
-        image_group       = self.load_image_group(group) # image group is now [image_rgb, image_dep]
+        image_group       = self.load_image_group(group)
         annotations_group = self.load_annotations_group(group)
 
         # check validity of annotations
@@ -385,6 +465,23 @@ class Generator(keras.utils.Sequence):
 
         return inputs, targets
 
+    def compute_inputs_target(self, group):
+        """ Compute inputs and target outputs for the network.
+        """
+        # load images and annotations
+        image_group       = self.load_image_group(group)
+
+        # randomly transform data
+        image_group = self.random_transform_target(image_group)
+
+        # perform preprocessing steps
+        image_group = self.preprocess_target(image_group)
+
+        # compute network inputs
+        inputs = self.compute_inputs(image_group)
+
+        return inputs
+
     def __len__(self):
         """
         Number of batches for generator.
@@ -400,3 +497,25 @@ class Generator(keras.utils.Sequence):
         inputs, targets = self.compute_input_output(group)
 
         return inputs, targets
+
+    def __getsynt__(self):
+        """
+        Keras sequence method for generating batches.
+        """
+
+        index = np.random.choice(self.len_group, size=1, replace=True)
+        self.len_group = np.delete(self.len_group, index)
+        group = self.groups[index[0]]
+        inputs, targets = self.compute_input_output(group)
+
+        return inputs, targets
+
+    def __getreal__(self):
+        """
+        Keras sequence method for generating batches.
+        """
+        index = np.random.choice(self.len_group_ss, size=1, replace=True)
+        group = self.groups_ss[index[0]]
+        inputs = self.compute_inputs_target(group)
+
+        return inputs

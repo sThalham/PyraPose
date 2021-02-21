@@ -443,4 +443,3 @@ def smooth_reconstruction_l1(loss_weight=0.2, sigma=3.0, weight=0.1):
         return loss_weight * keras.backend.sum(regression_loss) / normalizer
 
     return _smooth_reconstruction_l1
-

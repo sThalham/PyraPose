@@ -147,7 +147,7 @@ class TransformParameters:
             return cv2.INTER_LANCZOS4
 
 
-def apply_transform(matrix, image, params, cpara):
+def apply_transform(matrix, image, params):
 
     # rgb
     # seq describes an object for rgb image augmentation using aleju/imgaug
