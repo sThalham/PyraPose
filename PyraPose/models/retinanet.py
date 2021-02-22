@@ -183,8 +183,10 @@ def default_discriminator(pyramid_feature_size=256, regression_feature_size=256,
     outputs = keras.layers.Conv2D(256, **options)(outputs)
     outputs = keras.layers.Conv2D(512, **options)(outputs)
 
-    outputs = keras.layers.Conv2D(1, **options)(outputs) #, name='pyramid_regression3D'
+    #outputs = keras.layers.Conv2D(1, **options)(outputs) #, name='pyramid_regression3D'
+    outputs = keras.layers.Conv2D(1, kernel_size=5, strides=2, padding='same', kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None), bias_initializer='zeros')(outputs)
     outputs = keras.layers.Reshape((-1, 1))(outputs)
+    print('discriminator out: ', outputs)
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
