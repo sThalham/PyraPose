@@ -278,7 +278,8 @@ class SelfLinemodGenerator(Generator):
         depth = cv2.imread(dep_path, -1)
 
         target_domain = np.full((1), False)
-        if self.domain in path:
+
+        if str(self.domain) in path:
             target_domain = True
 
         annotations     = {'mask': mask, 'depth': depth, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}

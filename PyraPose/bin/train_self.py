@@ -413,15 +413,21 @@ def main(args=None):
             #for idx, layer in enumerate(discriminator_model.layers):
             #    print(layer.name, layer.trainable)#.name, layer.trainable)
 
-            loss_syn = discriminator_model.train_on_batch(x_t, valid)
-            loss_fake = discriminator_model.train_on_batch(fake_target, fake)
-            loss_dis = 0.5 * (loss_syn + loss_fake)
+            disc_patch = np.concatenate([x_t, fake_target], axis=0)
+            disc_class = np.concatenate([valid, fake], axis=0)
+
+            #loss_syn = discriminator_model.train_on_batch(x_t, valid)
+            #loss_fake = discriminator_model.train_on_batch(fake_target, fake)
+            #loss_dis = 0.5 * (loss_syn + loss_fake)
+            loss_dis = discriminator_model.train_on_batch(disc_patch, disc_class)
+
 
             pp_loss = training_model.train_on_batch(x=x_s, y=y_s)
 
             #for idx, layer in enumerate(training_model.layers):
             #    print(layer.name, layer.trainable)
 
+            print('iteration time: ', time.time() - start_time)
             time_list.append(time.time() - start_time)
             time_list = time_list[-10:]
             eta = ((sum(time_list) / 10) * (train_iterations - iteration)) / 3600

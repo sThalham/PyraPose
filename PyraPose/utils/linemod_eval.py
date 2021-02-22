@@ -167,7 +167,7 @@ def load_pcd(cat):
     model_vsd = ply_loader.load_ply(ply_path)
     pcd_model = open3d.geometry.PointCloud()
     pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
-    pcd_model.estimate_normals(search_param=open3d.geometry.KDTreeSearchParamHybrid(
+    open3d.estimate_normals(pcd_model, search_param=open3d.geometry.KDTreeSearchParamHybrid(
         radius=0.1, max_nn=30))
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
@@ -177,6 +177,26 @@ def load_pcd(cat):
 
     return pcd_model, model_vsd, model_vsd_mm
 
+'''
+def load_pcd(cat):
+    # load meshes
+    #mesh_path ="/RGBDPose/Meshes/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
+    ply_path = mesh_path + 'obj_' + cat + '.ply'
+    model_vsd = ply_loader.load_ply(ply_path)
+    pcd_model = open3d.geometry.PointCloud()
+    pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
+    pcd_model.estimate_normals(search_param=open3d.geometry.KDTreeSearchParamHybrid(
+        radius=0.1, max_nn=30))
+    # open3d.draw_geometries([pcd_model])
+    model_vsd_mm = copy.deepcopy(model_vsd)
+    model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
+    #pcd_model = open3d.read_point_cloud(ply_path)
+    #pcd_model = None
+
+    return pcd_model, model_vsd, model_vsd_mm
+'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -321,11 +341,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         images = []
         images.append(image)
         images.append(image_dep)
-        boxes3D, scores, mask, reg_aux, cls_aux, msk_aux = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)]
-
-        boxes3D = reg_aux
-        scores = cls_aux
-        mask = msk_aux
+        boxes3D, scores, mask, recon, domain = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)]
 
         for inv_cls in range(scores.shape[2]):
 
@@ -556,7 +572,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             print(' ')
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
-
+            '''
             tDbox = R_gt.dot(ori_points.T).T
             tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
             box3D = toPix_array(tDbox)
@@ -616,17 +632,18 @@ def evaluate_linemod(generator, model, threshold=0.05):
                              2)
             image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              2)
+            '''
 
-            hyp_mask = np.zeros((640, 480), dtype=np.float32)
-            for idx in range(k_hyp):
-                hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
+            #hyp_mask = np.zeros((640, 480), dtype=np.float32)
+            #for idx in range(k_hyp):
+            #    hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
 
-            hyp_mask = np.transpose(hyp_mask)
-            hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
+            #hyp_mask = np.transpose(hyp_mask)
+            #hyp_mask = (hyp_mask * (255.0 / np.nanmax(hyp_mask))).astype(np.uint8)
 
-            image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
-            image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
-            image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
+            #image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
+            #image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
+            #image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
 
 
             '''
@@ -654,9 +671,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            name = '/home/stefan/PyraPose_viz/img_' + str(index) + '.jpg'
-            cv2.imwrite(name, image_raw)
-            print('break')
+            #name = '/home/stefan/PyraPose_viz/img_' + str(index) + '.jpg'
+            #cv2.imwrite(name, image_raw)
+            #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)

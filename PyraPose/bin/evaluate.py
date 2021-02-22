@@ -61,11 +61,11 @@ def create_generator(args):
         )
     elif args.dataset_type == 'linemod':
         # import here to prevent unnecessary dependency on cocoapi
-        from ..preprocessing.linemod import LinemodGenerator
+        from ..preprocessing.linemod_self import SelfLinemodGenerator
 
-        validation_generator = LinemodGenerator(
+        validation_generator = SelfLinemodGenerator(
             args.linemod_path,
-            'val',
+            'test',
             image_min_side=args.image_min_side,
             image_max_side=args.image_max_side,
             config=args.config
