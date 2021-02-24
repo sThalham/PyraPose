@@ -165,7 +165,7 @@ def default_reconstruction_model(pyramid_feature_size=256, regression_feature_si
 
 def default_discriminator(pyramid_feature_size=256, regression_feature_size=256, name='domain'):
     options = {
-        'kernel_size'        : 5,
+        'kernel_size'        : 3,
         'strides'            : 2,
         'padding'            : 'same',
         'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
@@ -179,14 +179,16 @@ def default_discriminator(pyramid_feature_size=256, regression_feature_size=256,
         inputs  = keras.layers.Input(shape=(60, 80, 3))
 
     outputs = inputs
+    #outputs = keras.layers.Conv2D(32, **options)(outputs)
+    outputs = keras.layers.Conv2D(64, **options)(outputs)
     outputs = keras.layers.Conv2D(128, **options)(outputs)
     outputs = keras.layers.Conv2D(256, **options)(outputs)
     outputs = keras.layers.Conv2D(512, **options)(outputs)
 
     #outputs = keras.layers.Conv2D(1, **options)(outputs) #, name='pyramid_regression3D'
-    outputs = keras.layers.Conv2D(1, kernel_size=5, strides=2, padding='same', kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None), bias_initializer='zeros')(outputs)
+    outputs = keras.layers.Conv2D(1, kernel_size=1, strides=1, padding='same', kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None), bias_initializer='zeros', activation='sigmoid')(outputs)
     outputs = keras.layers.Reshape((-1, 1))(outputs)
-    print('discriminator out: ', outputs)
+    #print('discriminator out: ', keras.backend.int_shape(outputs))
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 

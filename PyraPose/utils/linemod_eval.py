@@ -158,6 +158,7 @@ def toPix_array(translation):
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
 
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -196,7 +197,7 @@ def load_pcd(cat):
     #pcd_model = None
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
+
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -311,6 +312,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
         print(anno['labels'])
         if len(anno['labels']) < 1:
+            continue
+
+        if anno['labels'] == 6 or anno['labels'] == 2:
             continue
 
         checkLab = anno['labels']  # +1 to real_class
@@ -566,13 +570,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
             else:
                 err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
+            colEst = (0, 0, 250)
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
+                colEst = (0, 204, 0)
 
             print(' ')
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
-            '''
+
             tDbox = R_gt.dot(ori_points.T).T
             tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
             box3D = toPix_array(tDbox)
@@ -587,7 +593,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             pose = eDbox.astype(np.uint16)
 
             colGT = (255, 0, 0)
-            colEst = colEst = (0, 204, 0)
+            #colEst = colEst = (0, 204, 0)
 
             image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
             image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
@@ -632,7 +638,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                              2)
             image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              2)
-            '''
+
 
             #hyp_mask = np.zeros((640, 480), dtype=np.float32)
             #for idx in range(k_hyp):
@@ -671,8 +677,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            #name = '/home/stefan/PyraPose_viz/img_' + str(index) + '.jpg'
-            #cv2.imwrite(name, image_raw)
+            name = '/home/stefan/PyraPose_viz/img_' + str(index) + '.jpg'
+            cv2.imwrite(name, image_raw)
             #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
