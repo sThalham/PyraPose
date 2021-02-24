@@ -317,7 +317,7 @@ class Generator(keras.utils.Sequence):
     def resize_image_target(self, image):
         """ Resize an image using image_min_side and image_max_side.
         """
-        return resize_image(image, min_side=60, max_side=80)
+        return resize_image(image, min_sidpyramid_feature_sizee=480, max_side=640)
 
     def preprocess_group_entry(self, image, annotations):
         """ Preprocess image and its annotations.
@@ -356,7 +356,7 @@ class Generator(keras.utils.Sequence):
 
         # resize image
         #image, image_scale = self.resize_image(image)
-        image, image_scale = resize_image(image, min_side=60, max_side=80)
+        image, image_scale = resize_image(image, min_side=480, max_side=640)
 
         # convert to the wanted keras floatx
         image = keras.backend.cast_to_floatx(image)

@@ -103,14 +103,15 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
             'mask'          : losses.focal(),
-            'reconstruction' : losses.smooth_reconstruction_l1(),
+            #'reconstruction' : losses.smooth_reconstruction_l1(),
             'domain': losses.focal(),
+            'P3'            : losses.smooth_l1(),
         },
         optimizer=optimizer
     )
 
     #discriminator_model = default_discriminator()
-    discriminator_model.compile(loss=losses.smooth_l1(), optimizer=optimizer)
+    discriminator_model.compile(loss=losses.focal(), optimizer=optimizer)
 
     # For the combined model we will only train the generator
     #self.discriminator.trainable = False
@@ -390,9 +391,10 @@ def main(args=None):
 
     #valid = np.ones((args.batch_size, 20, 2), dtype=keras.backend.floatx())
     #fake = np.zeros((args.batch_size, 20, 2), dtype=keras.backend.floatx())
-    valid = np.ones((args.batch_size, 4800, 2), dtype=keras.backend.floatx())
-    fake = np.zeros((args.batch_size, 4800, 2), dtype=keras.backend.floatx())
-    fake[:, :, 1] = 1
+    #fake[:, :, 1] = 1
+    valid = np.ones((args.batch_size, 60, 80, 2), dtype=keras.backend.floatx())
+    fake = np.zeros((args.batch_size, 60, 80, 2), dtype=keras.backend.floatx())
+    fake[:, :, :, 1] = 1
 
     time_list = []
 
@@ -401,28 +403,29 @@ def main(args=None):
     for epoch in range(args.epochs):
 
         for iteration in range(train_iterations):
-        #for iteration in range(2):
 
             start_time = time.time()
             x_s, y_s = train_generator.__getsynt__()
             x_t = train_generator.__getreal__()
 
             fake_targets = training_model.predict(x_s)
-            fake_target = fake_targets[3]
+            fake_target = fake_targets[4]
+            true_targets = training_model.predict(x_t)
+            true_target = true_targets[4]
 
             #with graph.as_default():
 
             #for idx, layer in enumerate(discriminator_model.layers):
             #    print(layer.name, layer.trainable)#.name, layer.trainable)
 
-            disc_patch = np.concatenate([x_t, fake_target], axis=0)
+            #disc_patch = np.concatenate([x_t, fake_target], axis=0)
+            disc_patch = np.concatenate([true_target, fake_target], axis=0)
             disc_class = np.concatenate([valid, fake], axis=0)
 
             #loss_syn = discriminator_model.train_on_batch(x_t, valid)
             #loss_fake = discriminator_model.train_on_batch(fake_target, fake)
             #loss_dis = 0.5 * (loss_syn + loss_fake)
             loss_dis = discriminator_model.train_on_batch(disc_patch, disc_class)
-
 
             pp_loss = training_model.train_on_batch(x=x_s, y=y_s)
 
@@ -434,13 +437,12 @@ def main(args=None):
             time_list = time_list[-10:]
             eta = ((sum(time_list) / 10) * (train_iterations - iteration)) / 3600
             # Plot the progress
-            print("[Epoch %d/%d] [Iteration %d/%d] 3Dbox: %f cls: %f mask: %f reconstruction: %f domain %f ETA: %s" % (epoch, args.epochs,
+            print("[Epoch %d/%d] [Iteration %d/%d] 3Dbox: %f cls: %f mask: %f domain: %f ETA: %s" % (epoch, args.epochs,
                                                                                                   iteration,
                                                                                                   train_iterations,
                                                                                                   pp_loss[1],
                                                                                                   pp_loss[2],
                                                                                                   pp_loss[3],
-                                                                                                  pp_loss[4],
                                                                                                   loss_dis,
                                                                                                   eta))
 

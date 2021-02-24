@@ -112,7 +112,9 @@ def anchor_targets_bbox(
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
     reconstruction_batch = np.zeros((batch_size, 60, 80, 3 + 1), dtype=keras.backend.floatx())
     #valid = np.ones((batch_size, 20, 2), dtype=keras.backend.floatx())
-    valid = np.ones((batch_size, 4800, 2), dtype=keras.backend.floatx())
+    valid = np.ones((batch_size, 60, 80, 2), dtype=keras.backend.floatx())
+
+    features_batch = np.zeros((batch_size, 60, 80, 256), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
 
@@ -278,7 +280,7 @@ def anchor_targets_bbox(
             #labels_batch_target[index, indices, -1] = -1
             #regression_3D_target[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, mask_batch, reconstruction_batch, valid
+    return regression_3D, labels_batch, mask_batch, valid, features_batch
 
 
 def compute_gt_annotations(

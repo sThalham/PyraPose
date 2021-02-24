@@ -207,9 +207,9 @@ def default_discriminator(
     }
 
     if keras.backend.image_data_format() == 'channels_first':
-        inputs = keras.layers.Input(shape=(3, None, None))
+        inputs = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
-        inputs = keras.layers.Input(shape=(60, 80, 3))
+        inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size))
 
     outputs = inputs
     for i in range(4):
@@ -233,10 +233,10 @@ def default_discriminator(
     # reshape output and apply sigmoid
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) #, name='pyramid_classification_permute'
-    outputs = keras.layers.Reshape((-1, 1))(outputs) # , name='pyramid_classification_reshape'
+    outputs = keras.layers.Reshape((60, 80, 1))(outputs) # , name='pyramid_classification_reshape'
     outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
 
-    outputs = keras.backend.print_tensor(outputs, message='domain')
+    #outputs = keras.backend.print_tensor(outputs, message='domain')
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
@@ -385,7 +385,7 @@ def retinanet(
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
     mask_head = default_mask_model(num_classes=num_classes)
     #mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
-    recon_head = default_reconstruction_model()
+    #recon_head = default_reconstruction_model()
     discriminator_head = default_discriminator()
 
     discriminator_head.trainable = False
@@ -399,11 +399,13 @@ def retinanet(
     masks = mask_head(features[0])
     pyramids.append(masks)
 
-    recon = recon_head(features[0])
-    pyramids.append(recon)
+    #recon = recon_head(features[0])
+    #pyramids.append(recon)
 
-    domain = discriminator_head(recon)
+    domain = discriminator_head(features[0])
     pyramids.append(domain)
+
+    pyramids.append(features[0])
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name), discriminator_head
 
@@ -435,13 +437,13 @@ def retinanet_bbox(
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     mask = model.outputs[2]
-    recon = model.outputs[3]
-    domain = model.outputs[4]
+    #recon = model.outputs[3]
+    domain = model.outputs[3]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
     #reg_aux = layers.RegressBoxes3D(name='reg3D')([anchors, reg_aux])
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, recon, domain], name=name)
-    #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, cls_aux], name=name)
+    #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, recon, domain], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, domain, features[0]], name=name)
