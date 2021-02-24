@@ -111,7 +111,8 @@ def anchor_targets_bbox(
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
     reconstruction_batch = np.zeros((batch_size, 60, 80, 3 + 1), dtype=keras.backend.floatx())
-    valid = np.ones((batch_size, 20, 2), dtype=keras.backend.floatx())
+    #valid = np.ones((batch_size, 20, 2), dtype=keras.backend.floatx())
+    valid = np.ones((batch_size, 4800, 2), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
 

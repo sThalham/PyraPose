@@ -503,8 +503,8 @@ class Generator(keras.utils.Sequence):
         Keras sequence method for generating batches.
         """
 
-        index = np.random.choice(self.len_group, size=1, replace=True)
-        self.len_group = np.delete(self.len_group, index)
+        index = np.random.choice(self.len_group, size=self.batch_size, replace=False)
+
         group = self.groups[index[0]]
         inputs, targets = self.compute_input_output(group)
 
@@ -514,7 +514,7 @@ class Generator(keras.utils.Sequence):
         """
         Keras sequence method for generating batches.
         """
-        index = np.random.choice(self.len_group_ss, size=1, replace=True)
+        index = np.random.choice(self.len_group_ss, size=self.batch_size, replace=True)
         group = self.groups_ss[index[0]]
         inputs = self.compute_inputs_target(group)
 

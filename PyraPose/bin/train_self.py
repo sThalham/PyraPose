@@ -104,7 +104,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             'cls'          : losses.focal(),
             'mask'          : losses.focal(),
             'reconstruction' : losses.smooth_reconstruction_l1(),
-            'domain': losses.smooth_l1(),
+            'domain': losses.focal(),
         },
         optimizer=optimizer
     )
@@ -388,8 +388,10 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
-    valid = np.ones((args.batch_size, 20, 2), dtype=keras.backend.floatx())
-    fake = np.zeros((args.batch_size, 20, 2), dtype=keras.backend.floatx())
+    #valid = np.ones((args.batch_size, 20, 2), dtype=keras.backend.floatx())
+    #fake = np.zeros((args.batch_size, 20, 2), dtype=keras.backend.floatx())
+    valid = np.ones((args.batch_size, 4800, 2), dtype=keras.backend.floatx())
+    fake = np.zeros((args.batch_size, 4800, 2), dtype=keras.backend.floatx())
     fake[:, :, 1] = 1
 
     time_list = []
@@ -427,7 +429,7 @@ def main(args=None):
             #for idx, layer in enumerate(training_model.layers):
             #    print(layer.name, layer.trainable)
 
-            print('iteration time: ', time.time() - start_time)
+            #print('iteration time: ', time.time() - start_time)
             time_list.append(time.time() - start_time)
             time_list = time_list[-10:]
             eta = ((sum(time_list) / 10) * (train_iterations - iteration)) / 3600
