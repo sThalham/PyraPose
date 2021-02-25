@@ -222,19 +222,12 @@ def anchor_targets_bbox(
                 cv2.imwrite(name, image_raw)
             '''
             regression_3D[index, :, :-1] = box3D_transform(anchors, calculated_boxes[argmax_overlaps_inds, :], num_classes)
-            #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-            # necessary for self-supervision
-            #regression_3D_target[index, :, :] = regression_3D[index, :, :]
-            #labels_batch_target[index, :, :] = labels_batch[index, :, :]
-            #mask_batch_target[index, :, :] = mask_batch[index, :, :]
-            #img_lr = Image.fromarray(image).resize((80, 60), Image.NEAREST)
-            img_lr = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0]))
-            #depth = cv2.resize(depth, (image_shapes[0][1], image_shapes[0][0]))
-            #depth = np.where(np.isfinite(depth), depth / 20, 0.0) - 125.0
-            reconstruction_batch[index, :, :, :-1] = img_lr
-            #reconstruction_batch[index, :, :, -2] = depth
-            reconstruction_batch[index, :, :, -1] = 1
 
+            #img_lr = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0]))
+            #reconstruction_batch[index, :, :, :-1] = img_lr
+            #reconstruction_batch[index, :, :, -1] = 1
+
+            # Visualize
             #image_lr = img_lr
             #image_lr[..., 0] += 103.939
             #image_lr[..., 1] += 116.779

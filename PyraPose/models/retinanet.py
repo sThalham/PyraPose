@@ -195,6 +195,7 @@ def default_discriminator(pyramid_feature_size=256, regression_feature_size=256,
 
 
 def default_discriminator(
+    num_classes,
     pyramid_feature_size=256,
     prior_probability=0.01,
     classification_feature_size=256,
@@ -207,9 +208,9 @@ def default_discriminator(
     }
 
     if keras.backend.image_data_format() == 'channels_first':
-        inputs = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+        inputs = keras.layers.Input(shape=(pyramid_feature_size + num_classes, None, None))
     else:
-        inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size))
+        inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size + num_classes))
 
     outputs = inputs
     for i in range(4):
@@ -386,7 +387,7 @@ def retinanet(
     mask_head = default_mask_model(num_classes=num_classes)
     #mask_head_target = default_mask_model(num_classes=num_classes, name='mask_target')
     #recon_head = default_reconstruction_model()
-    discriminator_head = default_discriminator()
+    discriminator_head = default_discriminator(num_classes)
 
     discriminator_head.trainable = False
 
@@ -401,8 +402,10 @@ def retinanet(
 
     #recon = recon_head(features[0])
     #pyramids.append(recon)
+    mask_reshape = keras.layers.Reshape((60, 80, num_classes))(masks)
+    disc_in = keras.layers.Concatenate(axis=3)([features[0], mask_reshape])
 
-    domain = discriminator_head(features[0])
+    domain = discriminator_head(disc_in)
     pyramids.append(domain)
 
     pyramids.append(features[0])
