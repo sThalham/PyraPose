@@ -450,3 +450,4 @@ def retinanet_bbox(
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
     #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, recon, domain], name=name)
     return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, domain, features[0]], name=name)
+

@@ -50,6 +50,8 @@ from ..utils.model import freeze as freeze_model
 from ..utils.transform import random_transform_generator
 from ..utils.image import resize_image
 
+from ..models.pyrapose import custom_Model
+
 
 def makedirs(path):
     # Intended behavior: try to create the directory,
@@ -94,6 +96,24 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
         model, discriminator_model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = model
 
+    prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
+
+    gan = custom_Model(pyrapose=training_model, discriminator=discriminator_model)
+    optimizer = keras.optimizers.Adam(lr=lr, clipnorm=0.001)
+    gan.compile(
+        optimizer=optimizer,
+        gen_loss={
+            '3Dbox': losses.orthogonal_l1(),
+            'cls': losses.focal(),
+            'mask': losses.focal(),
+            # 'reconstruction' : losses.smooth_reconstruction_l1(),
+            'domain': losses.focal(),
+            'P3': losses.smooth_l1(),
+        },
+        dis_loss=losses.focal()
+    )
+
+    '''
     # make prediction model
     prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
 
@@ -117,8 +137,9 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
 
     # For the combined model we will only train the generator
     #self.discriminator.trainable = False
+    '''
 
-    return model, training_model, prediction_model, discriminator_model
+    return model, gan, prediction_model
 
 
 def create_callbacks(model, training_model, prediction_model, validation_generator, train_generator, args):
@@ -363,7 +384,7 @@ def main(args=None):
             weights = backbone.download_imagenet()
 
         print('Creating model, this may take a second...')
-        model, training_model, prediction_model, discriminator_model = create_models(
+        model, training_model, prediction_model = create_models(
             backbone_retinanet=backbone.retinanet,
             num_classes=train_generator.num_classes(),
             weights=weights,
@@ -391,6 +412,19 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
+    training_model.fit_generator(
+        generator=train_generator,
+        steps_per_epoch=train_generator.size() / args.batch_size,
+        epochs=args.epochs,
+        verbose=1,
+        callbacks=callbacks,
+        workers=args.workers,
+        use_multiprocessing=use_multiprocessing,
+        max_queue_size=args.max_queue_size
+    )
+
+    '''
+
     #valid = np.ones((args.batch_size, 20, 2), dtype=keras.backend.floatx())
     #fake = np.zeros((args.batch_size, 20, 2), dtype=keras.backend.floatx())
     #fake[:, :, 1] = 1
@@ -409,21 +443,8 @@ def main(args=None):
         for iteration in range(train_iterations):
 
             start_time = time.time()
-            for btx in range(args.batch_size):
-                a = Process(target=pickle_gen_syn, args=(train_generator,))
-                b = Process(target=pickle_gen_real, args=(train_generator,))
-                a.start()
-                b.start()
-                a.join()
-                b.join()
-
-            print(len(y_s))
-
-            #x_s, y_s = multiproc.map(pickle_gen_syn, train_generator)
-            #x_t = multiproc.map(pickle_gen_real, train_generator)
-
-            #x_s, y_s = train_generator.__getsynt__()
-            #x_t = train_generator.__getreal__()
+            x_s, y_s = train_generator.__getsynt__()
+            x_t = train_generator.__getreal__()
             print('loading: ', time.time() - start_time)
 
             ##############################
@@ -510,6 +531,7 @@ def main(args=None):
                 args.snapshot_path, '{backbone}_{dataset_type}_{epoch}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type, epoch=epoch))
         model.save(safe_path)
         train_generator.on_epoch_end()
+    '''
 
 if __name__ == '__main__':
     main()
