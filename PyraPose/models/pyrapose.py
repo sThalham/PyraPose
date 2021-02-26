@@ -36,7 +36,7 @@ class CustomModel(tf.keras.Model):
         # labels += 0.05 * tf.random.uniform(tf.shape(labels))
 
         x_st = tf.concat([x_s, x_t], axis=0)
-        with tf.GradientTape() as tape:
+        with tf.GradientTape() as tape_gen:
             predicts_gen = self.pyrapose.predict(x_st, batch_size=None, steps=1)
 
         points = predicts_gen[0]
@@ -44,8 +44,6 @@ class CustomModel(tf.keras.Model):
         masks = predicts_gen[2]
         domain = predicts_gen[3]
         features = predicts_gen[4]
-        print('Predict')
-        print('points: ', keras.backend.int_shape(points))
 
         source_points, target_points = tf.split(points, num_or_size_splits=2, axis=0)
         source_locations, target_locations = tf.split(locations, num_or_size_splits=2, axis=0)
@@ -54,23 +52,29 @@ class CustomModel(tf.keras.Model):
         source_features, target_features = tf.split(features, num_or_size_splits=2, axis=0)
 
         cls_shape = tf.shape(source_mask)[2]
-        source_mask = tf.reshape(source_mask, (batch_size, 60, 80, cls_shape))
-        target_mask = tf.reshape(target_mask, (batch_size, 60, 80, cls_shape))
+        source_mask_re = tf.reshape(source_mask, (batch_size, 60, 80, cls_shape))
+        target_mask_re = tf.reshape(target_mask, (batch_size, 60, 80, cls_shape))
 
-        source_patch = tf.concat([source_features, source_mask], axis=3)
-        target_patch = tf.concat([target_features, target_mask], axis=3)
+        source_patch = tf.concat([source_features, source_mask_re], axis=3)
+        target_patch = tf.concat([target_features, target_mask_re], axis=3)
         disc_patch = tf.concat([target_patch, source_patch], axis=0)
 
-        with tf.GradientTape() as tape:
+        filtered_predictions = [source_points, source_locations, source_mask, source_domain]
+        losses = []
+        with tf.GradientTape() as tape_dis:
             domain = self.discriminator(disc_patch)
             d_loss = self.loss_discriminator(labels, domain)
-            g_loss = self.loss_generator(y_s, [source_points, source_locations, source_mask, source_domain, source_features])
+        with tape_gen:
+            for ldx, task in enumerate(y_s):
+                losses.append(self.loss_generator[ldx](task, filtered_predictions[ldx]))
+            #g_loss = self.loss_generator(y_s, )
 
-        grads_dis = tape.gradient(d_loss, self.discriminator.trainable_weights)
+        grads_dis = tape_dis.gradient(d_loss, self.discriminator.trainable_weights)
         self.optimizer.apply_gradients(zip(grads_dis, self.discriminator.trainable_weights))
 
-        grads_gen = tape.gradient(d_loss, self.pyrapose.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads_gen, self.pyrapose.trainable_weights))
+        grads_gen = tape_gen.gradient(losses, self.pyrapose.trainable_weights)
+        for grads_loss in enumerate(grads_gen):
+            self.optimizer.apply_gradients(zip(grads_loss, self.pyrapose.trainable_weights))
 
         #'3Dbox', 'cls', 'mask', 'domain', 'P3'
         return {"d_loss": d_loss, "g_loss": g_loss}
