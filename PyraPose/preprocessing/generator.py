@@ -489,14 +489,25 @@ class Generator(keras.utils.Sequence):
 
         return len(self.groups)
 
+    #def __getitem__(self, index):
+    #    """
+    #    Keras sequence method for generating batches.
+    #    """
+    #    group = self.groups[index]
+    #    inputs, targets = self.compute_input_output(group)
+
+    #    return inputs, targets
+
     def __getitem__(self, index):
         """
         Keras sequence method for generating batches.
         """
         group = self.groups[index]
         inputs, targets = self.compute_input_output(group)
+        group = self.groups_ss[index[0]]
+        inputs_domain = self.compute_inputs_target(group)
 
-        return inputs, targets
+        return inputs, targets, inputs_domain
 
     def __getsynt__(self):
         """

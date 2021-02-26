@@ -6,15 +6,15 @@ from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
 
-class custom_Model(keras.Model):
+class CustomModel(keras.Model):
     def __init__(self, pyrapose, discriminator):
-        super(custom_Model, self).__init__()
+        super(CustomModel, self).__init__()
         self.discriminator = discriminator
         self.pyrapose = pyrapose
 
-    def compile(self, optimizer, gen_loss, dis_loss):
-        super(custom_Model, self).compile()
-        self.optimizer = optimizer
+    def compile(self, omni_optimizer, gen_loss, dis_loss):
+        super(CustomModel, self).compile()
+        self.omni_optimizer = omni_optimizer
         self.loss_generator = gen_loss
         self.loss_discriminator = dis_loss
 

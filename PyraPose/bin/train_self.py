@@ -50,7 +50,7 @@ from ..utils.model import freeze as freeze_model
 from ..utils.transform import random_transform_generator
 from ..utils.image import resize_image
 
-from ..models.pyrapose import custom_Model
+from ..models.pyrapose import CustomModel
 
 
 def makedirs(path):
@@ -98,10 +98,12 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
 
     prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
 
-    gan = custom_Model(pyrapose=training_model, discriminator=discriminator_model)
+    print(training_model)
+    gan = CustomModel(pyrapose=training_model, discriminator=discriminator_model)
+    print(gan)
     optimizer = keras.optimizers.Adam(lr=lr, clipnorm=0.001)
     gan.compile(
-        optimizer=optimizer,
+        omni_optimizer=optimizer,
         gen_loss={
             '3Dbox': losses.orthogonal_l1(),
             'cls': losses.focal(),
