@@ -6,28 +6,30 @@ from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
 
-class CustomModel(keras.Model):
+class CustomModel(tf.keras.Model):
     def __init__(self, pyrapose, discriminator):
         super(CustomModel, self).__init__()
         self.discriminator = discriminator
         self.pyrapose = pyrapose
 
-    def compile(self, omni_optimizer, gen_loss, dis_loss):
-        super(CustomModel, self).compile()
+    def compile(self, omni_optimizer, gen_loss, dis_loss, **kwargs):
+        super(CustomModel, self).compile(**kwargs)
         self.omni_optimizer = omni_optimizer
         self.loss_generator = gen_loss
         self.loss_discriminator = dis_loss
 
     def train_step(self, data):
-        if isinstance(data, tuple):
-            x_s = data[0]
-            y_s = data[1]
-            x_t = data[2]
+        print(data)
+        #if isinstance(data, tuple):
+        x_s = data[0]
+        y_s = data[1]
+        x_t = data[2]
         # Sample random points in the latent space
         batch_size = tf.shape(x_s)[0]
         valid = tf.ones((batch_size, 60, 80,  2))
-        fake = tf.zeros((batch_size, 60, 80, 2))
-        fake[:, :, :, 1] = 1
+        fake1 = tf.zeros((batch_size, 60, 80, 1))
+        fake2 = tf.ones((batch_size, 60, 80, 1 ))
+        fake = tf.concat([fake1, fake2], axis=3)
         labels = tf.concat([valid, fake], axis=0)
 
         # from Chollet
@@ -71,5 +73,9 @@ class CustomModel(keras.Model):
 
         #'3Dbox', 'cls', 'mask', 'domain', 'P3'
         return {"d_loss": d_loss, "g_loss": g_loss}
+
+    def call(self, data):
+        loss = self.train_step(data)
+        return loss
 
 

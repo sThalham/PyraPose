@@ -21,7 +21,7 @@ import copy
 import cv2
 import time
 
-import keras
+import tensorflow.keras as keras
 
 from ..utils.anchors import (
     anchor_targets_bbox,
@@ -504,8 +504,13 @@ class Generator(keras.utils.Sequence):
         """
         group = self.groups[index]
         inputs, targets = self.compute_input_output(group)
-        group = self.groups_ss[index[0]]
+        index_ss = np.random.choice(self.len_group_ss, size=1, replace=False)
+        group = self.groups_ss[index_ss[0]]
         inputs_domain = self.compute_inputs_target(group)
+
+        #inputs = np.asarray(inputs)
+        #targets = np.asarray(targets)
+        #inputs_domain = np.asarray(inputs_domain)
 
         return inputs, targets, inputs_domain
 

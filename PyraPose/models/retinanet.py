@@ -440,14 +440,14 @@ def retinanet_bbox(
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     mask = model.outputs[2]
-    #recon = model.outputs[3]
-    domain = model.outputs[3]
+    recon = model.outputs[3]
+    domain = model.outputs[4]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
     #reg_aux = layers.RegressBoxes3D(name='reg3D')([anchors, reg_aux])
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
-    #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, recon, domain], name=name)
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, domain, features[0]], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, recon, domain], name=name)
+    #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, domain, features[0]], name=name)
 

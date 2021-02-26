@@ -180,7 +180,7 @@ if __name__ == "__main__":
     spec_objs = [5, 8, 9, 10, 21]
 
     root = "/home/stefan/data/datasets/LM_BOP_test/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/linemod_PBR_BOP/'
+    target = '/home/stefan/data/train_data/linemod_split_50_50/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -354,12 +354,12 @@ if __name__ == "__main__":
             # if rnd == 1:
 
             valtest = None
-            if split_count < 3:
-                fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_dep.png'
+            if split_count < 1:
+                fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_rgb.png'
                 valtest = 'val'
                 split_count += 1
             else:
-                fileName = target + 'images/' + 'test/' + imgNam[:-4] + '_dep.png'
+                fileName = target + 'images/' + 'test/' + imgNam[:-4] + '_rgb.png'
                 split_count = 0
                 valtest = 'test'
 
@@ -367,11 +367,11 @@ if __name__ == "__main__":
             if myFile.exists():
                 print('File exists, skip encoding, ', fileName)
             else:
-                imgI = depImg.astype(np.uint16)
+                #imgI = depImg.astype(np.uint16)
 
-                rgb_name = fileName[:-8] + '_rgb.png'
-                cv2.imwrite(rgb_name, rgbImg)
-                cv2.imwrite(fileName, imgI)
+                #rgb_name = fileName[:-8] + '_rgb.png'
+                cv2.imwrite(fileName, rgbImg)
+                #cv2.imwrite(fileName, imgI)
                 print("storing image in : ", fileName)
 
             mask_ind = 0
@@ -592,7 +592,7 @@ if __name__ == "__main__":
 
                 #print(camR_vis[i], camT_vis[i])
                 #draw_axis(img, camR_vis[i], camT_vis[i], K)
-                cv2.imwrite(rgb_name, img)
+                cv2.imwrite(fileName, img)
 
                 print('STOP')
 

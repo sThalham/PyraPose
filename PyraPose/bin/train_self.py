@@ -98,12 +98,10 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
 
     prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
 
-    print(training_model)
     gan = CustomModel(pyrapose=training_model, discriminator=discriminator_model)
-    print(gan)
-    optimizer = keras.optimizers.Adam(lr=lr, clipnorm=0.001)
+    optimizer_adam = tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001)
     gan.compile(
-        omni_optimizer=optimizer,
+        omni_optimizer=optimizer_adam,
         gen_loss={
             '3Dbox': losses.orthogonal_l1(),
             'cls': losses.focal(),
@@ -414,8 +412,8 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
-    training_model.fit_generator(
-        generator=train_generator,
+    training_model.fit(
+        x=train_generator,
         steps_per_epoch=train_generator.size() / args.batch_size,
         epochs=args.epochs,
         verbose=1,
