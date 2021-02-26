@@ -19,7 +19,6 @@ class CustomModel(tf.keras.Model):
         self.loss_discriminator = dis_loss
 
     def train_step(self, data):
-        print(data)
         #if isinstance(data, tuple):
         x_s = data[0]
         y_s = data[1]
@@ -38,13 +37,15 @@ class CustomModel(tf.keras.Model):
 
         x_st = tf.concat([x_s, x_t], axis=0)
         with tf.GradientTape() as tape:
-            predicts_gen = self.pyrapose.predict(x_st)
+            predicts_gen = self.pyrapose.predict(x_st, batch_size=None, steps=1)
 
         points = predicts_gen[0]
         locations = predicts_gen[1]
         masks = predicts_gen[2]
         domain = predicts_gen[3]
         features = predicts_gen[4]
+        print('Predict')
+        print('points: ', keras.backend.int_shape(points))
 
         source_points, target_points = tf.split(points, num_or_size_splits=2, axis=0)
         source_locations, target_locations = tf.split(locations, num_or_size_splits=2, axis=0)
@@ -53,8 +54,8 @@ class CustomModel(tf.keras.Model):
         source_features, target_features = tf.split(features, num_or_size_splits=2, axis=0)
 
         cls_shape = tf.shape(source_mask)[2]
-        source_mask = source_mask.reshape((batch_size, 60, 80, cls_shape))
-        target_mask = target_mask.reshape((batch_size, 60, 80, cls_shape))
+        source_mask = tf.reshape(source_mask, (batch_size, 60, 80, cls_shape))
+        target_mask = tf.reshape(target_mask, (batch_size, 60, 80, cls_shape))
 
         source_patch = tf.concat([source_features, source_mask], axis=3)
         target_patch = tf.concat([target_features, target_mask], axis=3)
@@ -74,8 +75,8 @@ class CustomModel(tf.keras.Model):
         #'3Dbox', 'cls', 'mask', 'domain', 'P3'
         return {"d_loss": d_loss, "g_loss": g_loss}
 
-    def call(self, data):
-        loss = self.train_step(data)
+    def call(self, inputs):
+        loss = self.train_step(inputs)
         return loss
 
 

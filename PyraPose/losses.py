@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import keras
-import tensorflow as tf
+#import keras
+import tensorflow.keras as keras
 from . import backend
 
 

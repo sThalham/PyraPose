@@ -512,7 +512,7 @@ class Generator(keras.utils.Sequence):
         #targets = np.asarray(targets)
         #inputs_domain = np.asarray(inputs_domain)
 
-        return inputs, targets, inputs_domain
+        return [inputs, targets, inputs_domain]
 
     def __getsynt__(self):
         """
