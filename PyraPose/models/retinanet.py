@@ -94,6 +94,7 @@ def default_mask_model(
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) #, name='pyramid_classification_permute'
     outputs = keras.layers.Reshape((-1, num_classes))(outputs) # , name='pyramid_classification_reshape'
+    #outputs = keras.layers.Reshape((60, 80, num_classes))(outputs)
     outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
@@ -408,7 +409,8 @@ def retinanet(
     domain = discriminator_head(disc_in)
     pyramids.append(domain)
 
-    pyramids.append(features[0])
+    P3_features = keras.layers.Reshape((4800, 256), name='features')(features[0])
+    pyramids.append(P3_features)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name), discriminator_head
 

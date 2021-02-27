@@ -102,7 +102,13 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     optimizer_adam = tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001)
     gan.compile(
         omni_optimizer=optimizer_adam,
-        gen_loss=[losses.orthogonal_l1(), losses.focal(), losses.focal(), losses.focal()],
+        gen_loss={
+            '3Dbox'         : losses.orthogonal_l1(),
+            'cls'           : losses.focal(),
+            'mask'          : losses.focal(),
+            'domain'        : losses.focal(),
+            'features'            : losses.smooth_l1(),
+        },
         dis_loss=losses.focal()
     )
 

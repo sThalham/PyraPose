@@ -114,6 +114,8 @@ def anchor_targets_bbox(
     #valid = np.ones((batch_size, 20, 2), dtype=keras.backend.floatx())
     valid = np.ones((batch_size, 60, 80, 2), dtype=keras.backend.floatx())
 
+    P3 = np.zeros((batch_size, 4800, 257), dtype=keras.backend.floatx())
+
     pyramid_levels = [3]
 
     # compute labels and regression targets
@@ -271,7 +273,7 @@ def anchor_targets_bbox(
             #labels_batch_target[index, indices, -1] = -1
             #regression_3D_target[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, mask_batch, valid
+    return regression_3D, labels_batch, mask_batch, valid, P3
 
 
 def compute_gt_annotations(
