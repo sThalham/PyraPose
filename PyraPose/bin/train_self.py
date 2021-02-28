@@ -23,8 +23,8 @@ import warnings
 import time
 import numpy as np
 
-import keras
-#import keras.preprocessing.image
+#import keras
+import tensorflow.keras as keras
 #import tensorflow.keras.preprocessing.image as keras_preprocessing_image
 import tensorflow as tf
 from multiprocessing import Pool, Process

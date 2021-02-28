@@ -1,4 +1,4 @@
-import keras
+import tensorflow.keras as keras
 import tensorflow as tf
 from .. import initializers
 from .. import layers
@@ -66,7 +66,6 @@ class CustomModel(tf.keras.Model):
             domain = self.discriminator(disc_patch)
             d_loss = self.loss_discriminator(labels, domain)
 
-        print([var.name for var in tape.watched_variables()])
         grads_dis = tape.gradient(d_loss, self.discriminator.trainable_weights)
         self.omni_optimizer.apply_gradients(zip(grads_dis, self.discriminator.trainable_weights))
 
@@ -100,21 +99,31 @@ class CustomModel(tf.keras.Model):
         self.optimizer.apply_gradients(zip(accum_gradient, train_vars))
         '''
 
+        train_vars = self.pyrapose.trainable_weights
+        # Create empty gradient list (not a tf.Variable list)
+        accum_gradient = [tf.zeros_like(this_var) for this_var in train_vars]
+
         with tf.GradientTape() as tape:
-            predicts = self.pyrapose.predict(x_s, batch_size=None, steps=1)
-        for ldx, loss_func in enumerate(self.loss_generator):
-            loss_names.append(loss_func)
-            with tape:
-                loss = self.loss_generator[loss_func](y_s[ldx], predicts[ldx])
-            losses.append(loss)
-            loss_sum += loss
+            #tape.watch(x_s)
+            #predicts = self.pyrapose.predics(x_s, batch_size=None, steps=1)
+            predicts = self.pyrapose(x_s)
+            for ldx, loss_func in enumerate(self.loss_generator):
+                loss_names.append(loss_func)
+                print(self.loss_generator[loss_func])
+                print(type(y_s[ldx]), type(predicts[ldx]))
+                y_now = tf.convert_to_tensor(y_s[ldx], dtype=tf.float32)
+                loss = self.loss_generator[loss_func](y_now, predicts[ldx])
+                print(loss)
+                losses.append(loss)
+                loss_sum += loss
+                print(loss_sum)
                 #losses = [self.loss_generator[loss_func](y_s[ldx], filtered_predictions[ldx])] + losses
                 # We sum all losses together. (And calculate their mean value.)
                 # You might want to split this if you are interested in the separate losses.
-            #self.loss_sum.update_state(loss)
-            print([var.name for var in tape.watched_variables()])
-            grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
-            accum_gradient = accum_gradient + grads_gen
+                #self.loss_sum.update_state(loss)
+            #print([var.name for var in tape.watched_variables()])
+                grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
+                accum_gradient = [(acum_grad+grad) for acum_grad, grad in zip(accum_gradient, grads_gen)]
         print([var.name for var in tape.watched_variables()])
         self.omni_optimizer.apply_gradients(zip(accum_gradient, self.pyrapose.trainable_weights))
 
