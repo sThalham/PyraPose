@@ -88,7 +88,8 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # Keras recommends initialising a multi-gpu model on the CPU to ease weight sharing, and to prevent OOM errors.
     # optionally wrap in a parallel model
     if multi_gpu > 1:
-        from keras.utils import multi_gpu_model
+        #from keras.utils import multi_gpu_model
+        from tensorflow.keras.utils import multi_gpu_model
         with tf.device('/cpu:0'):
             model, discriminator_model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = multi_gpu_model(model, gpus=multi_gpu)
@@ -99,9 +100,10 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
 
     gan = CustomModel(pyrapose=training_model, discriminator=discriminator_model)
-    optimizer_adam = tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001)
+    #optimizer_adam = tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001)
     gan.compile(
-        omni_optimizer=optimizer_adam,
+        gen_optimizer=tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001),
+        dis_optimizer=tf.keras.optimizers.Adam(lr=lr, clipnorm=0.001),
         gen_loss={
             '3Dbox'         : losses.orthogonal_l1(),
             'cls'           : losses.focal(),
@@ -149,32 +151,32 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
     #if args.self_supervision > 0:
     #    args.evaluation = True
 
-    if args.evaluation and validation_generator:
-        if args.dataset_type == 'linemod':
-            from ..callbacks.linemod import LinemodEval
-            evaluation = LinemodEval(validation_generator, train_generator)
+    #if args.evaluation and validation_generator:
+    #    if args.dataset_type == 'linemod':
+    #        from ..callbacks.linemod import LinemodEval
+    #        evaluation = LinemodEval(validation_generator, train_generator)
 
-        else:
-            evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
-        evaluation = RedirectModel(evaluation, prediction_model)
-        callbacks.append(evaluation)
+    #    else:
+    #        evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
+    #    evaluation = RedirectModel(evaluation, prediction_model)
+    #    callbacks.append(evaluation)
 
         # save the model
-    if args.snapshots:
+    #if args.snapshots:
         # ensure directory created first; otherwise h5py will error after epoch.
-        makedirs(args.snapshot_path)
-        checkpoint = keras.callbacks.ModelCheckpoint(
-            os.path.join(
-                args.snapshot_path,
-                '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
-            ),
+    #    makedirs(args.snapshot_path)
+    #    checkpoint = keras.callbacks.ModelCheckpoint(
+    #        os.path.join(
+    #            args.snapshot_path,
+    #            '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
+    #        ),
             #verbose=1,
             #save_best_only=True,
             #monitor="val_loss",graph = tf.get_default_graph()
             #mode='auto'
-        )
-        checkpoint = RedirectModel(checkpoint, model)
-        callbacks.append(checkpoint)
+    #    )
+    #    checkpoint = RedirectModel(checkpoint, model)
+    #    callbacks.append(checkpoint)
 
     callbacks.append(keras.callbacks.ReduceLROnPlateau(
         monitor    = 'loss',

@@ -12,9 +12,10 @@ class CustomModel(tf.keras.Model):
         self.discriminator = discriminator
         self.pyrapose = pyrapose
 
-    def compile(self, omni_optimizer, gen_loss, dis_loss, **kwargs):
+    def compile(self, gen_optimizer, dis_optimizer, gen_loss, dis_loss, **kwargs):
         super(CustomModel, self).compile(**kwargs)
-        self.omni_optimizer = omni_optimizer
+        self.optimizer_generator = gen_optimizer
+        self.optimizer_discriminator = dis_optimizer
         self.loss_generator = gen_loss
         self.loss_discriminator = dis_loss
         self.loss_sum = keras.metrics.Sum()
@@ -22,15 +23,17 @@ class CustomModel(tf.keras.Model):
     def train_step(self, data):
         self.loss_sum.reset_states()
 
+        print(data[0])
+
         #if isinstance(data, tuple):
-        x_s = data[0]
-        y_s = data[1]
-        x_t = data[2]
+        x_s = data[0]['x']
+        y_s = data[0]['y']
+        x_t = data[0]['domain']
         # Sample random points in the latent space
         batch_size = tf.shape(x_s)[0]
         valid = tf.ones((batch_size, 60, 80,  2))
         fake1 = tf.zeros((batch_size, 60, 80, 1))
-        fake2 = tf.ones((batch_size, 60, 80, 1 ))
+        fake2 = tf.ones((batch_size, 60, 80, 1))
         fake = tf.concat([fake1, fake2], axis=3)
         labels = tf.concat([valid, fake], axis=0)
 
@@ -39,7 +42,7 @@ class CustomModel(tf.keras.Model):
         # labels += 0.05 * tf.random.uniform(tf.shape(labels))
         x_st = tf.concat([x_s, x_t], axis=0)
         with tf.GradientTape() as tape:
-            predicts_gen = self.pyrapose.predict(x_st, batch_size=None, steps=1)
+            predicts_gen = self.pyrapose.predict(x_st, batch_size=8, steps=1)
 
         points = predicts_gen[0]
         locations = predicts_gen[1]
@@ -109,19 +112,9 @@ class CustomModel(tf.keras.Model):
             predicts = self.pyrapose(x_s)
             for ldx, loss_func in enumerate(self.loss_generator):
                 loss_names.append(loss_func)
-                print(self.loss_generator[loss_func])
-                print(type(y_s[ldx]), type(predicts[ldx]))
                 y_now = tf.convert_to_tensor(y_s[ldx], dtype=tf.float32)
                 loss = self.loss_generator[loss_func](y_now, predicts[ldx])
-                print(loss)
-                losses.append(loss)
                 loss_sum += loss
-                print(loss_sum)
-                #losses = [self.loss_generator[loss_func](y_s[ldx], filtered_predictions[ldx])] + losses
-                # We sum all losses together. (And calculate their mean value.)
-                # You might want to split this if you are interested in the separate losses.
-                #self.loss_sum.update_state(loss)
-            #print([var.name for var in tape.watched_variables()])
                 grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
                 accum_gradient = [(acum_grad+grad) for acum_grad, grad in zip(accum_gradient, grads_gen)]
         print([var.name for var in tape.watched_variables()])
@@ -218,8 +211,16 @@ class CustomModel(tf.keras.Model):
         return return_losses
     '''
 
-    def call(self, inputs):
-        loss = self.train_step(inputs)
-        return loss
+    def call(self, inputs, training=False):
+        x = self.pyrapose(inputs['x'])
+        if training:
+            x = self.pyrapose(inputs['x'])
+        return x
+
+    #def call(self, inputs, training=False):
+    #    x = self.dense1(inputs)
+    #    if training:
+    #        x = self.dropout(x, training=training)
+    #    return self.dense2(x)
 
 

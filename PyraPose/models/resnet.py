@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import keras
+#import keras
+import tensorflow.keras as keras
 from keras.utils import get_file
 import tensorflow as tf
 import keras_resnet
@@ -84,30 +85,41 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
         else:
             inputs = keras.layers.Input(shape=(480, 640, 3))
 
-    resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)
+    #resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)
 
-    filename = 'ResNet-50-model.keras.h5'
-    resource = 'https://github.com/fizyr/keras-models/releases/download/v0.0.1/{}'.format(filename)
-    checksum = '3e9f4e4f77bbe2c9bec13b53ee1c2319'
-    weights = get_file(
-            filename,
-            resource,
-            cache_subdir='models',
-            md5_hash=checksum
-        )
-    resnet.load_weights(weights, by_name=True, skip_mismatch=False)
+    #filename = 'ResNet-50-model.keras.h5'
+    #resource = 'https://github.com/fizyr/keras-models/releases/download/v0.0.1/{}'.format(filename)
+    #checksum = '3e9f4e4f77bbe2c9bec13b53ee1c2319'
+    #weights = get_file(
+    #        filename,
+    #        resource,
+    #        cache_subdir='models',
+    #        md5_hash=checksum
+    #    )
+    #resnet.load_weights(weights, by_name=True, skip_mismatch=False)
 
-    for i, layer in enumerate(resnet.layers):
-        #print(i, layer.name)
-        if i < 40 and 'bn' not in layer.name:
-            layer.trainable=False
+    #for i, layer in enumerate(resnet.layers):
+    #    #print(i, layer.name)
+    #    if i < 40 and 'bn' not in layer.name:
+    #        layer.trainable=False
+
+    resnet = tf.keras.applications.ResNet50(
+        include_top=False, weights='imagenet', input_tensor=inputs, classes=num_classes)
+
+    resnet_outputs = [resnet.layers[80].output, resnet.layers[142].output, resnet.layers[174].output]
+    #for i, layer in enumerate(resnet.layers):
+    #    print(i, layer.name)
+    #    if i < 40 and 'bn' not in layer.name:
+    #        layer.trainable=False
+
+    print(resnet_outputs)
 
         # invoke modifier if given
     if modifier:
         resnet = modifier(resnet)
 
         # create the full model
-    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=resnet.outputs[1:], **kwargs)
+    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=resnet_outputs, **kwargs)
 
 
 def resnet50_retinanet(num_classes, inputs=None, **kwargs):

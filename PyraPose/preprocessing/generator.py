@@ -22,6 +22,7 @@ import cv2
 import time
 
 import tensorflow.keras as keras
+#import keras
 
 from ..utils.anchors import (
     anchor_targets_bbox,
@@ -512,26 +513,5 @@ class Generator(keras.utils.Sequence):
         #targets = np.asarray(targets)
         #inputs_domain = np.asarray(inputs_domain)
 
-        return [inputs, targets, inputs_domain]
-
-    def __getsynt__(self):
-        """
-        Keras sequence method for generating batches.
-        """
-
-        index = np.random.choice(self.len_group, size=self.batch_size, replace=False)
-
-        group = self.groups[index[0]]
-        inputs, targets = self.compute_input_output(group)
-
-        return inputs, targets
-
-    def __getreal__(self):
-        """
-        Keras sequence method for generating batches.
-        """
-        index = np.random.choice(self.len_group_ss, size=self.batch_size, replace=True)
-        group = self.groups_ss[index[0]]
-        inputs = self.compute_inputs_target(group)
-
-        return inputs
+        #return inputs, targets, inputs_domain
+        return {'x': inputs, 'y': targets, 'domain': inputs_domain}
