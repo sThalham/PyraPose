@@ -20,12 +20,46 @@ class CustomModel(tf.keras.Model):
         self.loss_discriminator = dis_loss
         self.loss_sum = keras.metrics.Sum()
 
+    '''
+    def train_step(self, data):
+        """The logic for one training step.
+        This method can be overridden to support custom training logic.
+        This method is called by `Model.make_train_function`.
+        This method should contain the mathematical logic for one step of training.
+        This typically includes the forward pass, loss calculation, backpropagation,
+        and metric updates.
+        Configuration details for *how* this logic is run (e.g. `tf.function` and
+        `tf.distribute.Strategy` settings), should be left to
+        `Model.make_train_function`, which can also be overridden.
+        Arguments:
+          data: A nested structure of `Tensor`s.
+        Returns:
+          A `dict` containing values that will be passed to
+          `tf.keras.callbacks.CallbackList.on_train_batch_end`. Typically, the
+          values of the `Model`'s metrics are returned. Example:
+          `{'loss': 0.2, 'accuracy': 0.7}`.
+        """
+        # These are the only transformations `Model.fit` applies to user-input
+        # data when a `tf.data.Dataset` is provided.
+        data = data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+
+        with backprop.GradientTape() as tape:
+            y_pred = self(x, training=True)
+            loss = self.compiled_loss(
+                y, y_pred, sample_weight, regularization_losses=self.losses)
+        self.optimizer.minimize(loss, self.trainable_variables, tape=tape)
+        self.compiled_metrics.update_state(y, y_pred, sample_weight)
+        return {m.name: m.result() for m in self.metrics}
+
+    '''
+
     def train_step(self, data):
         self.loss_sum.reset_states()
 
-        print(data[0])
-
-        #if isinstance(data, tuple):
+        #x_s = data[0]['x']
+        #y_s = data[0]['y']
+        #x_t = data[0]['domain']
         x_s = data[0]['x']
         y_s = data[0]['y']
         x_t = data[0]['domain']
@@ -41,8 +75,10 @@ class CustomModel(tf.keras.Model):
         # Add random noise to the labels - important trick!
         # labels += 0.05 * tf.random.uniform(tf.shape(labels))
         x_st = tf.concat([x_s, x_t], axis=0)
+        print(keras.backend.int_shape(x_st))
         with tf.GradientTape() as tape:
-            predicts_gen = self.pyrapose.predict(x_st, batch_size=8, steps=1)
+            #predicts_gen = self.pyrapose.predict(x_st, steps=1)
+            predicts_gen = self.pyrapose(x_st)
 
         points = predicts_gen[0]
         locations = predicts_gen[1]
@@ -70,7 +106,7 @@ class CustomModel(tf.keras.Model):
             d_loss = self.loss_discriminator(labels, domain)
 
         grads_dis = tape.gradient(d_loss, self.discriminator.trainable_weights)
-        self.omni_optimizer.apply_gradients(zip(grads_dis, self.discriminator.trainable_weights))
+        self.optimizer_discriminator.apply_gradients(zip(grads_dis, self.discriminator.trainable_weights))
 
         source_features = tf.reshape(source_features, (batch_size, 4800, 256))
         filtered_predictions = [source_points, source_locations, source_mask, source_domain, source_features]
@@ -114,21 +150,25 @@ class CustomModel(tf.keras.Model):
                 loss_names.append(loss_func)
                 y_now = tf.convert_to_tensor(y_s[ldx], dtype=tf.float32)
                 loss = self.loss_generator[loss_func](y_now, predicts[ldx])
+                losses.append(loss)
                 loss_sum += loss
-                grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
-                accum_gradient = [(acum_grad+grad) for acum_grad, grad in zip(accum_gradient, grads_gen)]
+                #grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
+                #accum_gradient = [(acum_grad+grad) for acum_grad, grad in zip(accum_gradient, grads_gen)]
         print([var.name for var in tape.watched_variables()])
-        self.omni_optimizer.apply_gradients(zip(accum_gradient, self.pyrapose.trainable_weights))
+        grads_gen = tape.gradient(loss_sum, self.discriminator.trainable_weights)
+        self.optimizer_generator.apply_gradients(zip(grads_gen, self.pyrapose.trainable_weights))
 
         #del tape
 
         return_losses = {}
-        return_losses["loss"] = self.loss_sum
+        return_losses["loss"] = loss_sum
         for name, loss in zip(loss_names, losses):
             return_losses["name"] = loss
 
         #'3Dbox', 'cls', 'mask', 'domain', 'P3'
         #return {"d_loss": d_loss, "g_loss": g_loss}
+
+        print(return_losses)
 
         return return_losses
 
@@ -210,6 +250,12 @@ class CustomModel(tf.keras.Model):
 
         return return_losses
     '''
+
+    #def call(self, inputs, training=False):
+    #    x = self.pyrapose(inputs)
+    #    if training:
+    #        x = self.pyrapose(inputs)
+    #    return x
 
     def call(self, inputs, training=False):
         x = self.pyrapose(inputs['x'])
