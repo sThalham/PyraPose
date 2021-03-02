@@ -18,7 +18,7 @@ class CustomModel(tf.keras.Model):
         self.optimizer_discriminator = dis_optimizer
         self.loss_generator = gen_loss
         self.loss_discriminator = dis_loss
-        self.loss_sum = keras.metrics.Sum()
+        #self.loss_sum = keras.metrics.Sum()
 
     '''
     def train_step(self, data):
@@ -55,7 +55,7 @@ class CustomModel(tf.keras.Model):
     '''
     @tf.function
     def train_step(self, data):
-        self.loss_sum.reset_states()
+        #self.loss_sum.reset_states()
 
         #x_s = data[0]['x']
         #y_s = data[0]['y']
@@ -153,7 +153,7 @@ class CustomModel(tf.keras.Model):
                 loss_sum += loss
                 #grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
                 #accum_gradient = [(acum_grad+grad) for acum_grad, grad in zip(accum_gradient, grads_gen)]
-        grads_gen = tape.gradient(loss_sum, self.discriminator.trainable_weights)
+        grads_gen = tape.gradient(loss_sum, self.pyrapose.trainable_weights)
         self.optimizer_generator.apply_gradients(zip(grads_gen, self.pyrapose.trainable_weights))
 
         #del tape
