@@ -112,8 +112,6 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
     #    if i < 40 and 'bn' not in layer.name:
     #        layer.trainable=False
 
-    print(resnet_outputs)
-
         # invoke modifier if given
     if modifier:
         resnet = modifier(resnet)

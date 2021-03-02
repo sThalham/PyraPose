@@ -53,7 +53,7 @@ class CustomModel(tf.keras.Model):
         return {m.name: m.result() for m in self.metrics}
 
     '''
-
+    @tf.function
     def train_step(self, data):
         self.loss_sum.reset_states()
 
@@ -137,9 +137,9 @@ class CustomModel(tf.keras.Model):
         self.optimizer.apply_gradients(zip(accum_gradient, train_vars))
         '''
 
-        train_vars = self.pyrapose.trainable_weights
+        #train_vars = self.pyrapose.trainable_weights
         # Create empty gradient list (not a tf.Variable list)
-        accum_gradient = [tf.zeros_like(this_var) for this_var in train_vars]
+        #accum_gradient = [tf.zeros_like(this_var) for this_var in train_vars]
 
         with tf.GradientTape() as tape:
             #tape.watch(x_s)
