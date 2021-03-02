@@ -424,6 +424,20 @@ def main(args=None):
         max_queue_size=args.max_queue_size
     )
 
+    # debugging
+    dataset = tf.data.Dataset.from_generator(gen, (tf.dtypes.float32, tf.dtypes.int32))
+    training_model.fit(
+        x=dataset,
+        steps_per_epoch=train_generator.size() / args.batch_size,
+        epochs=args.epochs,
+        verbose=1,
+        callbacks=callbacks,
+        workers=args.workers,
+        use_multiprocessing=use_multiprocessing,
+        max_queue_size=args.max_queue_size
+    )
+
+
     '''
 
     #valid = np.ones((args.batch_size, 20, 2), dtype=keras.backend.floatx())
