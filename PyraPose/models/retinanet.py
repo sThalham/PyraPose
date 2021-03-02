@@ -209,9 +209,11 @@ def default_discriminator(
     }
 
     if keras.backend.image_data_format() == 'channels_first':
-        inputs = keras.layers.Input(shape=(pyramid_feature_size + num_classes, None, None))
+        #inputs = keras.layers.Input(shape=(pyramid_feature_size + num_classes, None, None))
+        inputs = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
-        inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size + num_classes))
+        #inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size + num_classes))
+        inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size))
 
     outputs = inputs
     for i in range(4):
@@ -401,12 +403,18 @@ def retinanet(
     masks = mask_head(features[0])
     pyramids.append(masks)
 
+    # discriminator conditioned on generated image classification
     #recon = recon_head(features[0])
     #pyramids.append(recon)
-    mask_reshape = keras.layers.Reshape((60, 80, num_classes))(masks)
-    disc_in = keras.layers.Concatenate(axis=3)([features[0], mask_reshape])
 
-    domain = discriminator_head(disc_in)
+    # discriminator for feature map conditioned on predicted mask
+    #mask_reshape = keras.layers.Reshape((60, 80, num_classes))(masks)
+    #disc_in = keras.layers.Concatenate(axis=3)([features[0], mask_reshape])
+    #domain = discriminator_head(disc_in)
+
+    # discriminator conditioned on P3 feature classification
+    domain = discriminator_head(features[0])
+
     pyramids.append(domain)
 
     P3_features = keras.layers.Reshape((4800, 256), name='features')(features[0])

@@ -96,9 +96,13 @@ class CustomModel(tf.keras.Model):
         source_features_re = tf.reshape(source_features, (batch_size, 60, 80, 256))
         target_features_re = tf.reshape(target_features, (batch_size, 60, 80, 256))
 
-        source_patch = tf.concat([source_features_re, source_mask_re], axis=3)
-        target_patch = tf.concat([target_features_re, target_mask_re], axis=3)
-        disc_patch = tf.concat([target_patch, source_patch], axis=0)
+        # discriminator conditioned on feature space
+        disc_patch = tf.concat([target_features_re, source_features_re], axis=0)
+
+        # discriminator for feature map conditioned on predicted mask
+        #source_patch = tf.concat([source_features_re, source_mask_re], axis=3)
+        #target_patch = tf.concat([target_features_re, target_mask_re], axis=3)
+        #disc_patch = tf.concat([target_patch, source_patch], axis=0)
 
         with tape:
             domain = self.discriminator(disc_patch)
