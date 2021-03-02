@@ -75,7 +75,6 @@ class CustomModel(tf.keras.Model):
         # Add random noise to the labels - important trick!
         # labels += 0.05 * tf.random.uniform(tf.shape(labels))
         x_st = tf.concat([x_s, x_t], axis=0)
-        print(keras.backend.int_shape(x_st))
         with tf.GradientTape() as tape:
             #predicts_gen = self.pyrapose.predict(x_st, steps=1)
             predicts_gen = self.pyrapose(x_st)
@@ -154,7 +153,6 @@ class CustomModel(tf.keras.Model):
                 loss_sum += loss
                 #grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
                 #accum_gradient = [(acum_grad+grad) for acum_grad, grad in zip(accum_gradient, grads_gen)]
-        print([var.name for var in tape.watched_variables()])
         grads_gen = tape.gradient(loss_sum, self.discriminator.trainable_weights)
         self.optimizer_generator.apply_gradients(zip(grads_gen, self.pyrapose.trainable_weights))
 
@@ -167,8 +165,6 @@ class CustomModel(tf.keras.Model):
 
         #'3Dbox', 'cls', 'mask', 'domain', 'P3'
         #return {"d_loss": d_loss, "g_loss": g_loss}
-
-        print(return_losses)
 
         return return_losses
 
