@@ -109,7 +109,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             'cls'           : losses.focal(),
             'mask'          : losses.focal(),
             'domain'        : losses.focal(),
-            'features'            : losses.smooth_l1(),
+            #'features'            : losses.smooth_l1(),
         },
         dis_loss=losses.focal()
     )

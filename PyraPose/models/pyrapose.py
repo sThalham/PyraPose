@@ -163,7 +163,7 @@ class CustomModel(tf.keras.Model):
         return_losses = {}
         return_losses["loss"] = loss_sum
         for name, loss in zip(loss_names, losses):
-            return_losses["name"] = loss
+            return_losses[name] = loss
 
         #'3Dbox', 'cls', 'mask', 'domain', 'P3'
         #return {"d_loss": d_loss, "g_loss": g_loss}
