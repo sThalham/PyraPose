@@ -19,16 +19,13 @@ limitations under the License.
 import argparse
 import os
 import sys
-import warnings
-import time
-import numpy as np
-
 #import keras
 import tensorflow.keras as keras
 #import tensorflow.keras.preprocessing.image as keras_preprocessing_image
 import tensorflow as tf
-from multiprocessing import Pool, Process
-from functools import partial
+#os.environ['TF_DETERMINISTIC_OPS'] = '1'
+
+
 
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
@@ -413,19 +410,32 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
-    training_model.fit(
-        x=train_generator,
-        steps_per_epoch=train_generator.size() / args.batch_size,
-        epochs=args.epochs,
-        verbose=1,
-        callbacks=callbacks,
-        workers=args.workers,
-        use_multiprocessing=use_multiprocessing,
-        max_queue_size=args.max_queue_size
-    )
+    #training_model.fit(
+    #    x=train_generator,
+    #    steps_per_epoch=train_generator.size() / args.batch_size,
+    #    epochs=args.epochs,
+    #    verbose=1,
+    #    callbacks=callbacks,
+    #    workers=args.workers,
+    #    use_multiprocessing=use_multiprocessing,
+    #    max_queue_size=args.max_queue_size
+    #)
 
     # debugging
-    dataset = tf.data.Dataset.from_generator(gen, (tf.dtypes.float32, tf.dtypes.int32))
+    transform_generator = random_transform_generator(
+        min_translation=(-0.2, -0.2),
+        max_translation=(0.2, 0.2),
+        min_scaling=(0.8, 0.8),
+        max_scaling=(1.2, 1.2),
+    )
+    from ..preprocessing.data_linemod import LinemodGenerator
+    gen = LinemodGenerator(
+        data_dir=args.linemod_path,
+        set_name='train',
+        transform_generator=transform_generator,
+        self_dir='val',
+    )
+    dataset = tf.data.Dataset.from_generator(gen, (tf.dtypes.float32, tuple, tf.dtypes.float32))
     training_model.fit(
         x=dataset,
         steps_per_epoch=train_generator.size() / args.batch_size,
@@ -437,116 +447,6 @@ def main(args=None):
         max_queue_size=args.max_queue_size
     )
 
-
-    '''
-
-    #valid = np.ones((args.batch_size, 20, 2), dtype=keras.backend.floatx())
-    #fake = np.zeros((args.batch_size, 20, 2), dtype=keras.backend.floatx())
-    #fake[:, :, 1] = 1
-    valid = np.ones((args.batch_size, 60, 80, 2), dtype=keras.backend.floatx())
-    fake = np.zeros((args.batch_size, 60, 80, 2), dtype=keras.backend.floatx())
-    fake[:, :, :, 1] = 1
-
-    time_list = []
-
-    train_iterations = int(train_generator.size()/args.batch_size)
-
-    multiproc = Pool(args.workers)
-
-    for epoch in range(args.epochs):
-
-        for iteration in range(train_iterations):
-
-            start_time = time.time()
-            x_s, y_s = train_generator.__getsynt__()
-            x_t = train_generator.__getreal__()
-            print('loading: ', time.time() - start_time)
-
-            ##############################
-            # generative adversarial S->T
-            ##############################
-            #fake_targets = training_model.predict(x_s)
-            #fake_target = fake_targets[4]
-            #disc_patch = np.concatenate([x_t, fake_target], axis=0)
-            #disc_class = np.concatenate([valid, fake], axis=0)
-            #loss_dis = discriminator_model.train_on_batch(disc_patch, disc_class)
-            #pp_loss = training_model.train_on_batch(x=x_s, y=y_s)
-
-            ##############################
-            # adversarial Training on feature space after PFPN
-            ##############################
-            #fake_targets = training_model.predict(x_s)
-            #fake_target = fake_targets[4]
-            #true_targets = training_model.predict(x_t)
-            #true_target = true_targets[4]
-            #disc_patch = np.concatenate([true_target, fake_target], axis=0)
-            #disc_class = np.concatenate([valid, fake], axis=0)
-            #loss_dis = discriminator_model.train_on_batch(disc_patch, disc_class)
-            #pp_loss = training_model.train_on_batch(x=x_s, y=y_s)
-
-            ##############################
-            # Conditional adversarial Source-target Training
-            ##############################
-            #source_predicts = training_model.predict(x_s)
-            #source_mask = source_predicts[2]
-            #source_features = source_predicts[4]
-            #target_predicts = training_model.predict(x_t)
-            #target_mask = target_predicts[2]
-            #target_features = target_predicts[4]
-
-            scope_time = time.time()
-            x_st = np.concatenate([x_s, x_t], axis=0)
-            predicts = training_model.predict(x_st)
-            masks = predicts[2]
-            features = predicts[4]
-            source_mask = masks[:args.batch_size, ...]
-            target_mask = masks[args.batch_size:, ...]
-            source_features = features[:args.batch_size, ...]
-            target_features = features[args.batch_size:, ...]
-            print('predict & split: ', time.time() - scope_time)
-
-            scope_time = time.time()
-            cls_shape = source_mask.shape[2]
-            source_mask = source_mask.reshape((args.batch_size, 60, 80, cls_shape))
-            target_mask = target_mask.reshape((args.batch_size, 60, 80, cls_shape))
-            #source_mask = np.pad(source_mask, ((0, 0), (0, 0), (0, 0), (0, (256 - cls_shape))), 'constant')
-            #target_mask = np.pad(target_mask, ((0, 0), (0, 0), (0, 0), (0, (256 - cls_shape))), 'constant')
-
-            source_patch = np.concatenate([source_features, source_mask], axis=3)
-            target_patch = np.concatenate([target_features, target_mask], axis=3)
-            disc_patch = np.concatenate([target_patch, source_patch], axis=0)
-            disc_class = np.concatenate([valid, fake], axis=0)
-            print('prep for train: ', time.time() - scope_time)
-
-            scope_time = time.time()
-            loss_dis = discriminator_model.train_on_batch(disc_patch, disc_class)
-            print('train discriminator: ', time.time() - scope_time)
-            scope_time = time.time()
-            pp_loss = training_model.train_on_batch(x=x_s, y=y_s)
-            print('train model: ', time.time() - scope_time)
-
-            ##############################
-            # Printing progress
-            ##############################
-            time_list.append(time.time() - start_time)
-            time_list = time_list[-10:]
-            eta = ((sum(time_list) / 10) * (train_iterations - iteration)) / 3600
-            print("[Epoch %d/%d] [Iteration %d/%d] 3Dbox: %f cls: %f mask: %f domain: %f ETA: %s" % (epoch, args.epochs,
-                                                                                                  iteration,
-                                                                                                  train_iterations,
-                                                                                                  pp_loss[1],
-                                                                                                  pp_loss[2],
-                                                                                                  pp_loss[3],
-                                                                                                  loss_dis,
-                                                                                                  eta))
-
-            x_s, y_s, x_t = []
-
-        safe_path = os.path.join(
-                args.snapshot_path, '{backbone}_{dataset_type}_{epoch}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type, epoch=epoch))
-        model.save(safe_path)
-        train_generator.on_epoch_end()
-    '''
 
 if __name__ == '__main__':
     main()

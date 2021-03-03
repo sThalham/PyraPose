@@ -431,6 +431,8 @@ class Generator(keras.utils.Sequence):
         """
         # get the max image shape
         max_shape = tuple(max(image.shape[x] for image in image_group) for x in range(3))
+        test = (480, 640, 3)
+        print(test)
         anchors   = self.generate_anchors(max_shape)
 
         batches = self.compute_anchor_targets(
@@ -503,8 +505,7 @@ class Generator(keras.utils.Sequence):
         """
         Keras sequence method for generating batches.
         """
-        index_syn = np.random.choice(self.len_group_ss, size=1, replace=False)
-        group = self.groups[index_syn[0]]
+        group = self.groups[index]
         inputs, targets = self.compute_input_output(group)
         # probabilisitically avoiding deadlocks
         #YOLO
