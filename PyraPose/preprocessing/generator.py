@@ -503,7 +503,8 @@ class Generator(keras.utils.Sequence):
         """
         Keras sequence method for generating batches.
         """
-        group = self.groups[index]
+        index_syn = np.random.choice(self.len_group_ss, size=1, replace=False)
+        group = self.groups[index_syn[0]]
         inputs, targets = self.compute_input_output(group)
         # probabilisitically avoiding deadlocks
         #YOLO
