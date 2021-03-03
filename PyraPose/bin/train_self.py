@@ -162,21 +162,21 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
     #    callbacks.append(evaluation)
 
         # save the model
-    #if args.snapshots:
+    if args.snapshots:
         # ensure directory created first; otherwise h5py will error after epoch.
-    #    makedirs(args.snapshot_path)
-    #    checkpoint = keras.callbacks.ModelCheckpoint(
-    #        os.path.join(
-    #            args.snapshot_path,
-    #            '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
-    #        ),
+        makedirs(args.snapshot_path)
+        checkpoint = keras.callbacks.ModelCheckpoint(
+            os.path.join(
+                args.snapshot_path,
+                '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
+            ),
             #verbose=1,
             #save_best_only=True,
             #monitor="val_loss",graph = tf.get_default_graph()
             #mode='auto'
-    #    )
-    #    checkpoint = RedirectModel(checkpoint, model)
-    #    callbacks.append(checkpoint)
+        )
+        checkpoint = RedirectModel(checkpoint, model)
+        callbacks.append(checkpoint)
 
     callbacks.append(keras.callbacks.ReduceLROnPlateau(
         monitor    = 'loss',

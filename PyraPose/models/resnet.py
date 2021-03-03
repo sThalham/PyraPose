@@ -33,7 +33,7 @@ class ResNetBackbone(Backbone):
 
     def __init__(self, backbone):
         super(ResNetBackbone, self).__init__(backbone)
-        self.custom_objects.update(keras_resnet.custom_objects)
+        #self.custom_objects.update(keras_resnet.custom_objects)
 
     def retinanet(self, *args, **kwargs):
         """ Returns a retinanet model using the correct backbone.
@@ -106,7 +106,6 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
     resnet = tf.keras.applications.ResNet50(
         include_top=False, weights='imagenet', input_tensor=inputs, classes=num_classes)
 
-    resnet_outputs = [resnet.layers[80].output, resnet.layers[142].output, resnet.layers[174].output]
     #for i, layer in enumerate(resnet.layers):
     #    print(i, layer.name)
     #    if i < 40 and 'bn' not in layer.name:
@@ -115,6 +114,8 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
         # invoke modifier if given
     if modifier:
         resnet = modifier(resnet)
+
+    resnet_outputs = [resnet.layers[80].output, resnet.layers[142].output, resnet.layers[174].output]
 
         # create the full model
     return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=resnet_outputs, **kwargs)

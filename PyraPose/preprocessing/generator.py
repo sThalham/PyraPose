@@ -505,8 +505,11 @@ class Generator(keras.utils.Sequence):
         """
         group = self.groups[index]
         inputs, targets = self.compute_input_output(group)
-        index_ss = np.random.choice(self.len_group_ss, size=1, replace=False)
-        group = self.groups_ss[index_ss[0]]
+        # probabilisitically avoiding deadlocks
+        #YOLO
+        index_ss = int(index * (len(self.len_group_ss) / len(self.len_group)))
+        #index_ss = np.random.choice(self.len_group_ss, size=1, replace=False)
+        group = self.groups_ss[index_ss]
         inputs_domain = self.compute_inputs_target(group)
 
         #inputs = np.asarray(inputs)

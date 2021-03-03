@@ -165,7 +165,7 @@ def main(args=None):
     args = parse_args(args)
 
     # make sure keras is the minimum required version
-    check_keras_version()
+    #check_keras_version()
 
     # optionally choose specific GPU
     if args.gpu:

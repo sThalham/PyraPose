@@ -15,7 +15,7 @@ class Backbone(object):
             'UpsampleLike'     : layers.UpsampleLike,
             'PriorProbability' : initializers.PriorProbability,
             'RegressBoxes'     : layers.RegressBoxes,
-            'FilterDetections' : layers.FilterDetections,
+            #'FilterDetections' : layers.FilterDetections,
             'Anchors'          : layers.Anchors,
             'ClipBoxes'        : layers.ClipBoxes,
             '_smooth_l1'       : losses.smooth_l1(),
@@ -66,9 +66,36 @@ def backbone(backbone_name):
 
 
 def load_model(filepath, backbone_name='resnet50'):
-    import keras.models
+    import tensorflow.keras as keras
+    #import keras as keras
+    from .. import layers
+    from .. import losses
+    from .. import initializers
+    from . import retinanet
+    custom_objects = {
+        #'UpsampleLike': layers.UpsampleLike,
+        #'PriorProbability': initializers.PriorProbability,
+        #'RegressBoxes': layers.RegressBoxes,
+        # 'FilterDetections' : layers.FilterDetections,
+        #'Anchors': layers.Anchors,
+        #'ClipBoxes': layers.ClipBoxes,
+        #'_smooth_l1': losses.smooth_l1(),
+        #'_smooth_l1_pose': losses.smooth_l1_pose(),
+        #'_focal': losses.focal(),
+        #'_focal_mask': losses.focal_mask(),
+        #'_cross': losses.cross(),
+        #'_wMSE': losses.weighted_mse(),
+        #'_wl1': losses.weighted_l1(),
+        #'_msle': losses.weighted_msle(),
+        #'_orth_l1': losses.orthogonal_l1(),
+        #'RegressBoxes3D': layers.RegressBoxes3D(),
+        #'DenormBoxes3D': layers.DenormBoxes3D(),
+        #'_smooth_reconstruction_l1': losses.smooth_reconstruction_l1(),
+    }
 
-    return keras.models.load_model(filepath, custom_objects=backbone(backbone_name).custom_objects)
+    print(backbone(backbone_name).custom_objects)
+    #return keras.models.load_model(filepath, custom_objects=backbone(backbone_name).custom_objects)
+    return keras.models.load_model(filepath, custom_objects=custom_objects)
 
 
 def convert_model(model, nms=True, class_specific_filter=True, anchor_params=None):
@@ -78,7 +105,7 @@ def convert_model(model, nms=True, class_specific_filter=True, anchor_params=Non
 
 def assert_training_model(model):
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
-    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain', 'features'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
+    #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain', 'features'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'reconstruction', 'domain'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(
         model.output_names)
