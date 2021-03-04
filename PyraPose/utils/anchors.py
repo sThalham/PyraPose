@@ -275,8 +275,8 @@ def anchor_targets_bbox(
             #labels_batch_target[index, indices, -1] = -1
             #regression_3D_target[index, indices, -1] = -1
 
-    #return regression_3D, labels_batch, mask_batch, valid
-    return (tf.convert_to_tensor(regression_3D), tf.convert_to_tensor(labels_batch), tf.convert_to_tensor(mask_batch), tf.convert_to_tensor(valid))
+    return regression_3D, labels_batch, mask_batch#, valid
+    #return (tf.convert_to_tensor(regression_3D), tf.convert_to_tensor(labels_batch), tf.convert_to_tensor(mask_batch), tf.convert_to_tensor(valid))
 
 
 def compute_gt_annotations(

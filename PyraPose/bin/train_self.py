@@ -105,7 +105,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             '3Dbox'         : losses.orthogonal_l1(),
             'cls'           : losses.focal(),
             'mask'          : losses.focal(),
-            'domain'        : losses.focal(),
+            #'domain'        : losses.focal(),
             #'features'            : losses.smooth_l1(),
         },
         dis_loss=losses.focal()
@@ -410,17 +410,18 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
-    #training_model.fit(
-    #    x=train_generator,
-    #    steps_per_epoch=train_generator.size() / args.batch_size,
-    #    epochs=args.epochs,
-    #    verbose=1,
-    #    callbacks=callbacks,
-    #    workers=args.workers,
-    #    use_multiprocessing=use_multiprocessing,
-    #    max_queue_size=args.max_queue_size
-    #)
+    training_model.fit(
+        x=train_generator,
+        steps_per_epoch=train_generator.size() / args.batch_size,
+        epochs=args.epochs,
+        verbose=1,
+        callbacks=callbacks,
+        workers=args.workers,
+        use_multiprocessing=use_multiprocessing,
+        max_queue_size=args.max_queue_size
+    )
 
+    '''
     # debugging
     transform_generator = random_transform_generator(
         min_translation=(-0.2, -0.2),
@@ -446,7 +447,7 @@ def main(args=None):
         use_multiprocessing=use_multiprocessing,
         max_queue_size=args.max_queue_size
     )
-
+    '''
 
 if __name__ == '__main__':
     main()

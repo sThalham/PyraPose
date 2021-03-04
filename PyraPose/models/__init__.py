@@ -94,8 +94,8 @@ def load_model(filepath, backbone_name='resnet50'):
     }
 
     print(backbone(backbone_name).custom_objects)
-    #return keras.models.load_model(filepath, custom_objects=backbone(backbone_name).custom_objects)
-    return keras.models.load_model(filepath, custom_objects=custom_objects)
+    return keras.models.load_model(filepath, custom_objects=backbone(backbone_name).custom_objects)
+    #return keras.models.load_model(filepath, custom_objects=custom_objects)
 
 
 def convert_model(model, nms=True, class_specific_filter=True, anchor_params=None):
@@ -104,11 +104,10 @@ def convert_model(model, nms=True, class_specific_filter=True, anchor_params=Non
 
 
 def assert_training_model(model):
-    #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
+    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain', 'features'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'reconstruction', 'domain'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
-    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(
-        model.output_names)
+    #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
 
 
 def check_training_model(model):

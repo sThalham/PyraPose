@@ -413,9 +413,9 @@ def retinanet(
     #domain = discriminator_head(disc_in)
 
     # discriminator conditioned on P3 feature classification
-    domain = discriminator_head(features[0])
+    #domain = discriminator_head(features[0])
 
-    pyramids.append(domain)
+    #pyramids.append(domain)
 
     P3_features = keras.layers.Reshape((4800, 256), name='features')(features[0])
     pyramids.append(P3_features)
@@ -451,13 +451,14 @@ def retinanet_bbox(
     classification = model.outputs[1]
     mask = model.outputs[2]
     recon = model.outputs[3]
-    domain = model.outputs[4]
+    #domain = model.outputs[4]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
     #reg_aux = layers.RegressBoxes3D(name='reg3D')([anchors, reg_aux])
 
     # construct the model
     #return keras.models.Model(inputs=model.inputs, outputs=detections, name=name)
-    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, recon, domain], name=name)
+    #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, recon, domain], name=name)
     #return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask, domain, features[0]], name=name)
+    return keras.models.Model(inputs=model.inputs, outputs=[boxes3D, classification, mask], name=name)
 
