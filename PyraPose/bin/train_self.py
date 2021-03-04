@@ -410,37 +410,8 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
-    training_model.fit(
-        x=train_generator,
-        steps_per_epoch=train_generator.size() / args.batch_size,
-        epochs=args.epochs,
-        verbose=1,
-        callbacks=callbacks,
-        workers=args.workers,
-        use_multiprocessing=use_multiprocessing,
-        max_queue_size=args.max_queue_size
-    )
-
-    # debugging
-    #transform_generator = random_transform_generator(
-    #    min_translation=(-0.2, -0.2),
-    #    max_translation=(0.2, 0.2),
-    #    min_scaling=(0.8, 0.8),
-    #    max_scaling=(1.2, 1.2),
-    #)
-    #from ..preprocessing.data_linemod import LinemodGenerator
-    #gen = LinemodGenerator()
-    #    data_dir=args.linemod_path,
-    #    set_name='train',
-    #    transform_generator=transform_generator,
-    #    self_dir='val',
-    #)
-    #for idx, elem in enumerate(gen):
-    #    print(idx)
-
-    #dataset = tf.data.Dataset.from_generator(LinemodGenerator, (tf.dtypes.float32, tf.tuple, tf.dtypes.float32))
     #training_model.fit(
-    #    x=dataset,
+    #    x=train_generator,
     #    steps_per_epoch=train_generator.size() / args.batch_size,
     #    epochs=args.epochs,
     #    verbose=1,
@@ -449,6 +420,35 @@ def main(args=None):
     #    use_multiprocessing=use_multiprocessing,
     #    max_queue_size=args.max_queue_size
     #)
+
+    # debugging
+    transform_generator = random_transform_generator(
+        min_translation=(-0.2, -0.2),
+        max_translation=(0.2, 0.2),
+        min_scaling=(0.8, 0.8),
+        max_scaling=(1.2, 1.2),
+    )
+    from ..preprocessing.data_linemod import LinemodGenerator
+    #gen = LinemodGenerator(
+    #    data_dir=args.linemod_path,
+    #    set_name='train',
+    #    transform_generator=transform_generator,
+    #    self_dir='val',
+    #)
+    #for idx, elem in enumerate(gen):
+    #    print(idx)
+
+    dataset = tf.data.Dataset.from_generator(LinemodGenerator, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))
+    training_model.fit(
+        x=dataset,
+        steps_per_epoch=train_generator.size() / args.batch_size,
+        epochs=args.epochs,
+        verbose=1,
+        callbacks=callbacks,
+        workers=args.workers,
+        use_multiprocessing=use_multiprocessing,
+        max_queue_size=args.max_queue_size
+    )
 
 if __name__ == '__main__':
     main()

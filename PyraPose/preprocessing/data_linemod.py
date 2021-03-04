@@ -329,13 +329,12 @@ def LinemodGenerator(data_dir='/home/stefan/data/train_data/linemod_PBR_BOP', se
 
             target_batch = compute_anchor_targets(anchors,x_s,y_s,len(classes))
 
-            print(type(target_batch))
             image_source_batch = tf.convert_to_tensor(image_source_batch, dtype=tf.float32)
             target_batch = tf.tuple(target_batch)
             image_target_batch = tf.convert_to_tensor(image_target_batch, dtype=tf.float32)
 
-            print(type(image_source_batch))
-            print(type(target_batch))
-            print(type(image_target_batch))
+            #print(type(image_source_batch))
+            #print(type(target_batch))
+            #print(type(image_target_batch))
 
             yield image_source_batch, target_batch, image_target_batch

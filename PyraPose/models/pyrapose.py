@@ -55,9 +55,17 @@ class CustomModel(tf.keras.Model):
     @tf.function
     def train_step(self, data):
 
-        x_s = data[0]['x']
-        y_s = data[0]['y']
-        x_t = data[0]['domain']
+        #x_s = data[0]['x']
+        #y_s = data[0]['y']
+        #x_t = data[0]['domain']
+
+        x_s = data[0]
+        y_s = data[1]
+        x_t = data[2]
+
+        #print(keras.backend.int_shape(x_s))
+        #print(keras.backend.int_shape(y_s))
+        #print(keras.backend.int_shape(x_t))
 
         # Sample random points in the latent space
         batch_size = tf.shape(x_s)[0]
@@ -221,10 +229,16 @@ class CustomModel(tf.keras.Model):
     '''
 
     def call(self, inputs, training=False):
-        x = self.pyrapose(inputs['x'])
+        x = self.pyrapose(inputs[0])
         if training:
-            x = self.pyrapose(inputs['x'])
+            x = self.pyrapose(inputs[0])
         return x
+
+    #def call(self, inputs, training=False):
+    #    x = self.pyrapose(inputs['x'])
+    #    if training:
+    #        x = self.pyrapose(inputs['x'])
+    #    return x
 
 
 
