@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import numpy as np
+import threading
 
 DEFAULT_PRNG = np.random
 
@@ -222,7 +223,32 @@ def random_transform(
         random_scaling(min_scaling, max_scaling, prng),
     ])
 
+'''
+#https://anandology.com/blog/using-iterators-and-generators/class threadsafe_iter:
+class threadsafe_iter:
+    """Takes an iterator/generator and makes it thread-safe by
+    serializing call to the `next` method of given iterator/generator.
+    """
+    def __init__(self, it):
+        self.it = it
+        self.lock = threading.Lock()
 
+    def __iter__(self):
+        return self
+
+    def __next__(self): # Py3
+        return next(self.it)
+
+
+def threadsafe_generator(f):
+    """A decorator that takes a generator function and makes it thread-safe.
+    """
+    def g(*a, **kw):
+        return threadsafe_iter(f(*a, **kw))
+    return g
+
+@threadsafe_generator
+'''
 def random_transform_generator(prng=None, **kwargs):
     """ Create a random transform generator.
 

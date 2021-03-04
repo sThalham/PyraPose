@@ -413,9 +413,9 @@ def retinanet(
     #domain = discriminator_head(disc_in)
 
     # discriminator conditioned on P3 feature classification
-    #domain = discriminator_head(features[0])
+    domain = discriminator_head(features[0])
 
-    #pyramids.append(domain)
+    pyramids.append(domain)
 
     P3_features = keras.layers.Reshape((4800, 256), name='features')(features[0])
     pyramids.append(P3_features)

@@ -29,7 +29,7 @@ import cv2
 import time
 
 import tensorflow.keras as keras
-#import keras
+import tensorflow as tf
 
 from ..utils.anchors import (
     anchor_targets_bbox,
@@ -51,9 +51,7 @@ from ..utils.image import (
 from ..utils.transform import transform_aabb
 
 
-
-def LinemodGenerator(data_dir, set_name, transform_generator, self_dir=None, batch_size=1, image_min_side=480, image_max_side=640):
-#def gen(sr=8000, seconds=3, batch_size=16, shuffle=True):
+def LinemodGenerator(data_dir='/home/stefan/data/train_data/linemod_PBR_BOP', set_name='train', transform_generator=None, self_dir='val', batch_size=1, image_min_side=480, image_max_side=640):
 
     def _isArrayLike(obj):
         return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
@@ -170,8 +168,11 @@ def LinemodGenerator(data_dir, set_name, transform_generator, self_dir=None, bat
         """ Load annotations for an image_index.
             CHECK DONE HERE: Annotations + images correct
         """
-        lists = [imgToAnns[imgId] for imgId in ids if imgId in imgToAnns]
-        anns = list(itertools.chain.from_iterable(lists))
+        #ids = image_ids[image_index]
+
+        #lists = [imgToAnns[imgId] for imgId in ids if imgId in imgToAnns]
+        #anns = list(itertools.chain.from_iterable(lists))
+        anns = imgToAnns[image_ids[image_index]]
 
         path = image_paths[image_index]
         mask_path = path[:-4] + '_mask.png'  # + path[-4:]
@@ -181,13 +182,13 @@ def LinemodGenerator(data_dir, set_name, transform_generator, self_dir=None, bat
         if str(domain) in path:
             target_domain = True
 
-        annotations     = {'mask': mask, 'depth': depth, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
+        annotations     = {'mask': mask, 'target_domain': target_domain, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
 
         for idx, a in enumerate(anns):
             if set_name == 'train':
                 if a['feature_visibility'] < 0.5:
                     continue
-            annotations['labels'] = np.concatenate([annotations['labels'], [self.inv_label_to_label(a['category_id'])]], axis=0)
+            annotations['labels'] = np.concatenate([annotations['labels'], [labels_inverse[a['category_id']]]], axis=0)
             annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[
                 a['bbox'][0],
                 a['bbox'][1],
@@ -211,7 +212,7 @@ def LinemodGenerator(data_dir, set_name, transform_generator, self_dir=None, bat
                 a['mask_id'],
             ]], axis=0)
             objID = a['category_id']
-            threeDbox = self.TDboxes[objID, :, :]
+            threeDbox = TDboxes[objID, :, :]
             annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
             annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[
                 fx,
@@ -252,7 +253,7 @@ def LinemodGenerator(data_dir, set_name, transform_generator, self_dir=None, bat
         if transform is not None or transform_generator:
             if transform is None:
                 #transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
-                next_transform = next(self.transform_generator)
+                next_transform = next(transform_generator)
                 transform = adjust_transform_for_image(next_transform, image,
                                                        transform_parameters.relative_translation)
 
@@ -327,5 +328,14 @@ def LinemodGenerator(data_dir, set_name, transform_generator, self_dir=None, bat
                 image_target_batch[image_index, :image.shape[0], :image.shape[1], :image.shape[2]] = image
 
             target_batch = compute_anchor_targets(anchors,x_s,y_s,len(classes))
+
+            print(type(target_batch))
+            image_source_batch = tf.convert_to_tensor(image_source_batch, dtype=tf.float32)
+            target_batch = tf.tuple(target_batch)
+            image_target_batch = tf.convert_to_tensor(image_target_batch, dtype=tf.float32)
+
+            print(type(image_source_batch))
+            print(type(target_batch))
+            print(type(image_target_batch))
 
             yield image_source_batch, target_batch, image_target_batch

@@ -105,7 +105,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             '3Dbox'         : losses.orthogonal_l1(),
             'cls'           : losses.focal(),
             'mask'          : losses.focal(),
-            #'domain'        : losses.focal(),
+            'domain'        : losses.focal(),
             #'features'            : losses.smooth_l1(),
         },
         dis_loss=losses.focal()
@@ -421,33 +421,34 @@ def main(args=None):
         max_queue_size=args.max_queue_size
     )
 
-    '''
     # debugging
-    transform_generator = random_transform_generator(
-        min_translation=(-0.2, -0.2),
-        max_translation=(0.2, 0.2),
-        min_scaling=(0.8, 0.8),
-        max_scaling=(1.2, 1.2),
-    )
-    from ..preprocessing.data_linemod import LinemodGenerator
-    gen = LinemodGenerator(
-        data_dir=args.linemod_path,
-        set_name='train',
-        transform_generator=transform_generator,
-        self_dir='val',
-    )
-    dataset = tf.data.Dataset.from_generator(gen, (tf.dtypes.float32, tuple, tf.dtypes.float32))
-    training_model.fit(
-        x=dataset,
-        steps_per_epoch=train_generator.size() / args.batch_size,
-        epochs=args.epochs,
-        verbose=1,
-        callbacks=callbacks,
-        workers=args.workers,
-        use_multiprocessing=use_multiprocessing,
-        max_queue_size=args.max_queue_size
-    )
-    '''
+    #transform_generator = random_transform_generator(
+    #    min_translation=(-0.2, -0.2),
+    #    max_translation=(0.2, 0.2),
+    #    min_scaling=(0.8, 0.8),
+    #    max_scaling=(1.2, 1.2),
+    #)
+    #from ..preprocessing.data_linemod import LinemodGenerator
+    #gen = LinemodGenerator()
+    #    data_dir=args.linemod_path,
+    #    set_name='train',
+    #    transform_generator=transform_generator,
+    #    self_dir='val',
+    #)
+    #for idx, elem in enumerate(gen):
+    #    print(idx)
+
+    #dataset = tf.data.Dataset.from_generator(LinemodGenerator, (tf.dtypes.float32, tf.tuple, tf.dtypes.float32))
+    #training_model.fit(
+    #    x=dataset,
+    #    steps_per_epoch=train_generator.size() / args.batch_size,
+    #    epochs=args.epochs,
+    #    verbose=1,
+    #    callbacks=callbacks,
+    #    workers=args.workers,
+    #    use_multiprocessing=use_multiprocessing,
+    #    max_queue_size=args.max_queue_size
+    #)
 
 if __name__ == '__main__':
     main()

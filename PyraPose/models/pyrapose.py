@@ -20,6 +20,7 @@ class CustomModel(tf.keras.Model):
         self.loss_discriminator = dis_loss
         #self.loss_sum = keras.metrics.Sum()
 
+    '''
     @tf.function
     def train_step(self, data):
         x_s = data[0]['x']
@@ -49,10 +50,9 @@ class CustomModel(tf.keras.Model):
             return_losses[name] = loss
 
         return return_losses
-
     '''
+
     @tf.function
-    
     def train_step(self, data):
 
         x_s = data[0]['x']
@@ -132,9 +132,9 @@ class CustomModel(tf.keras.Model):
             return_losses[name] = loss
 
         return return_losses
-    '''
 
     '''
+    @tf.function
     def train_step(self, data):
         x_s = data[0]['x']
         y_s = data[0]['y']
@@ -151,7 +151,7 @@ class CustomModel(tf.keras.Model):
         # Add random noise to the labels - important trick!
         # labels += 0.05 * tf.random.uniform(tf.shape(labels))
         x_st = tf.concat([x_s, x_t], axis=0)
-        with tf.GradientTape() as tape:
+        with tf.GradientTape(persistent=True) as tape:
             predicts_gen = self.pyrapose(x_st)
 
         points = predicts_gen[0]
@@ -192,20 +192,16 @@ class CustomModel(tf.keras.Model):
         loss_names = []
         losses = []
         loss_sum = 0
-        accum_gradient = []
 
-        #train_vars = self.pyrapose.trainable_weights
-        # Create empty gradient list (not a tf.Variable list)
-        #accum_gradient = [tf.zeros_like(this_var) for this_var in train_vars]
-
-        with tf.GradientTape() as tape:
+        #with tf.GradientTape() as tape:
+        with tape:
             #tape.watch(x_s)
             #predicts = self.pyrapose.predics(x_s, batch_size=None, steps=1)
-            predicts = self.pyrapose(x_s)
+            #predicts = self.pyrapose(x_s)
             for ldx, loss_func in enumerate(self.loss_generator):
                 loss_names.append(loss_func)
                 y_now = tf.convert_to_tensor(y_s[ldx], dtype=tf.float32)
-                loss = self.loss_generator[loss_func](y_now, predicts[ldx])
+                loss = self.loss_generator[loss_func](y_now, filtered_predictions[ldx])
                 losses.append(loss)
                 loss_sum += loss
                 #grads_gen = tape.gradient(loss, self.pyrapose.trainable_weights)
