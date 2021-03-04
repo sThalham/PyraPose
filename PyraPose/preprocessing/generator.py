@@ -44,33 +44,16 @@ from ..utils.image import (
 )
 from ..utils.transform import transform_aabb
 
-'''
 #https://anandology.com/blog/using-iterators-and-generators/class threadsafe_iter:
-class threadsafe_iter:
-    """Takes an iterator/generator and makes it thread-safe by
-    serializing call to the `next` method of given iterator/generator.
-    """
-    def __init__(self, it):
-        self.it = it
-        self.lock = threading.Lock()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self): # Py3
-        return next(self.it)
-
-
-def threadsafe_generator(f):
+def threadsafe_function(f):
     """A decorator that takes a generator function and makes it thread-safe.
     """
-    def g(*a, **kw):
-        return threadsafe_iter(f(*a, **kw))
-    return g
+    #def g(*a, **kw):
+    #    return threadsafe_iter(f(*a, **kw))
+    with threading.Lock():
+        return f
 
 
-@threadsafe_generator
-'''
 class Generator(keras.utils.Sequence):
     """ Abstract generator class.
     """
@@ -527,23 +510,22 @@ class Generator(keras.utils.Sequence):
 
     #    return inputs, targets
 
+    @threadsafe_function
     def __getitem__(self, index):
         """
         Keras sequence method for generating batches.
         """
-        with self.lock:
-            group = self.groups[index]
-            inputs, targets = self.compute_input_output(group)
-            # probabilisitically avoiding deadlocks
-            #YOLO
-            index_ss = int(index * (len(self.len_group_ss) / len(self.len_group)))
-            #index_ss = np.random.choice(self.len_group_ss, size=1, replace=False)
-            group = self.groups_ss[index_ss]
-            inputs_domain = self.compute_inputs_target(group)
+        group = self.groups[index]
+        inputs, targets = self.compute_input_output(group)
+        # probabilisitically avoiding deadlocks
+        #YOLO
+        index_ss = int(index * (len(self.len_group_ss) / len(self.len_group)))
+        #index_ss = np.random.choice(self.len_group_ss, size=1, replace=False)
+        group = self.groups_ss[index_ss]
+        inputs_domain = self.compute_inputs_target(group)
+        #inputs = np.asarray(inputs)
+        #targets = np.asarray(targets)
+        #inputs_domain = np.asarray(inputs_domain)
 
-            #inputs = np.asarray(inputs)
-            #targets = np.asarray(targets)
-            #inputs_domain = np.asarray(inputs_domain)
-    
-            #return inputs, targets, inputs_domain
-            return {'x': inputs, 'y': targets, 'domain': inputs_domain}
+        #return inputs, targets, inputs_domain
+        return {'x': inputs, 'y': targets, 'domain': inputs_domain}

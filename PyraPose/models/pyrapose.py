@@ -58,6 +58,7 @@ class CustomModel(tf.keras.Model):
         x_s = data[0]['x']
         y_s = data[0]['y']
         x_t = data[0]['domain']
+
         # Sample random points in the latent space
         batch_size = tf.shape(x_s)[0]
         valid = tf.ones((batch_size, 60, 80,  2))
