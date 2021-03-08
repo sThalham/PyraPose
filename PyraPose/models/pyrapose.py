@@ -63,6 +63,12 @@ class CustomModel(tf.keras.Model):
         y_s = data[1]
         x_t = data[2]
 
+        loss_names = []
+        losses = []
+        loss_sum = 0
+        d_loss_sum = 0
+
+        '''
         #print(keras.backend.int_shape(x_s))
         #print(keras.backend.int_shape(y_s))
         #print(keras.backend.int_shape(x_t))
@@ -93,11 +99,6 @@ class CustomModel(tf.keras.Model):
         labelsP5 = tf.concat([validP5, fakeP5], axis=0)
 
         disc_labels = [labelsP3, labelsP4, labelsP5]
-
-        loss_names = []
-        losses = []
-        loss_sum = 0
-        d_loss_sum = 0
 
         # from Chollet
         # Add random noise to the labels - important trick!
@@ -180,6 +181,7 @@ class CustomModel(tf.keras.Model):
 
         grads_dis = tape.gradient(d_loss_sum, self.discriminator.trainable_weights)
         self.optimizer_discriminator.apply_gradients(zip(grads_dis, self.discriminator.trainable_weights))
+        '''
 
         #filtered_predictions = [source_points, source_locations, source_mask, source_domain]
 

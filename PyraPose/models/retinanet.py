@@ -404,6 +404,7 @@ def retinanet(
     masks = mask_head(features[0])
     pyramids.append(masks)
 
+    '''
     # discriminator conditioned on generated image classification
     #recon = recon_head(features[0])
     #pyramids.append(recon)
@@ -430,6 +431,7 @@ def retinanet(
     pyramids.append(features[0])
     pyramids.append(features[1])
     pyramids.append(features[2])
+    '''
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name), discriminator_head
 
@@ -461,7 +463,7 @@ def retinanet_bbox(
     regression3D = model.outputs[0]
     classification = model.outputs[1]
     mask = model.outputs[2]
-    recon = model.outputs[3]
+    #recon = model.outputs[3]
     #domain = model.outputs[4]
 
     boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])

@@ -349,9 +349,9 @@ def LinemodGenerator(data_dir='/home/stefan/data/train_data/linemod_PBR_BOP', se
 
 class LinemodDataset(tf.data.Dataset):
 
-    def _generate(data_dir='/home/stefan/data/train_data/linemod_PBR_BOP', set_name='train',
-                         transform_generator=None, self_dir='val', batch_size=8, image_min_side=480,
+    def _generate(data_dir, set_name, self_dir, batch_size=8, transform_generator=None, image_min_side=480,
                          image_max_side=640):
+
         def _isArrayLike(obj):
             return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
@@ -378,9 +378,10 @@ class LinemodDataset(tf.data.Dataset):
             return classes, labels, labels_inverse, labels_rev
 
         # Parameters
-        data_dir = data_dir
-        set_name = set_name
-        domain = self_dir
+        data_dir = data_dir.decode("utf-8")
+        set_name = set_name.decode("utf-8")
+        domain = self_dir.decode("utf-8")
+        batch_size = batch_size
         path = os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json')
         mesh_info = os.path.join(data_dir, 'annotations', 'models_info' + '.yml')
 
@@ -423,7 +424,7 @@ class LinemodDataset(tf.data.Dataset):
 
         # if self.domain is not None:
         # load target w/o annotations
-        self_path = os.path.join(data_dir, 'annotations', 'instances_' + self_dir + '.json')
+        self_path = os.path.join(data_dir, 'annotations', 'instances_' + domain + '.json')
         with open(self_path, 'r') as js:
             data_pseudo = json.load(js)
 
@@ -432,7 +433,7 @@ class LinemodDataset(tf.data.Dataset):
         image_paths_ss = []
         for img in image_ann_ss:
             image_ids_ss.append(img['id'])  # to correlate indexing to self.image_ann
-            image_paths_ss.append(os.path.join(data_dir, 'images', self_dir, img['file_name']))
+            image_paths_ss.append(os.path.join(data_dir, 'images', domain, img['file_name']))
 
         # load 3D boxes
         TDboxes = np.ndarray((16, 8, 3), dtype=np.float32)
@@ -643,6 +644,6 @@ class LinemodDataset(tf.data.Dataset):
 
                 yield image_source_batch, target_batch, image_target_batch
 
-    def __new__(self):
-        return tf.data.Dataset.from_generator(self._generate, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))#, args=(batch_size,))
+    def __new__(self, data_dir, set_name, self_dir, batch_size):
+        return tf.data.Dataset.from_generator(self._generate, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32), args=(data_dir, set_name, self_dir, batch_size))
 

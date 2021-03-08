@@ -105,7 +105,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
             '3Dbox'         : losses.orthogonal_l1(),
             'cls'           : losses.focal(),
             'mask'          : losses.focal(),
-            'domain'        : losses.focal(),
+            #'domain'        : losses.focal(),
             #'features'            : losses.smooth_l1(),
         },
         dis_loss=losses.focal()
@@ -433,10 +433,13 @@ def main(args=None):
     #    LinemodDataset().prefetch(tf.data.AUTOTUNE)
     #)
 
-    dataset = tf.data.Dataset.from_generator(LinemodDataset, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))
+    dataset = LinemodDataset(args.linemod_path, 'train', 'val', batch_size=args.batch_size)
+
+    #dataset = tf.data.Dataset.from_generator(LinemodDataset, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))
     dataset = tf.data.Dataset.range(args.workers).interleave(
         lambda _: dataset,
-        num_parallel_calls=tf.data.experimental.AUTOTUNE
+        #num_parallel_calls=tf.data.experimental.AUTOTUNE
+        num_parallel_calls=args.workers
     )
 
     training_model.fit(
