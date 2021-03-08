@@ -1,4 +1,5 @@
 #import keras
+import tensorflow as tf
 import tensorflow.keras as keras
 from .. import initializers
 from .. import layers
@@ -209,11 +210,11 @@ def default_discriminator(
     }
 
     if keras.backend.image_data_format() == 'channels_first':
-        #inputs = keras.layers.Input(shape=(pyramid_feature_size + num_classes, None, None))
-        inputs = keras.layers.Input(shape=(pyramid_feature_size, None, None))
+        inputs = keras.layers.Input(shape=(pyramid_feature_size + num_classes, None, None))
+        #inputs = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
-        #inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size + num_classes))
-        inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size))
+        inputs = keras.layers.Input(shape=(None, None, pyramid_feature_size + 16 * 9))
+        #inputs = keras.layers.Input(shape=(60, 80, pyramid_feature_size))
 
     outputs = inputs
     for i in range(4):
@@ -237,12 +238,13 @@ def default_discriminator(
     # reshape output and apply sigmoid
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1))(outputs) #, name='pyramid_classification_permute'
-    outputs = keras.layers.Reshape((60, 80, 1))(outputs) # , name='pyramid_classification_reshape'
+    #outputs = keras.layers.Reshape((60, 80, 1))(outputs) # , name='pyramid_classification_reshape'
+    outputs = keras.layers.Reshape((-1, 1))(outputs)
     outputs = keras.layers.Activation('sigmoid')(outputs) # , name='pyramid_classification_sigmoid'
 
     #outputs = keras.backend.print_tensor(outputs, message='domain')
 
-    return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
+    return keras.models.Model(inputs=inputs, outputs=outputs)#, name=name)
 
 
 def __create_pyramid_features(C3, C4, C5, feature_size=256):
@@ -327,8 +329,7 @@ def default_submodels(num_classes, num_anchors):
 
 def default_submodels_target(num_classes, num_anchors):
     return [
-        ('3Dbox_target', default_3Dregression_model(16, num_anchors)),
-        ('cls_target', default_classification_model(num_classes, num_anchors))
+        ('discriminator', default_discriminator(num_classes)),
     ]
 
 
@@ -409,16 +410,26 @@ def retinanet(
 
     # discriminator for feature map conditioned on predicted mask
     #mask_reshape = keras.layers.Reshape((60, 80, num_classes))(masks)
-    #disc_in = keras.layers.Concatenate(axis=3)([features[0], mask_reshape])
-    #domain = discriminator_head(disc_in)
+    pointsP3, pointsP4, pointsP5 = tf.split(pyramids[0], num_or_size_splits=[43200, 10800, 2700], axis=1)
+    pointsP3 = keras.layers.Reshape((60, 80, num_anchors * 16))(pointsP3)
+    disc_P3 = keras.layers.Concatenate(axis=3)([features[0], pointsP3])
+    pointsP4 = keras.layers.Reshape((30, 40, num_anchors * 16))(pointsP4)
+    disc_P4 = keras.layers.Concatenate(axis=3)([features[1], pointsP4])
+    pointsP5 = keras.layers.Reshape((15, 20, num_anchors * 16))(pointsP5)
+    disc_P5 = keras.layers.Concatenate(axis=3)([features[2], pointsP5])
+
+    domainP3 = discriminator_head(disc_P3)
+    domainP4 = discriminator_head(disc_P4)
+    domainP5 = discriminator_head(disc_P5)
+    domain = keras.layers.Concatenate(axis=1, name='domain')([domainP3, domainP4, domainP5])
 
     # discriminator conditioned on P3 feature classification
-    domain = discriminator_head(features[0])
+    #domain = discriminator_head(features[0])
 
     pyramids.append(domain)
-
-    P3_features = keras.layers.Reshape((4800, 256), name='features')(features[0])
-    pyramids.append(P3_features)
+    pyramids.append(features[0])
+    pyramids.append(features[1])
+    pyramids.append(features[2])
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name), discriminator_head
 

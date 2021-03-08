@@ -107,7 +107,7 @@ def assert_training_model(model):
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain', 'features'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
     #assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'reconstruction', 'domain'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
-    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'features'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
+    assert (all(output in model.output_names for output in ['3Dbox', 'cls', 'mask', 'domain'])), "Input is not a training model. Outputs were found, outputs are: {}).".format(model.output_names)
 
 
 def check_training_model(model):

@@ -114,7 +114,8 @@ def anchor_targets_bbox(
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
     reconstruction_batch = np.zeros((batch_size, 60, 80, 3 + 1), dtype=keras.backend.floatx())
     #valid = np.ones((batch_size, 20, 2), dtype=keras.backend.floatx())
-    valid = np.ones((batch_size, 60, 80, 2), dtype=keras.backend.floatx())
+    #valid = np.ones((batch_size, 60, 80, 2), dtype=keras.backend.floatx())
+    valid = np.ones((batch_size, 5900, 2), dtype=keras.backend.floatx())
 
     P3 = np.zeros((batch_size, 4800, 257), dtype=keras.backend.floatx())
 
