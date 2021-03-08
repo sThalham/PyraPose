@@ -428,17 +428,17 @@ def main(args=None):
         min_scaling=(0.8, 0.8),
         max_scaling=(1.2, 1.2),
     )
-    from ..preprocessing.data_linemod import LinemodGenerator
-    #gen = LinemodGenerator(
-    #    data_dir=args.linemod_path,
-    #    set_name='train',
-    #    transform_generator=transform_generator,
-    #    self_dir='val',
+    from ..preprocessing.data_linemod import LinemodDataset
+    #benchmark(
+    #    LinemodDataset().prefetch(tf.data.AUTOTUNE)
     #)
-    #for idx, elem in enumerate(gen):
-    #    print(idx)
 
-    dataset = tf.data.Dataset.from_generator(LinemodGenerator, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))
+    dataset = tf.data.Dataset.from_generator(LinemodDataset, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))
+    dataset = tf.data.Dataset.range(args.workers).interleave(
+        lambda _: dataset,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
+
     training_model.fit(
         x=dataset,
         steps_per_epoch=train_generator.size() / args.batch_size,

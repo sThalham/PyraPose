@@ -545,8 +545,9 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                 idx = idx+8
             '''
 
-        #name = '/home/stefan/occ_viz/img_' + str(index) + '.jpg'
-        #cv2.imwrite(name, image)
+        name = '/home/stefan/PyraPose/img_' + str(index) + '.jpg'
+        image_viz = np.concatenate([image_raw, image_mask], axis=1)
+        cv2.imwrite(name, image_viz)
         #cv2.imwrite('/home/stefan/occ_viz/pred_mask_' + str(index) + '_.jpg', image_mask)
         #print('break')
 

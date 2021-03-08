@@ -297,6 +297,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
+
         image_raw_dep = generator.load_image_dep(index)
         image_raw_dep = np.where(image_raw_dep > 0, image_raw_dep, 0.0)
         image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
@@ -375,13 +376,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 continue
             trueDets[int(cls)] += 1
 
-            #obj_mask = mask[0, :, inv_cls]
-            #print(np.nanmax(obj_mask))
-            #cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
-            #cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            #cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
-            #cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
-            #cls_img = np.where(cls_img > 254, cls_img, image_raw)
+            obj_mask = mask[0, :, inv_cls]
+            print(np.nanmax(obj_mask))
+            cls_img = np.where(obj_mask > 0.5, 255.0, 80.0)
+            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
+            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
+            cls_img = np.where(cls_img > 254, cls_img, image_raw)
             #cv2.imwrite('/home/stefan/head_mask_viz/pred_mask_' + str(index) + '_.jpg', cls_img)
 
             '''

@@ -349,146 +349,33 @@ def LinemodGenerator(data_dir='/home/stefan/data/train_data/linemod_PBR_BOP', se
 
 class LinemodDataset(tf.data.Dataset):
 
-    def load_classes(self, categories):
-        """ Loads the class to label mapping (and inverse) for COCO.
-        """
-        if _isArrayLike(categories):
-            categories = [categories[id] for id in categories]
-        elif type(categories) == int:
-            categories = [categories[categories]]
-        categories.sort(key=lambda x: x['id'])
-        classes = {}
-        labels = {}
-        labels_inverse = {}
-        for c in categories:
-            labels[len(classes)] = c['id']
-            labels_inverse[c['id']] = len(classes)
-            classes[c['name']] = len(classes)
-        # also load the reverse (label -> name)
-        labels_rev = {}
-        for key, value in classes.items():
-            labels_rev[value] = key
+    def _generate(data_dir='/home/stefan/data/train_data/linemod_PBR_BOP', set_name='train',
+                         transform_generator=None, self_dir='val', batch_size=8, image_min_side=480,
+                         image_max_side=640):
+        def _isArrayLike(obj):
+            return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
-        return classes, labels, labels_inverse, labels_rev
+        def load_classes(categories):
+            """ Loads the class to label mapping (and inverse) for COCO.
+            """
+            if _isArrayLike(categories):
+                categories = [categories[id] for id in categories]
+            elif type(categories) == int:
+                categories = [categories[categories]]
+            categories.sort(key=lambda x: x['id'])
+            classes = {}
+            labels = {}
+            labels_inverse = {}
+            for c in categories:
+                labels[len(classes)] = c['id']
+                labels_inverse[c['id']] = len(classes)
+                classes[c['name']] = len(classes)
+            # also load the reverse (label -> name)
+            labels_rev = {}
+            for key, value in classes.items():
+                labels_rev[value] = key
 
-    def load_image(self, image_index):
-        """ Load an image at the image_index.
-        """
-        path = image_paths[image_index]
-        path = path[:-4] + '_rgb' + path[-4:]
-
-        return read_image_bgr(path)
-
-    def load_annotations(self, image_index):
-        """ Load annotations for an image_index.
-            CHECK DONE HERE: Annotations + images correct
-        """
-        # ids = image_ids[image_index]
-
-        # lists = [imgToAnns[imgId] for imgId in ids if imgId in imgToAnns]
-        # anns = list(itertools.chain.from_iterable(lists))
-        anns = imgToAnns[image_ids[image_index]]
-
-        path = image_paths[image_index]
-        mask_path = path[:-4] + '_mask.png'  # + path[-4:]
-        mask = cv2.imread(mask_path, -1)
-
-        target_domain = np.full((1), False)
-        if str(domain) in path:
-            target_domain = True
-
-        annotations = {'mask': mask, 'target_domain': target_domain, 'labels': np.empty((0,)),
-                       'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)),
-                       'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
-
-        for idx, a in enumerate(anns):
-            if set_name == 'train':
-                if a['feature_visibility'] < 0.5:
-                    continue
-            annotations['labels'] = np.concatenate([annotations['labels'], [labels_inverse[a['category_id']]]],
-                                                   axis=0)
-            annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[
-                a['bbox'][0],
-                a['bbox'][1],
-                a['bbox'][0] + a['bbox'][2],
-                a['bbox'][1] + a['bbox'][3],
-            ]]], axis=0)
-            if a['pose'][2] < 10.0:  # needed for adjusting pose annotations
-                a['pose'][0] = a['pose'][0] * 1000.0
-                a['pose'][1] = a['pose'][1] * 1000.0
-                a['pose'][2] = a['pose'][2] * 1000.0
-            annotations['poses'] = np.concatenate([annotations['poses'], [[
-                a['pose'][0],
-                a['pose'][1],
-                a['pose'][2],
-                a['pose'][3],
-                a['pose'][4],
-                a['pose'][5],
-                a['pose'][6],
-            ]]], axis=0)
-            annotations['mask_ids'] = np.concatenate([annotations['mask_ids'], [
-                a['mask_id'],
-            ]], axis=0)
-            objID = a['category_id']
-            threeDbox = TDboxes[objID, :, :]
-            annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
-            annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[
-                fx,
-                fy,
-                cx,
-                cy,
-            ]]], axis=0)
-
-        return annotations
-
-    def random_transform_group_entry(self, image, annotations, transform_generator, transform_parameters):
-        """ Randomly transforms image and annotation.
-        """
-        # randomly transform both image and annotations
-        if transform_generator:
-            next_transform = next(transform_generator)
-            transform = adjust_transform_for_image(next_transform, image,
-                                                       transform_parameters.relative_translation)
-            transform_mask = adjust_transform_for_mask(next_transform, annotations['mask'],
-                                                           transform_parameters.relative_translation)
-
-            image = apply_transform(transform, image, transform_parameters)
-            annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], transform_parameters)
-
-            # Transform the bounding boxes in the annotations.
-            annotations['bboxes'] = annotations['bboxes'].copy()
-            annotations['segmentations'] = annotations['segmentations'].copy()
-            for index in range(annotations['bboxes'].shape[0]):
-                annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
-                annotations['poses'][index, :] = adjust_pose_annotation(transform, annotations['poses'][index, :],
-                                                                        annotations['cam_params'][index, :])
-
-        return image, annotations
-
-    def random_transform_target_entry(self, image, transform_generator, transform_parameters):
-        """ Randomly transforms image and annotation.
-        """
-
-        # randomly transform both image and annotations
-        if transform_generator:
-                # transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
-            next_transform = next(transform_generator)
-            transform = adjust_transform_for_image(next_transform, image,
-                                                       transform_parameters.relative_translation)
-
-            image = apply_transform(transform, image, transform_parameters)
-
-        return image
-
-
-    def _generate(self, batch_size):
-
-        #config
-        data_dir = '/home/stefan/data/train_data/linemod_PBR_BOP'
-        set_name = 'train'
-        self_dir = 'val'
-        image_min_side = 480,
-        image_max_side = 640
+            return classes, labels, labels_inverse, labels_rev
 
         # Parameters
         data_dir = data_dir
@@ -532,7 +419,7 @@ class LinemodDataset(tf.data.Dataset):
             imgToAnns[ann['image_id']].append(ann)
             catToImgs[ann['category_id']].append(ann['image_id'])
 
-        classes, labels, labels_inverse, labels_rev = self.load_classes(cats)
+        classes, labels, labels_inverse, labels_rev = load_classes(cats)
 
         # if self.domain is not None:
         # load target w/o annotations
@@ -567,6 +454,117 @@ class LinemodDataset(tf.data.Dataset):
                                        [x_minus, y_minus, z_plus]])
             TDboxes[int(key), :, :] = three_box_solo
 
+        def load_image(image_index):
+            """ Load an image at the image_index.
+            """
+            path = image_paths[image_index]
+            path = path[:-4] + '_rgb' + path[-4:]
+
+            return read_image_bgr(path)
+
+        def load_annotations(image_index):
+            """ Load annotations for an image_index.
+                CHECK DONE HERE: Annotations + images correct
+            """
+            # ids = image_ids[image_index]
+
+            # lists = [imgToAnns[imgId] for imgId in ids if imgId in imgToAnns]
+            # anns = list(itertools.chain.from_iterable(lists))
+            anns = imgToAnns[image_ids[image_index]]
+
+            path = image_paths[image_index]
+            mask_path = path[:-4] + '_mask.png'  # + path[-4:]
+            mask = cv2.imread(mask_path, -1)
+
+            target_domain = np.full((1), False)
+            if str(domain) in path:
+                target_domain = True
+
+            annotations = {'mask': mask, 'target_domain': target_domain, 'labels': np.empty((0,)),
+                           'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)),
+                           'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,))}
+
+            for idx, a in enumerate(anns):
+                if set_name == 'train':
+                    if a['feature_visibility'] < 0.5:
+                        continue
+                annotations['labels'] = np.concatenate([annotations['labels'], [labels_inverse[a['category_id']]]],
+                                                       axis=0)
+                annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[
+                    a['bbox'][0],
+                    a['bbox'][1],
+                    a['bbox'][0] + a['bbox'][2],
+                    a['bbox'][1] + a['bbox'][3],
+                ]]], axis=0)
+                if a['pose'][2] < 10.0:  # needed for adjusting pose annotations
+                    a['pose'][0] = a['pose'][0] * 1000.0
+                    a['pose'][1] = a['pose'][1] * 1000.0
+                    a['pose'][2] = a['pose'][2] * 1000.0
+                annotations['poses'] = np.concatenate([annotations['poses'], [[
+                    a['pose'][0],
+                    a['pose'][1],
+                    a['pose'][2],
+                    a['pose'][3],
+                    a['pose'][4],
+                    a['pose'][5],
+                    a['pose'][6],
+                ]]], axis=0)
+                annotations['mask_ids'] = np.concatenate([annotations['mask_ids'], [
+                    a['mask_id'],
+                ]], axis=0)
+                objID = a['category_id']
+                threeDbox = TDboxes[objID, :, :]
+                annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
+                annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[
+                    fx,
+                    fy,
+                    cx,
+                    cy,
+                ]]], axis=0)
+
+            return annotations
+
+        def random_transform_group_entry(image, annotations, transform=None):
+            """ Randomly transforms image and annotation.
+            """
+            # randomly transform both image and annotations
+            if transform is not None or transform_generator:
+                if transform is None:
+                    next_transform = next(transform_generator)
+                    transform = adjust_transform_for_image(next_transform, image,
+                                                           transform_parameters.relative_translation)
+                    transform_mask = adjust_transform_for_mask(next_transform, annotations['mask'],
+                                                               transform_parameters.relative_translation)
+
+                image = apply_transform(transform, image, transform_parameters)
+                annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], transform_parameters)
+
+                # Transform the bounding boxes in the annotations.
+                annotations['bboxes'] = annotations['bboxes'].copy()
+                annotations['segmentations'] = annotations['segmentations'].copy()
+                for index in range(annotations['bboxes'].shape[0]):
+                    annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
+                    annotations['poses'][index, :] = adjust_pose_annotation(transform, annotations['poses'][index, :],
+                                                                            annotations['cam_params'][index, :])
+
+            return image, annotations
+
+        def random_transform_target_entry(image, transform=None):
+            """ Randomly transforms image and annotation.
+            """
+
+            # randomly transform both image and annotations
+            if transform is not None or transform_generator:
+                if transform is None:
+                    # transform = adjust_transform_for_image(next(self.transform_generator), image, self.transform_parameters.relative_translation)
+                    next_transform = next(transform_generator)
+                    transform = adjust_transform_for_image(next_transform, image,
+                                                           transform_parameters.relative_translation)
+
+                image = apply_transform(transform, image, transform_parameters)
+
+            return image
+
         max_shape = (image_min_side, image_max_side, 3)
         anchors = anchors_for_shape(max_shape, anchor_params=None, shapes_callback=compute_shapes)
 
@@ -584,11 +582,12 @@ class LinemodDataset(tf.data.Dataset):
             batches_real = np.arange(len(groups_real))
 
             for btx in range(len(batches_syn)):
+                x_s, y_s, x_t = [], [], []
 
                 rbtx = np.random.choice(len(groups_real), size=1, replace=False)
-                x_s = [self.load_image(image_index) for image_index in groups_syn[btx]]
-                x_t = [self.load_image(image_index) for image_index in groups_real[rbtx[0]]]
-                y_s = [self.load_annotations(image_index) for image_index in groups_syn[btx]]
+                x_s = [load_image(image_index) for image_index in groups_syn[btx]]
+                x_t = [load_image(image_index) for image_index in groups_real[rbtx[0]]]
+                y_s = [load_annotations(image_index) for image_index in groups_syn[btx]]
 
                 assert (len(x_s) == len(y_s) == len(x_t))
 
@@ -612,10 +611,10 @@ class LinemodDataset(tf.data.Dataset):
                             y_s[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
 
                     # transform a single group entry
-                    x_s[index], y_s[index] = self.random_transform_group_entry(x_s[index], y_s[index], transform_generator, transform_parameters)
+                    x_s[index], y_s[index] = random_transform_group_entry(x_s[index], y_s[index])
 
                     # transform a single group entry
-                    x_t[index] = self.random_transform_target_entry(x_t[index], transform_generator, transform_parameters)
+                    x_t[index] = random_transform_target_entry(x_t[index])
 
                     # preprocess
                     x_s[index] = preprocess_image(x_s[index])
@@ -644,6 +643,6 @@ class LinemodDataset(tf.data.Dataset):
 
                 yield image_source_batch, target_batch, image_target_batch
 
-    def __new__(self, batch_size):
-        return tf.data.Dataset.from_generator(self._generate, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32), args=(batch_size,))
+    def __new__(self):
+        return tf.data.Dataset.from_generator(self._generate, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))#, args=(batch_size,))
 
