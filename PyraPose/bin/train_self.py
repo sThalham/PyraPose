@@ -434,8 +434,6 @@ def main(args=None):
     #)
 
     dataset = LinemodDataset(args.linemod_path, 'train', 'val', batch_size=args.batch_size)
-
-    #dataset = tf.data.Dataset.from_generator(LinemodDataset, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32))
     dataset = tf.data.Dataset.range(args.workers).interleave(
         lambda _: dataset,
         #num_parallel_calls=tf.data.experimental.AUTOTUNE

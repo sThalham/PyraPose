@@ -68,7 +68,6 @@ class CustomModel(tf.keras.Model):
         loss_sum = 0
         d_loss_sum = 0
 
-        '''
         #print(keras.backend.int_shape(x_s))
         #print(keras.backend.int_shape(y_s))
         #print(keras.backend.int_shape(x_t))
@@ -181,7 +180,6 @@ class CustomModel(tf.keras.Model):
 
         grads_dis = tape.gradient(d_loss_sum, self.discriminator.trainable_weights)
         self.optimizer_discriminator.apply_gradients(zip(grads_dis, self.discriminator.trainable_weights))
-        '''
 
         #filtered_predictions = [source_points, source_locations, source_mask, source_domain]
 

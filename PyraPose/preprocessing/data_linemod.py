@@ -645,5 +645,5 @@ class LinemodDataset(tf.data.Dataset):
                 yield image_source_batch, target_batch, image_target_batch
 
     def __new__(self, data_dir, set_name, self_dir, batch_size):
-        return tf.data.Dataset.from_generator(self._generate, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32), args=(data_dir, set_name, self_dir, batch_size))
+        return tf.data.Dataset.from_generator(self._generate, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32), tf.dtypes.float32), args=(data_dir, set_name, self_dir, batch_size))
 

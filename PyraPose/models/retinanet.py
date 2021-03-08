@@ -404,7 +404,6 @@ def retinanet(
     masks = mask_head(features[0])
     pyramids.append(masks)
 
-    '''
     # discriminator conditioned on generated image classification
     #recon = recon_head(features[0])
     #pyramids.append(recon)
@@ -431,7 +430,6 @@ def retinanet(
     pyramids.append(features[0])
     pyramids.append(features[1])
     pyramids.append(features[2])
-    '''
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name), discriminator_head
 
