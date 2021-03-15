@@ -75,13 +75,13 @@ if __name__ == "__main__":
     #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
-    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/InDex/'
+    mesh_path = '/home/stefan/data/Meshes/objekte_CIT/objects_train_inv/'
     background = '/home/stefan/data/datasets/cocoval2017/'
-    target = '/home/stefan/data/train_data/indox/'
+    target = '/home/stefan/data/train_data/CIT/'
 
     # metal Markus
 
-    objsperimg = 6
+    objsperimg = 7
 
     #print(open3d.__version__)
     #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
@@ -100,13 +100,22 @@ if __name__ == "__main__":
     #dec_mesh.remove_non_manifold_edges()
     #open3d.io.write_triangle_mesh(filename="/media/stefan/CBED-050F/MMAssist/models_reconstructed/ply/seite_rechts.ply", mesh=dec_mesh, write_ascii=True)
 
+
     visu = False
+    # kinect V1
+    #resX = 640
+    #resY = 480
+    #fx = 572.41140
+    #fy = 573.57043
+    #cx = 325.26110
+    #cy = 242.04899
+    # Realsense d415
     resX = 640
     resY = 480
-    fx = 572.41140
-    fy = 573.57043
-    cx = 325.26110
-    cy = 242.04899
+    fx = 914.79047 * 0.5
+    fy = 915.36220 * 0.66666
+    cx = 632.46827 * 0.5
+    cy = 374.60736 * 0.66666
     #a_x = 57°
     #a_y = 43°
     K = [fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0]
@@ -151,13 +160,13 @@ if __name__ == "__main__":
     '''
 
     # interlude for debugging
-    mesh_info = os.path.join(mesh_path, 'models_info.yml')
+    mesh_info = os.path.join(mesh_path, 'models_info.json')
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
     #sym_cont = np.ndarray((34, 3), dtype=np.float32)
     #sym_disc = np.ndarray((34, 9), dtype=np.float32)
 
-    for key, value in yaml.load(open(mesh_info)).items():
-        # for key, value in json.load(open(mesh_info)).items():
+    #for key, value in yaml.load(open(mesh_info)).items():
+    for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
         x_minus = value['min_x']
         y_minus = value['min_y']
@@ -174,7 +183,6 @@ if __name__ == "__main__":
                                    [x_minus, y_minus, z_minus],
                                    [x_minus, y_minus, z_plus]])
 
-        print(key, three_box_solo)
         threeD_boxes[int(key), :, :] = three_box_solo * fac
 
         #if "symmetries_continuous" in value:
@@ -291,19 +299,27 @@ if __name__ == "__main__":
             mask_idxs = []
             poses = []
             
-            obj_ids = np.random.choice(categories, size=objsperimg, replace=True)
+            obj_ids = np.random.choice(categories, size=objsperimg, replace=False)
 
             right, top = False, False
             seq_obj = 0
             for objID in obj_ids:
                 # sample rotation and append
                 R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
+                # CIT
+                z = 0.3 + np.random.rand() * 0.6
+                if objID == 3 or objID == 6:
+                    x = (2 * (0.35 * z)) * np.random.rand() - (0.35 * z)  # 0.55 each side kinect
+                    y = (2 * (0.2 * z)) * np.random.rand() - (0.2 * z)  # 0.40 each side kinect
+                else:
+                    x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z)  # 0.55 each side kinect
+                    y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z)  # 0.40 each side kinect
                 # fronius
-                z = 0.6 + np.random.rand() * 1.0
+                #z = 0.6 + np.random.rand() * 1.0
                 # InDex
                 #z = 0.3 + np.random.rand() * 1.0
-                x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
-                y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
+                #x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
+                #y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
                 #x = (0.45 * 2 * z) * np.random.rand() - (0.45 * z)
                 #y = (0.3 * 2 * z) * np.random.rand() - (0.3 * z)
 
@@ -381,19 +397,32 @@ if __name__ == "__main__":
                 #light_color = [np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9]
                 # standard
                 light_color = [1.0, 1.0, 1.0]
-                light_ambient_weight = 0.2 + np.random.rand() * 0.8
+                light_ambient_weight = 0.2 + np.random.rand() * 0.5 # pretty good
+                #light_ambient_weight = 0.2 + np.random.rand() * 0.8
                 # Fronius
-                if objID != 1:
-                    light_diffuse_weight = 0.75 + np.random.rand() * 0.25
-                    light_spec_weight = 0.2 + np.random.rand() * 0.3
-                    light_spec_shine = np.random.rand() * 2.0
+                #if objID != 1:
+                #    light_diffuse_weight = 0.75 + np.random.rand() * 0.25
+                #    light_spec_weight = 0.2 + np.random.rand() * 0.3
+                #    light_spec_shine = np.random.rand() * 2.0
+                #else:
+                #    light_diffuse_weight = 0.15 + np.random.rand() * 0.25
+                #    light_spec_weight = 0.5 + np.random.rand() * 0.4
+                #    light_spec_shine = np.random.rand() * 6.0
+                # CIT
+                if objID == 4 or objID == 7:
+                    light_diffuse_weight = 0.1 + np.random.rand() * 0.2
+                    light_spec_weight = 0.6 + np.random.rand() * 0.3
+                    light_spec_shine = 0.5 + np.random.rand() * 1.0
+                elif objID == 1:
+                    light_diffuse_weight = 0.6 + np.random.rand() * 0.3
+                    light_spec_weight = 0.1 + np.random.rand() * 0.3
+                    light_spec_shine = 0.9 + np.random.rand() * 0.2
                 else:
-                    light_diffuse_weight = 0.15 + np.random.rand() * 0.25
-                    light_spec_weight = 0.5 + np.random.rand() * 0.4
-                    light_spec_shine = np.random.rand() * 6.0
+                    light_diffuse_weight = 0.4 + np.random.rand() * 0.3
+                    light_spec_weight = 0.3 + np.random.rand() * 0.3
+                    light_spec_shine = 0.75 + np.random.rand() * 0.25
 
-                print(R_list)
-                print(t_list)
+
                 ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
                 ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
                 rgb_img = ren.get_color_image(objID)
