@@ -27,6 +27,30 @@ from . import Backbone
 from ..utils.image import preprocess_image
 
 
+# taken from https://github.com/broadinstitute/keras-resnet/blob/master/keras_resnet/layers/_batch_normalization.py
+class BatchNormalization_freezeable(keras.layers.BatchNormalization):
+    """
+    Identical to keras.layers.BatchNormalization, but adds the option to freeze parameters.
+    """
+    def __init__(self, freeze, *args, **kwargs):
+        self.freeze = freeze
+        super(BatchNormalization_freezeable, self).__init__(*args, **kwargs)
+
+        # set to non-trainable if freeze is true
+        self.trainable = not self.freeze
+
+    def call(self, *args, **kwargs):
+        # Force test mode if frozen, otherwise use default behaviour (i.e., training=None).
+        if self.freeze:
+            kwargs['training'] = False
+        return super(BatchNormalization_freezeable, self).call(*args, **kwargs)
+
+    def get_config(self):
+        config = super(BatchNormalization_freezeable, self).get_config()
+        config.update({'freeze': self.freeze})
+        return config
+
+
 class ResNetBackbone(Backbone):
     """ Describes backbone information and provides utility functions.
     """
@@ -106,10 +130,18 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
     resnet = tf.keras.applications.ResNet50(
         include_top=False, weights='imagenet', input_tensor=inputs, classes=num_classes)
 
-    #for i, layer in enumerate(resnet.layers):
-    #    print(i, layer.name)
-    #    if i < 40 and 'bn' not in layer.name:
-    #        layer.trainable=False
+    for i, layer in enumerate(resnet.layers):
+        #if i < 39 and 'bn' not in layer.name: #freezing first 2 stages
+        #    layer.trainable=False
+        if i < 39 or 'bn' in layer.name: #freezing first 2 stages
+            layer.trainable=False
+        #print(i, layer.name)
+
+        #if 'bn' in layer.name:
+        #    layer.trainable = False
+        #    print("weights:", len(layer.weights))
+        #    print("trainable_weights:", len(layer.trainable_weights))
+        #    print("non_trainable_weights:", len(layer.non_trainable_weights))
 
         # invoke modifier if given
     if modifier:
