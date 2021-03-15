@@ -75,7 +75,7 @@ if __name__ == "__main__":
     #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
-    mesh_path = '/home/stefan/data/Meshes/objekte_CIT/objects_train_inv/'
+    mesh_path = '/home/stefan/data/Meshes/CIT/objects_train_inv/'
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/CIT/'
 
@@ -251,13 +251,13 @@ if __name__ == "__main__":
     annoID = 0
     gloCo = 1
     times = 0
-    loops = 6
+    loops = 2
 
     syns = os.listdir(background)
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns:
+        for bg_img_path in syns[:100]:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
@@ -465,11 +465,10 @@ if __name__ == "__main__":
                 #fullvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_fv.png'
                 #cv2.imwrite(fullvisibName, full_visib_mask*255)
                 # some systematic error in visibility calculation, yet I can't point the finger at it
-                visib_fract = int(partial_mask_surf / surf_visib)
+                visib_fract = float(partial_mask_surf / surf_visib)
                 if visib_fract > 1.0:
-                    visib_fract = int(1.0)
+                    visib_fract = float(1.0)
                 visibilities.append(visib_fract)
-                #print('visib: ', obj_id, visib_fract)
                 visib_img = np.where(visib_img > 0, visib_img, ren_img)
 
                 # compute bounding box and append

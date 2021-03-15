@@ -46,20 +46,21 @@ class AnchorParameters:
 """
 The default anchor parameters.
 """
-AnchorParameters.default = AnchorParameters(
-    sizes   = [32, 64, 128],
-    strides = [8, 16, 32],
-    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
-    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
-)
-
-# YCB-video
 #AnchorParameters.default = AnchorParameters(
-#    sizes   = [48, 96, 192],
+#    sizes   = [32, 64, 128],
 #    strides = [8, 16, 32],
 #    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
-#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
+#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
 #)
+
+# YCB-video
+AnchorParameters.default = AnchorParameters(
+    sizes   = [48, 96, 192],
+    strides = [8, 16, 32],
+    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
+)
+defaultHypotheses = 36
 
 # homebrewed
 #AnchorParameters.default = AnchorParameters(
@@ -127,7 +128,7 @@ def anchor_targets_bbox(
     #regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     # MHP
-    regression_3D = np.zeros((batch_size, anchors.shape[0], 8, 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
+    regression_3D = np.zeros((batch_size, anchors.shape[0], defaultHypotheses, 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
     # Transformer
     #regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 4 + 16 + 1), dtype=keras.backend.floatx())
     mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
@@ -143,10 +144,10 @@ def anchor_targets_bbox(
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        #image_raw = image
-        #image_raw[..., 0] += 103.939
-        #image_raw[..., 1] += 116.779
-        #image_raw[..., 2] += 123.68
+        image_raw = image
+        image_raw[..., 0] += 103.939
+        image_raw[..., 1] += 116.779
+        image_raw[..., 2] += 123.68
 
         #image_raw_sym = copy.deepcopy(image_raw)
 
@@ -178,7 +179,7 @@ def anchor_targets_bbox(
             #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
             # MHP
-            calculated_boxes = np.empty((0, 8, 16))
+            calculated_boxes = np.empty((0, defaultHypotheses, 16))
             # Transformer loss
             #calculated_boxes = np.empty((0, 16))
             for idx, pose_anno in enumerate(annotations['poses']):
@@ -248,9 +249,8 @@ def anchor_targets_bbox(
                                      2)
                 '''
 
-
-                eight_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=8, axis=1)
-                calculated_boxes = np.concatenate([calculated_boxes, eight_boxes], axis=0)
+                hyps_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=defaultHypotheses, axis=1)
+                calculated_boxes = np.concatenate([calculated_boxes, hyps_boxes], axis=0)
 
                 if np.sum(annotations['sym_dis'][idx]) != 0:
                     for sdx in range(annotations['sym_dis'][idx].shape[0]):
@@ -269,6 +269,26 @@ def anchor_targets_bbox(
                                         cy=annotations['cam_params'][idx][3])
                             box3D = np.reshape(box3D, (16))
                             calculated_boxes[idx, sdx, :] = box3D
+
+                '''
+                if annotations['sym_con'][idx][2] == 1:
+                    axis_order = 's'
+                    multiply = []
+                    for axis_id, axis in enumerate(['x', 'y', 'z']):
+                        if (sym[axis_id] == 1):
+                            axis_order += axis
+                            multiply.append(0)
+                    for axis_id, axis in enumerate(['x', 'y', 'z']):
+                        if (sym[axis_id] == 0):
+                            axis_order += axis
+                            multiply.append(1)
+
+                    axis_1, axis_2, axis_3 = tf3d.euler.mat2euler(rot_pose[:3, :3], axis_order)
+                    axis_1 = axis_1 * multiply[0]
+                    axis_2 = axis_2 * multiply[1]
+                    axis_3 = axis_3 * multiply[2]
+                    rot_pose[:3, :3] = tf3d.euler.euler2mat(axis_1, axis_2, axis_3, axis_order)
+                '''
 
                 '''
                 # Transformer loss
@@ -319,11 +339,11 @@ def anchor_targets_bbox(
             #regression_3D[index, :, :16] = box3D_transformer(anchors, calculated_boxes[argmax_overlaps_inds, :])
 
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-            #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
-            #cv2.imwrite(name, image_raw)
+            rind = np.random.randint(0, 1000)
+            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
+            cv2.imwrite(name, image_raw)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'aug_RGB.jpg'
-            #cv2.imwrite(name, image_aug)
+            #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'nosym_RGB.jpg'
             #cv2.imwrite(name, image_raw_sym)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
@@ -640,7 +660,7 @@ def box3D_MHP(anchors, gt_boxes, mean=None, std=None):
     anchor_widths  = anchors[:, 2] - anchors[:, 0]
     anchor_heights = anchors[:, 3] - anchors[:, 1]
 
-    sym_targets = np.empty((gt_boxes.shape[0], 8, 16))
+    sym_targets = np.empty((gt_boxes.shape[0], defaultHypotheses, 16))
     for idx in range(gt_boxes.shape[1]):
 
         targets_dx1 = (gt_boxes[:, idx, 0] - anchors[:, 0]) / anchor_widths

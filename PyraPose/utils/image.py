@@ -152,13 +152,13 @@ def apply_transform(matrix, image, params, cpara):
     # rgb
     # seq describes an object for rgb image augmentation using aleju/imgaug
     seq = iaa.Sequential([
-        iaa.OneOf([
-            iaa.Sequential([iaa.Sometimes(0.5, iaa.CoarseDropout(p=0.05, size_percent=(0.02, 0.1)))]),
-            iaa.Sequential([iaa.Sometimes(0.5, iaa.Cutout(fill_mode="constant", cval=(0, 255), nb_iterations=(5, 20),
-                                                          size=(0.02, 0.1), squared=False))]),
-            iaa.Sequential([iaa.Sometimes(0.5, iaa.Cutout(fill_mode="gaussian", cval=(0, 255), nb_iterations=(5, 20),
-                                                          size=(0.02, 0.1), squared=False))])
-        ]),
+        #iaa.OneOf([
+        #    iaa.Sequential([iaa.Sometimes(0.5, iaa.CoarseDropout(p=0.05, size_percent=(0.02, 0.1)))]),
+        #    iaa.Sequential([iaa.Sometimes(0.5, iaa.Cutout(fill_mode="constant", cval=(0, 255), nb_iterations=(5, 20),
+        #                                                  size=(0.02, 0.1), squared=False))]),
+        #    iaa.Sequential([iaa.Sometimes(0.5, iaa.Cutout(fill_mode="gaussian", cval=(0, 255), nb_iterations=(5, 20),
+        #                                                  size=(0.02, 0.1), squared=False))])
+        #]),
         iaa.Sequential([
             # blur
             iaa.SomeOf((0, 2), [

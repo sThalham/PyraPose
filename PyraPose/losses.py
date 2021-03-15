@@ -420,7 +420,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
     def _sym_orth_l1(y_true, y_pred):
 
         #y_pred = keras.backend.expand_dims(y_pred, axis=2) # hackiest !
-        y_pred = keras.backend.repeat_elements(x=y_pred, rep=8, axis=2)
+        y_pred = keras.backend.repeat_elements(x=y_pred, rep=36, axis=2)
         #print('y_pred: ', y_pred)
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]
