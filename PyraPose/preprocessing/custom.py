@@ -66,7 +66,7 @@ class CustomGenerator(Generator):
 
         self.TDboxes = np.zeros((16, 8, 3), dtype=np.float32)
         self.sym_cont = np.zeros((34, 3), dtype=np.float32)
-        self.sym_disc = np.zeros((34, 3, 9), dtype=np.float32)
+        self.sym_disc = np.zeros((34, 3, 16), dtype=np.float32)
 
         for key, value in yaml.load(open(self.mesh_info)).items():
             x_minus = value['min_x']
@@ -88,7 +88,7 @@ class CustomGenerator(Generator):
                 for sdx, sym in enumerate(value['symmetries_discrete']):
                     self.sym_disc[int(key), sdx, :] = np.array(sym)
             else:
-                self.sym_disc[int(key), :, :] = np.zeros((3, 9))
+                self.sym_disc[int(key), :, :] = np.zeros((3, 16))
             if "symmetries_continuous" in value:
                 self.sym_cont[int(key), :] = np.array(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
             else:

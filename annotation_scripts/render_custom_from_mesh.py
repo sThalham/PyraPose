@@ -112,10 +112,10 @@ if __name__ == "__main__":
     # Realsense d415
     resX = 640
     resY = 480
-    fx = 914.79047 * 0.5
-    fy = 915.36220 * 0.66666
-    cx = 632.46827 * 0.5
-    cy = 374.60736 * 0.66666
+    fx = 615.40063
+    fy = 615.04529
+    cx = 312.87567
+    cy = 250.85875
     #a_x = 57°
     #a_y = 43°
     K = [fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0]
@@ -251,13 +251,13 @@ if __name__ == "__main__":
     annoID = 0
     gloCo = 1
     times = 0
-    loops = 2
+    loops = 6
 
     syns = os.listdir(background)
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns[:100]:
+        for bg_img_path in syns:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)

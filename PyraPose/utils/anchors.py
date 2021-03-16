@@ -206,6 +206,9 @@ def anchor_targets_bbox(
                 rot = tf3d.quaternions.quat2mat(pose_anno[3:])
                 rot = np.asarray(rot, dtype=np.float32)
                 tra = pose_anno[:3]
+                full_T = np.ones((4,4))
+                full_T[:3, :3] = rot
+                full_T[:3, 3] = tra
                 tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
                 tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
@@ -254,13 +257,10 @@ def anchor_targets_bbox(
 
                 if np.sum(annotations['sym_dis'][idx]) != 0:
                     for sdx in range(annotations['sym_dis'][idx].shape[0]):
-                        #print('range: ', range(annotations['sym_dis'].shape[0]))
-                        #print(annotations['sym_dis'][idx].shape)
-                        #print(annotations['sym_dis'][idx])
-                        #print(idx, sdx)
-                        #print(annotations['sym_dis'][idx][sdx, :].shape)
                         if np.sum(annotations['sym_dis'][idx][sdx, :]) != 0:
-                            rot_sym = np.matmul(rot, np.array(annotations['sym_dis'][idx][sdx,:]).reshape((3,3)))
+                            T_sym = np.matmul(full_T, np.array(annotations['sym_dis'][idx][sdx,:]).reshape((4,4)).T)
+                            rot_sym = T_sym[:3, :3]
+                            tra = T_sym[:3, 3]
                             tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
                             tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
 
@@ -270,10 +270,11 @@ def anchor_targets_bbox(
                             box3D = np.reshape(box3D, (16))
                             calculated_boxes[idx, sdx, :] = box3D
 
-                '''
-                if annotations['sym_con'][idx][2] == 1:
+                ang_step = (2 * np.pi) / defaultHypotheses
+                if np.sum(annotations['sym_con'][idx]) > 0:
                     axis_order = 's'
                     multiply = []
+                    sym = annotations['sym_con'][idx]
                     for axis_id, axis in enumerate(['x', 'y', 'z']):
                         if (sym[axis_id] == 1):
                             axis_order += axis
@@ -283,12 +284,20 @@ def anchor_targets_bbox(
                             axis_order += axis
                             multiply.append(1)
 
-                    axis_1, axis_2, axis_3 = tf3d.euler.mat2euler(rot_pose[:3, :3], axis_order)
-                    axis_1 = axis_1 * multiply[0]
+                    axis_1, axis_2, axis_3 = tf3d.euler.mat2euler(rot[:3, :3], axis_order)
                     axis_2 = axis_2 * multiply[1]
                     axis_3 = axis_3 * multiply[2]
-                    rot_pose[:3, :3] = tf3d.euler.euler2mat(axis_1, axis_2, axis_3, axis_order)
-                '''
+                    for csdx in range(defaultHypotheses):
+                        axis_1 = np.pi + csdx * ang_step
+                        rot_sym = tf3d.euler.euler2mat(axis_1, axis_2, axis_3, axis_order)
+                        tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
+                        tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
+
+                        box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
+                                            fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
+                                            cy=annotations['cam_params'][idx][3])
+                        box3D = np.reshape(box3D, (16))
+                        calculated_boxes[idx, csdx, :] = box3D
 
                 '''
                 # Transformer loss
@@ -339,9 +348,9 @@ def anchor_targets_bbox(
             #regression_3D[index, :, :16] = box3D_transformer(anchors, calculated_boxes[argmax_overlaps_inds, :])
 
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-            rind = np.random.randint(0, 1000)
-            name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
-            cv2.imwrite(name, image_raw)
+            #rind = np.random.randint(0, 1000)
+            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
+            #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'aug_RGB.jpg'
             #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'nosym_RGB.jpg'
@@ -657,36 +666,38 @@ def box3D_MHP(anchors, gt_boxes, mean=None, std=None):
     elif not isinstance(std, np.ndarray):
         raise ValueError('Expected std to be a np.ndarray, list or tuple. Received: {}'.format(type(std)))
 
-    anchor_widths  = anchors[:, 2] - anchors[:, 0]
-    anchor_heights = anchors[:, 3] - anchors[:, 1]
+    anchors = np.repeat(anchors[:, np.newaxis, :], repeats=defaultHypotheses, axis=1)
 
-    sym_targets = np.empty((gt_boxes.shape[0], defaultHypotheses, 16))
-    for idx in range(gt_boxes.shape[1]):
+    anchor_widths  = anchors[:, :, 2] - anchors[:, :, 0]
+    anchor_heights = anchors[:, :, 3] - anchors[:, :, 1]
 
-        targets_dx1 = (gt_boxes[:, idx, 0] - anchors[:, 0]) / anchor_widths
-        targets_dy1 = (gt_boxes[:, idx, 1] - anchors[:, 1]) / anchor_heights
-        targets_dx2 = (gt_boxes[:, idx, 2] - anchors[:, 2]) / anchor_widths
-        targets_dy2 = (gt_boxes[:, idx, 3] - anchors[:, 3]) / anchor_heights
-        targets_dx3 = (gt_boxes[:, idx, 4] - anchors[:, 0]) / anchor_widths
-        targets_dy3 = (gt_boxes[:, idx, 5] - anchors[:, 1]) / anchor_heights
-        targets_dx4 = (gt_boxes[:, idx, 6] - anchors[:, 2]) / anchor_widths
-        targets_dy4 = (gt_boxes[:, idx, 7] - anchors[:, 3]) / anchor_heights
-        targets_dx5 = (gt_boxes[:, idx, 8] - anchors[:, 0]) / anchor_widths
-        targets_dy5 = (gt_boxes[:, idx, 9] - anchors[:, 1]) / anchor_heights
-        targets_dx6 = (gt_boxes[:, idx, 10] - anchors[:, 2]) / anchor_widths
-        targets_dy6 = (gt_boxes[:, idx, 11] - anchors[:, 3]) / anchor_heights
-        targets_dx7 = (gt_boxes[:, idx, 12] - anchors[:, 0]) / anchor_widths
-        targets_dy7 = (gt_boxes[:, idx, 13] - anchors[:, 1]) / anchor_heights
-        targets_dx8 = (gt_boxes[:, idx, 14] - anchors[:, 2]) / anchor_widths
-        targets_dy8 = (gt_boxes[:, idx, 15] - anchors[:, 3]) / anchor_heights
+    #sym_targets = np.empty((gt_boxes.shape[0], defaultHypotheses, 16))
+    #for idx in range(gt_boxes.shape[1]):
 
-        targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
-        sym_targets[:, idx,:] = targets.T
+    targets_dx1 = (gt_boxes[:, :, 0] - anchors[:, :, 0]) / anchor_widths
+    targets_dy1 = (gt_boxes[:, :, 1] - anchors[:, :, 1]) / anchor_heights
+    targets_dx2 = (gt_boxes[:, :, 2] - anchors[:, :, 2]) / anchor_widths
+    targets_dy2 = (gt_boxes[:, :, 3] - anchors[:, :, 3]) / anchor_heights
+    targets_dx3 = (gt_boxes[:, :, 4] - anchors[:, :, 0]) / anchor_widths
+    targets_dy3 = (gt_boxes[:, :, 5] - anchors[:, :, 1]) / anchor_heights
+    targets_dx4 = (gt_boxes[:, :, 6] - anchors[:, :, 2]) / anchor_widths
+    targets_dy4 = (gt_boxes[:, :, 7] - anchors[:, :, 3]) / anchor_heights
+    targets_dx5 = (gt_boxes[:, :, 8] - anchors[:, :, 0]) / anchor_widths
+    targets_dy5 = (gt_boxes[:, :, 9] - anchors[:, :, 1]) / anchor_heights
+    targets_dx6 = (gt_boxes[:, :, 10] - anchors[:, :, 2]) / anchor_widths
+    targets_dy6 = (gt_boxes[:, :, 11] - anchors[:, :, 3]) / anchor_heights
+    targets_dx7 = (gt_boxes[:, :, 12] - anchors[:, :, 0]) / anchor_widths
+    targets_dy7 = (gt_boxes[:, :, 13] - anchors[:, :, 1]) / anchor_heights
+    targets_dx8 = (gt_boxes[:, :, 14] - anchors[:, :, 2]) / anchor_widths
+    targets_dy8 = (gt_boxes[:, :, 15] - anchors[:, :, 3]) / anchor_heights
 
-    sym_targets = (sym_targets - mean) / std
+    targets = np.stack((targets_dx1, targets_dy1, targets_dx2, targets_dy2, targets_dx3, targets_dy3, targets_dx4, targets_dy4, targets_dx5, targets_dy5, targets_dx6, targets_dy6, targets_dx7, targets_dy7, targets_dx8, targets_dy8))
+    targets = np.transpose(targets, axes=[1, 2, 0])
+
+    targets = (targets - mean) / std
     #print(np.mean(gt_boxes, axis=0), np.var(gt_boxes, axis=0))
 
-    return sym_targets
+    return targets
 
 
 def toPix_array(translation, fx=None, fy=None, cx=None, cy=None):
