@@ -75,13 +75,13 @@ if __name__ == "__main__":
     #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
-    mesh_path = '/home/stefan/data/Meshes/CIT/objects_train_inv/'
+    mesh_path = '/home/stefan/data/Meshes/CIT/CIT_inv/'
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/CIT/'
 
     # metal Markus
 
-    objsperimg = 7
+    objsperimg = 9
 
     #print(open3d.__version__)
     #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns:
+        for bg_img_path in syns[:20]:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
@@ -307,7 +307,7 @@ if __name__ == "__main__":
                 # sample rotation and append
                 R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
                 # CIT
-                z = 0.3 + np.random.rand() * 0.6
+                z = 0.4 + np.random.rand() * 0.6
                 if objID == 3 or objID == 6:
                     x = (2 * (0.35 * z)) * np.random.rand() - (0.35 * z)  # 0.55 each side kinect
                     y = (2 * (0.2 * z)) * np.random.rand() - (0.2 * z)  # 0.40 each side kinect
@@ -417,6 +417,10 @@ if __name__ == "__main__":
                     light_diffuse_weight = 0.6 + np.random.rand() * 0.3
                     light_spec_weight = 0.1 + np.random.rand() * 0.3
                     light_spec_shine = 0.9 + np.random.rand() * 0.2
+                elif objID == 8 or objID == 9:
+                    light_diffuse_weight = 0.25 + np.random.rand() * 0.2
+                    light_spec_weight = 0.45 + np.random.rand() * 0.3
+                    light_spec_shine = 0.5 + np.random.rand() * 0.75
                 else:
                     light_diffuse_weight = 0.4 + np.random.rand() * 0.3
                     light_spec_weight = 0.3 + np.random.rand() * 0.3
