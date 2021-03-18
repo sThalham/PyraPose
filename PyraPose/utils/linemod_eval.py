@@ -25,6 +25,7 @@ from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import sys
+import matplotlib.pyplot as plt
 
 
 import progressbar
@@ -147,7 +148,7 @@ def toPix_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -158,6 +159,25 @@ def load_pcd(cat):
     pcd_model = open3d.PointCloud()
     pcd_model.points = open3d.Vector3dVector(model_vsd['pts'])
     open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=0.1, max_nn=30))
+    # open3d.draw_geometries([pcd_model])
+    model_vsd_mm = copy.deepcopy(model_vsd)
+    model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
+    #pcd_model = open3d.read_point_cloud(ply_path)
+
+    return pcd_model, model_vsd, model_vsd_mm
+'''
+
+def load_pcd(cat):
+    # load meshes
+    #mesh_path ="/RGBDPose/Meshes/linemod_13/"
+    mesh_path = "/home/stefan/data/Meshes/linemod_13/"
+    #mesh_path = "/home/sthalham/data/Meshes/linemod_13/"
+    ply_path = mesh_path + 'obj_' + cat + '.ply'
+    model_vsd = ply_loader.load_ply(ply_path)
+    pcd_model = open3d.geometry.PointCloud()
+    pcd_model.points = open3d.utility.Vector3dVector(model_vsd['pts'])
+    pcd_model.estimate_normals(search_param=open3d.geometry.KDTreeSearchParamHybrid(
         radius=0.1, max_nn=30))
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
@@ -302,8 +322,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
         #    t_tra = anno['poses'][0][:3]
         #    t_rot = anno['poses'][0][3:]
 
-        #if anno['labels'][0] != 13:
-        #    continue
+        if anno['labels'][0] == 2 or anno['labels'][0] == 6:
+            continue
 
         # run network
         boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
@@ -444,7 +464,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                                                    distCoeffs=None, rvec=None, tvec=None,
                                                                    useExtrinsicGuess=False, iterationsCount=300,
                                                                    reprojectionError=5.0, confidence=0.99,
-                                                                   flags=cv2.SOLVEPNP_ITERATIVE)
+                                                                   flags=cv2.SOLVEPNP_EPNP)
                 R_est, _ = cv2.Rodrigues(orvec)
                 t_est = otvec
 
@@ -455,17 +475,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 t_gt = t_gt * 0.001
                 t_est = t_est.T
 
-                if cls == 10 or cls == 11:
-                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                else:
-                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                #if cls == 10 or cls == 11:
+                #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                #else:
+                #    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-                if err_add < model_dia[true_cat] * 0.1:
-                    true_pose = 1
-                if err_add < top_error:
-                    top_error = err_add
+                #if err_add < model_dia[true_cat] * 0.1:
+                #    true_pose = 1
+                #if err_add < top_error:
+                #    top_error = err_add
 
-                error.append(err_add)
+                #errors.append(err_add)
 
                 tDbox = R_gt.dot(ori_points.T).T
                 tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
@@ -480,10 +500,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 eDbox = np.reshape(est3D, (16))
                 pose = eDbox.astype(np.uint16)
 
-                box_dev = numpy.linalg.norm(eDbox - pose_votes)
+                box_dev = np.linalg.norm(eDbox - pose_votes)
                 box_devs.append(box_dev)
-                loc_scores.append(cls_mask[0, cls_indices[0][hypdx]])
+                loc_scores.append(cls_mask[cls_indices[0][hypdx]])
 
+                '''
                 colGT = (255, 0, 0)
                 colEst = (0, 0, 215)
                 if err_add < model_dia[true_cat] * 0.1:
@@ -532,12 +553,57 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                      2)
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                                      2)
+                '''
 
-            truePoses[int(true_cat)] += true_pose
+            min_box_dev = np.argmin(np.array(box_devs))
+
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+            pose_votes = boxes3D[0, cls_indices[0][min_box_dev], :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
+                                                               imagePoints=est_points, cameraMatrix=K,
+                                                               distCoeffs=None, rvec=None, tvec=None,
+                                                               useExtrinsicGuess=False, iterationsCount=300,
+                                                               reprojectionError=5.0, confidence=0.99,
+                                                               flags=cv2.SOLVEPNP_EPNP)
+            R_est, _ = cv2.Rodrigues(orvec)
+            t_est = otvec
+
+            t_rot_q = tf3d.quaternions.quat2mat(t_rot)
+            R_gt = np.array(t_rot_q, dtype=np.float32).reshape(3, 3)
+            t_gt = np.array(t_tra, dtype=np.float32)
+
+            t_gt = t_gt * 0.001
+            t_est = t_est.T
+
+            if cls == 10 or cls == 11:
+                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+            else:
+                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+            if err_add < model_dia[true_cat] * 0.1:
+                truePoses[int(true_cat)] += 1
+
+            #truePoses[int(true_cat)] += true_pose
             print(' ')
-            print('error: ', top_error, 'threshold', model_dia[cls] * 0.1)
-            print('errors: ', errors)
-            print('box_devs: ', box_devs)
+            print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+            #print('errors: ', errors)
+            #print('box_devs: ', box_devs)
+
+            #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1/max(np.asarray(errors)))
+            #errors = np.asarray(errors) * (1/np.nanmax(np.asarray(errors)))
+            #box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
+
+            #x_axis = range(len(errors))
+            #plt.plot(x_axis, errors, 'bo:', linewidth=2, markersize=5)
+            #plt.plot(x_axis, box_devs, 'rv-.', linewidth=2, markersize=5)
+            #plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
+            #plt.axhline(y=norm_thres, color='r', linestyle='-')
+            #plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
+            #plt.show()
             '''
 
             #########################
