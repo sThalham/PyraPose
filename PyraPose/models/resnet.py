@@ -82,7 +82,7 @@ def resnet_retinanet(num_classes, inputs=None, modifier=None, **kwargs):
         if keras.backend.image_data_format() == 'channels_first':
             inputs = keras.layers.Input(shape=(3, None, None))
         else:
-            inputs = keras.layers.Input(shape=(480, 640, 3))
+            inputs = keras.layers.Input(shape=(None, None, 3))
 
     resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)
 

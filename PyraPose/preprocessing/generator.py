@@ -246,7 +246,7 @@ class Generator(keras.utils.Sequence):
                 K = [572.4114, 573.57043, 325.26110828, 242.04899594]
 
             image = apply_transform(transform, image, self.transform_parameters, K)
-            annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters)
+            annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters, self.image_min_side, self.image_max_side)
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()
@@ -361,7 +361,7 @@ class Generator(keras.utils.Sequence):
         """ Compute inputs and target outputs for the network.
         """
         # load images and annotations
-        image_group       = self.load_image_group(group) # image group is now [image_rgb, image_dep]
+        image_group       = self.load_image_group(group)
         annotations_group = self.load_annotations_group(group)
 
         # check validity of annotations

@@ -70,7 +70,7 @@ def default_mask_model(
     if keras.backend.image_data_format() == 'channels_first':
         inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
-        inputs  = keras.layers.Input(shape=(60, 80, pyramid_feature_size))
+        inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
 
     outputs = inputs
     for i in range(4):

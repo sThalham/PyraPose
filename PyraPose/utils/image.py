@@ -214,8 +214,9 @@ def apply_transform(matrix, image, params, cpara):
     return image
 
 
-def apply_transform2mask(matrix, mask, params):
+def apply_transform2mask(matrix, mask, params, min_side=480, max_side=640):
 
+    mask = np.asarray(Image.fromarray(mask).resize((max_side, min_side), Image.NEAREST))
     mask = cv2.warpAffine(
         mask,
         matrix[:2, :],

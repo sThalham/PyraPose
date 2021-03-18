@@ -106,7 +106,7 @@ def anchor_targets_bbox(
 
     batch_size = len(image_group)
 
-    regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
+    #regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
 
@@ -138,8 +138,8 @@ def anchor_targets_bbox(
             labels_batch[index, ignore_indices, -1]       = -1
             labels_batch[index, positive_indices, -1]     = 1
 
-            regression_batch[index, ignore_indices, -1]   = -1
-            regression_batch[index, positive_indices, -1] = 1
+            #regression_batch[index, ignore_indices, -1]   = -1
+            #regression_batch[index, positive_indices, -1] = 1
 
             regression_3D[index, ignore_indices, -1] = -1
             regression_3D[index, positive_indices, -1] = 1
@@ -147,7 +147,7 @@ def anchor_targets_bbox(
             # compute target class labels
             labels_batch[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int)] = 1
 
-            regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
+            #regression_batch[index, :, :-1] = bbox_transform(anchors, annotations['bboxes'][argmax_overlaps_inds, :])
 
             calculated_boxes = np.empty((0, 16))
             for idx, pose in enumerate(annotations['poses']):
@@ -281,7 +281,7 @@ def anchor_targets_bbox(
             indices = np.logical_or(anchors_centers[:, 0] >= image.shape[1], anchors_centers[:, 1] >= image.shape[0])
 
             labels_batch[index, indices, -1]     = -1
-            regression_batch[index, indices, -1] = -1
+            #regression_batch[index, indices, -1] = -1
             regression_3D[index, indices, -1] = -1
 
     return regression_3D, labels_batch, mask_batch
