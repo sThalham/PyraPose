@@ -75,7 +75,7 @@ if __name__ == "__main__":
     #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
-    mesh_path = '/home/stefan/data/Meshes/CIT/CIT_inv/'
+    mesh_path = '/home/stefan/data/Meshes/CIT_inv/'
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/CIT/'
 

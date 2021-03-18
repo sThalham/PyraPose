@@ -162,7 +162,7 @@ def load_pcd(cat):
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
     model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
-    pcd_model = open3d.read_point_cloud(ply_path)
+    #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
 
@@ -266,13 +266,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
-        image_raw_dep = generator.load_image_dep(index)
-        image_raw_dep = np.where(image_raw_dep > 0, image_raw_dep, 0.0)
-        image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
-        image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
+        #image_raw_dep = generator.load_image_dep(index)
+        #image_raw_dep = np.where(image_raw_dep > 0, image_raw_dep, 0.0)
+        #image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
+        #image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
         #image_raw_dep = get_normal(image_raw_dep, fxkin, fykin, cxkin, cykin)
-        image_dep = generator.preprocess_image(image_raw_dep)
-        image_dep, scale = generator.resize_image(image_dep)
+        #image_dep = generator.preprocess_image(image_raw_dep)
+        #image_dep, scale = generator.resize_image(image_dep)
 
         image_viz = copy.deepcopy(image_raw)
 
@@ -302,13 +302,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
         #    t_tra = anno['poses'][0][:3]
         #    t_rot = anno['poses'][0][3:]
 
-        if anno['labels'][0] != 13:
-            continue
+        #if anno['labels'][0] != 13:
+        #    continue
 
         # run network
-        images = []
-        images.append(image)
-        images.append(image_dep)
         boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
         for inv_cls in range(scores.shape[2]):
@@ -601,6 +598,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              2)
 
+            '''
             hyp_mask = np.zeros((640, 480), dtype=np.float32)
             for idx in range(k_hyp):
                 hyp_mask[int(est_points[idx, 0, 0]), int(est_points[idx, 0, 1])] += 1
@@ -611,7 +609,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw[:, :, 0] = np.where(hyp_mask > 0, 0, image_raw[:, :, 0])
             image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
             image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
-
+            '''
 
             '''
             idx = 0
@@ -638,9 +636,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
-            cv2.imwrite(name, image_raw)
-            print('break')
+            #name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
+            #cv2.imwrite(name, image_raw)
+            #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
