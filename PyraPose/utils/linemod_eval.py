@@ -422,6 +422,127 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 model_vsd = mv15
                 model_vsd_mm = mv15_mm
 
+            ##########################
+            # process every hypothesis separately
+            ##########################
+
+            true_pose = 0
+            top_error = 1
+            k_hyp = len(cls_indices[0])
+            errors = []
+            box_devs = []
+            loc_scores = []
+            for hypdx in range(k_hyp):
+                ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+                K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+                pose_votes = boxes3D[0, cls_indices[0][hypdx], :]
+                est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+
+                retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
+                                                                   imagePoints=est_points, cameraMatrix=K,
+                                                                   distCoeffs=None, rvec=None, tvec=None,
+                                                                   useExtrinsicGuess=False, iterationsCount=300,
+                                                                   reprojectionError=5.0, confidence=0.99,
+                                                                   flags=cv2.SOLVEPNP_ITERATIVE)
+                R_est, _ = cv2.Rodrigues(orvec)
+                t_est = otvec
+
+                t_rot_q = tf3d.quaternions.quat2mat(t_rot)
+                R_gt = np.array(t_rot_q, dtype=np.float32).reshape(3, 3)
+                t_gt = np.array(t_tra, dtype=np.float32)
+
+                t_gt = t_gt * 0.001
+                t_est = t_est.T
+
+                if cls == 10 or cls == 11:
+                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                else:
+                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+                if err_add < model_dia[true_cat] * 0.1:
+                    true_pose = 1
+                if err_add < top_error:
+                    top_error = err_add
+
+                error.append(err_add)
+
+                tDbox = R_gt.dot(ori_points.T).T
+                tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
+                box3D = toPix_array(tDbox)
+                tDbox = np.reshape(box3D, (16))
+                tDbox = tDbox.astype(np.uint16)
+
+                eDbox = R_est.dot(ori_points.T).T
+                # eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+                eDbox = eDbox + np.repeat(t_est, 8, axis=0)
+                est3D = toPix_array(eDbox)
+                eDbox = np.reshape(est3D, (16))
+                pose = eDbox.astype(np.uint16)
+
+                box_dev = numpy.linalg.norm(eDbox - pose_votes)
+                box_devs.append(box_dev)
+                loc_scores.append(cls_mask[0, cls_indices[0][hypdx]])
+
+                colGT = (255, 0, 0)
+                colEst = (0, 0, 215)
+                if err_add < model_dia[true_cat] * 0.1:
+                    colEst = (0, 204, 0)
+
+                image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[0:2].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[8:10].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[10:12].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[12:14].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[6:8].ravel()), tuple(tDbox[14:16].ravel()), colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[8:10].ravel()), tuple(tDbox[10:12].ravel()),
+                                     colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[10:12].ravel()), tuple(tDbox[12:14].ravel()),
+                                     colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[12:14].ravel()), tuple(tDbox[14:16].ravel()),
+                                     colGT,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
+                                     colGT,
+                                     2)
+
+                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()), colEst, 2)
+                image_raw = cv2.line(image_raw, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()), colEst,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()), colEst,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()), colEst,
+                                     2)
+                image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
+                                     2)
+
+            truePoses[int(true_cat)] += true_pose
+            print(' ')
+            print('error: ', top_error, 'threshold', model_dia[cls] * 0.1)
+            print('errors: ', errors)
+            print('box_devs: ', box_devs)
+            '''
+
+            #########################
+            # vanilla PyraPose
+            #######################
             k_hyp = len(cls_indices[0])
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
@@ -433,8 +554,43 @@ def evaluate_linemod(generator, model, threshold=0.05):
             obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
             obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
 
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                               imagePoints=est_points, cameraMatrix=K,
+                                                               distCoeffs=None, rvec=None, tvec=None,
+                                                               useExtrinsicGuess=False, iterationsCount=300,
+                                                               reprojectionError=5.0, confidence=0.99,
+                                                               flags=cv2.SOLVEPNP_ITERATIVE)
+            R_est, _ = cv2.Rodrigues(orvec)
+            t_est = otvec
+
+            # t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
+            t_rot = tf3d.quaternions.quat2mat(t_rot)
+            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+            t_gt = np.array(t_tra, dtype=np.float32)
+
+            # print(t_est)
+            # print(t_gt)
+
+            t_gt = t_gt * 0.001
+            t_est = t_est.T  # * 0.001
+
+            if cls == 10 or cls == 11:
+                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+            else:
+                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+
+            if err_add < model_dia[true_cat] * 0.1:
+                truePoses[int(true_cat)] += 1
+
+            print(' ')
+            print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+            '''
+
+            ###################################
+            # other experiments
             ###############################
             # weighted mean
+            ##############################
             #pose_weights = np.repeat(cls_mask[cls_indices, np.newaxis], 16, axis=2)
             #pose_mean = np.mean(boxes3D[0, cls_indices, :], axis=1)
             #pose_votes = boxes3D[0, cls_indices, :] - np.repeat(pose_mean, k_hyp, axis=0)
@@ -480,14 +636,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #obj_points = np.repeat(ori_points[np.newaxis, :, :], top_n, axis=0)
             #obj_points = obj_points.reshape((int(top_n * 8), 1, 3))
 
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                               imagePoints=est_points, cameraMatrix=K,
-                                                               distCoeffs=None, rvec=None, tvec=None,
-                                                               useExtrinsicGuess=False, iterationsCount=300,
-                                                               reprojectionError=5.0, confidence=0.99,
-                                                               flags=cv2.SOLVEPNP_ITERATIVE)
-            R_est, _ = cv2.Rodrigues(orvec)
-            t_est = otvec
+
 
             ##############################
             # pnp
@@ -505,38 +654,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #t_est[:2] = t_est[:2] * 0.5
             #t_est[2] = (t_est[2] / 3 + 1.0)
 
-            BOP_R = R_est.flatten().tolist()
-            BOP_t = t_est.flatten().tolist()
-
             # result = [int(BOP_scene_id), int(BOP_im_id), int(BOP_obj_id), float(BOP_score), BOP_R[0], BOP_R[1], BOP_R[2], BOP_R[3], BOP_R[4], BOP_R[5], BOP_R[6], BOP_R[7], BOP_R[8], BOP_t[0], BOP_t[1], BOP_t[2]]
             # result = [int(BOP_scene_id), int(BOP_im_id), int(BOP_obj_id), float(BOP_score), BOP_R, BOP_t]
             # results_image.append(result)
 
-            # t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
-            t_rot = tf3d.quaternions.quat2mat(t_rot)
-            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
-            t_gt = np.array(t_tra, dtype=np.float32)
-
-            # print(t_est)
-            # print(t_gt)
-
-            t_gt = t_gt * 0.001
-            t_est = t_est.T  # * 0.001
-            #print('pose: ', pose)
-            #print(t_gt)
-            #print(t_est)
-
-            if cls == 10 or cls == 11:
-                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-            else:
-                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-
-            if err_add < model_dia[true_cat] * 0.1:
-                truePoses[int(true_cat)] += 1
-
-            print(' ')
-            print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
-
+            '''
 
             tDbox = R_gt.dot(ori_points.T).T
             tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
@@ -598,6 +720,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              2)
 
+            '''
             '''
             hyp_mask = np.zeros((640, 480), dtype=np.float32)
             for idx in range(k_hyp):
