@@ -230,7 +230,7 @@ class CustomGenerator(Generator):
         # mask = None
         mask = cv2.imread(path, -1)
 
-        annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,)), 'sym_dis': np.empty((0, 3, 9)), 'sym_con': np.empty((0, 3))}
+        annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,)), 'sym_dis': np.empty((0, 3, 16)), 'sym_con': np.empty((0, 3))}
 
         for idx, a in enumerate(anns):
             if self.set_name == 'train':

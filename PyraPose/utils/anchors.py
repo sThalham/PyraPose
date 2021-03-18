@@ -250,14 +250,15 @@ def anchor_targets_bbox(
                                      colEst,
 
                                      2)
+
                 '''
 
                 hyps_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=defaultHypotheses, axis=1)
                 calculated_boxes = np.concatenate([calculated_boxes, hyps_boxes], axis=0)
 
-                if np.sum(annotations['sym_dis'][idx]) != 0:
+                if np.sum(np.abs(annotations['sym_dis'][idx])) != 0:
                     for sdx in range(annotations['sym_dis'][idx].shape[0]):
-                        if np.sum(annotations['sym_dis'][idx][sdx, :]) != 0:
+                        if np.sum(np.abs(annotations['sym_dis'][idx][sdx, :])) != 0:
                             T_sym = np.matmul(full_T, np.array(annotations['sym_dis'][idx][sdx,:]).reshape((4,4)).T)
                             rot_sym = T_sym[:3, :3]
                             tra = T_sym[:3, 3]
@@ -349,8 +350,6 @@ def anchor_targets_bbox(
 
             #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
             #rind = np.random.randint(0, 1000)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym_RGB.jpg'
-            #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'aug_RGB.jpg'
             #cv2.imwrite(name, image_raw)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'nosym_RGB.jpg'
