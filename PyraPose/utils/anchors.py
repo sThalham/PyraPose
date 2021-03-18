@@ -109,16 +109,16 @@ def anchor_targets_bbox(
     regression_batch  = np.zeros((batch_size, anchors.shape[0], 4 + 1), dtype=keras.backend.floatx())
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     regression_3D = np.zeros((batch_size, anchors.shape[0], 16 + 1), dtype=keras.backend.floatx())
-    mask_batch = np.zeros((batch_size, 4800, num_classes + 1), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
+    image_shapes = guess_shapes(image_group[0].shape[:2], pyramid_levels)
+    mask_batch = np.zeros((batch_size, int(image_shapes[0][1] * image_shapes[0][0]), num_classes + 1), dtype=keras.backend.floatx())
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
         # w/o mask
         mask = annotations['mask'][0]
-        image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
