@@ -148,6 +148,15 @@ def toPix_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
+
+def to3D_array(translation):
+
+    xpix = ((translation[:, 0] * fxkin) / translation[:, 2]) + cxkin
+    ypix = ((translation[:, 1] * fykin) / translation[:, 2]) + cykin
+    #zpix = translation[2] * fxkin
+
+    return np.stack((xpix, ypix), axis=1) #, zpix]
+
 '''
 def load_pcd(cat):
     # load meshes
@@ -487,6 +496,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 #errors.append(err_add)
 
+                # box deviatio in camera frame
                 tDbox = R_gt.dot(ori_points.T).T
                 tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
                 box3D = toPix_array(tDbox)
@@ -501,6 +511,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 pose = eDbox.astype(np.uint16)
 
                 box_dev = np.linalg.norm(eDbox - pose_votes)
+
+                # box deviation in object frame
+                #box_cam_m = pose_votes.reshape((2, 8))
+                #homo_series = np.repeat([0], repeats=8)
+                #box_cam_m = np.concatenate([box_cam_m, homo_series.T], axis=0)
+
                 box_devs.append(box_dev)
                 loc_scores.append(cls_mask[cls_indices[0][hypdx]])
 
@@ -555,15 +571,44 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                      2)
                 '''
 
+            ##norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
+            #errors = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
+            box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
+
+            med_box_dev = np.median(box_devs)
+            below_median = np.where(box_devs < med_box_dev)
+            filtered_hyps = cls_indices[0][below_median]
+            #filtered_errors = errors[below_median]
+            #filtered_box_devs = box_devs[below_median]
+
+            #x_axis = range(len(filtered_errors))
+            #plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=5)
+            #plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=5)
+            ##plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
+            #plt.axhline(y=norm_thres, color='r', linestyle='-')
+            ##plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
+            #plt.show()
+
             min_box_dev = np.argmin(np.array(box_devs))
 
+            #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            #K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
+            #pose_votes = boxes3D[0, cls_indices[0][min_box_dev], :]
+            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+
+            k_hyp = len(filtered_hyps)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
-            pose_votes = boxes3D[0, cls_indices[0][min_box_dev], :]
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+            ##############################
+            # pnp
+            pose_votes = boxes3D[0, filtered_hyps, :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
 
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
                                                                imagePoints=est_points, cameraMatrix=K,
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
@@ -593,17 +638,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print('errors: ', errors)
             #print('box_devs: ', box_devs)
 
-            #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1/max(np.asarray(errors)))
-            #errors = np.asarray(errors) * (1/np.nanmax(np.asarray(errors)))
-            #box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
 
-            #x_axis = range(len(errors))
-            #plt.plot(x_axis, errors, 'bo:', linewidth=2, markersize=5)
-            #plt.plot(x_axis, box_devs, 'rv-.', linewidth=2, markersize=5)
-            #plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
-            #plt.axhline(y=norm_thres, color='r', linestyle='-')
-            #plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
-            #plt.show()
             '''
 
             #########################
