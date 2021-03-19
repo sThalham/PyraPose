@@ -157,7 +157,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-'''
+
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -194,7 +194,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-
+'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -454,6 +454,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
             ##########################
             # process every hypothesis separately
             ##########################
+            ##########################
+            # keep space
+            # ----------------------
+            # median box deviation for thresholding
+            #med_box_dev = np.median(box_devs)
+            #below_median = np.where(box_devs < med_box_dev)
+            #filtered_hyps = cls_indices[0][below_median]
+            # ---------------------------
 
             true_pose = 0
             top_error = 1
@@ -484,17 +492,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 t_gt = t_gt * 0.001
                 t_est = t_est.T
 
-                #if cls == 10 or cls == 11:
-                #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                #else:
-                #    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                if cls == 10 or cls == 11:
+                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                else:
+                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-                #if err_add < model_dia[true_cat] * 0.1:
-                #    true_pose = 1
-                #if err_add < top_error:
-                #    top_error = err_add
+                if err_add < model_dia[true_cat] * 0.1:
+                    true_pose = 1
+                if err_add < top_error:
+                    top_error = err_add
 
-                #errors.append(err_add)
+                errors.append(err_add)
 
                 # box deviatio in camera frame
                 tDbox = R_gt.dot(ori_points.T).T
@@ -520,11 +528,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 box_devs.append(box_dev)
                 loc_scores.append(cls_mask[cls_indices[0][hypdx]])
 
-                '''
                 colGT = (255, 0, 0)
                 colEst = (0, 0, 215)
                 if err_add < model_dia[true_cat] * 0.1:
-                    colEst = (0, 204, 0)
+                    colEst = (255, 255, 255)
 
                 image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
                 image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
@@ -569,24 +576,29 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                      2)
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                                      2)
-                '''
 
-            ##norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
-            #errors = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
+            norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
+            errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
             box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
 
-            med_box_dev = np.median(box_devs)
-            below_median = np.where(box_devs < med_box_dev)
-            filtered_hyps = cls_indices[0][below_median]
-            #filtered_errors = errors[below_median]
-            #filtered_box_devs = box_devs[below_median]
+            hyps = 20
+            sorting = np.argsort(box_devs)
+            #if len(sorting) > hyps:
+            #    sorting = sorting[-hyps:]
+            #else:
+            #    pass
+            #sorted_box_devs = box_devs[sorting]
+            #print(sorted_box_devs)
+            filtered_hyps = cls_indices[0][sorting]
+            filtered_errors = errors_norm[sorting]
+            filtered_box_devs = box_devs[sorting]
 
-            #x_axis = range(len(filtered_errors))
-            #plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=5)
-            #plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=5)
-            ##plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
-            #plt.axhline(y=norm_thres, color='r', linestyle='-')
-            ##plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
+            x_axis = range(len(filtered_errors))
+            plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=5)
+            plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=5)
+            #plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
+            plt.axhline(y=norm_thres, color='r', linestyle='-')
+            #plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
             #plt.show()
 
             min_box_dev = np.argmin(np.array(box_devs))
@@ -631,6 +643,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
+
+            plt.axhline(y=(err_add * (1 / max(np.asarray(errors)))), color='b', linestyle='-')
+            plt.show()
 
             #truePoses[int(true_cat)] += true_pose
             print(' ')
@@ -759,8 +774,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # result = [int(BOP_scene_id), int(BOP_im_id), int(BOP_obj_id), float(BOP_score), BOP_R, BOP_t]
             # results_image.append(result)
 
-            '''
-
             tDbox = R_gt.dot(ori_points.T).T
             tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
             box3D = toPix_array(tDbox)
@@ -774,9 +787,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             eDbox = np.reshape(est3D, (16))
             pose = eDbox.astype(np.uint16)
 
-            colGT = (255, 0, 0)
-            colEst = colEst = (0, 204, 0)
+            #colGT = (255, 0, 0)
+            colEst = (0, 215, 255)
 
+            '''
             image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
             image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
             image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
@@ -803,6 +817,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
                              colGT,
                              2)
+            '''
 
             image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
             image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
@@ -821,7 +836,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              2)
 
-            '''
             '''
             hyp_mask = np.zeros((640, 480), dtype=np.float32)
             for idx in range(k_hyp):
@@ -860,9 +874,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            #name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
-            #cv2.imwrite(name, image_raw)
-            #print('break')
+            name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
+            cv2.imwrite(name, image_raw)
+            print('break')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
