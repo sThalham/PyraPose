@@ -26,6 +26,7 @@ from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import sys
 import matplotlib.pyplot as plt
+from sklearn.gaussian_process import GaussianProcessRegressor
 
 
 import progressbar
@@ -157,7 +158,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -194,7 +195,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
+
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -492,17 +493,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 t_gt = t_gt * 0.001
                 t_est = t_est.T
 
-                if cls == 10 or cls == 11:
-                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                else:
-                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                #if cls == 10 or cls == 11:
+                #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                #else:
+                #    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-                if err_add < model_dia[true_cat] * 0.1:
-                    true_pose = 1
-                if err_add < top_error:
-                    top_error = err_add
+                #if err_add < model_dia[true_cat] * 0.1:
+                #    true_pose = 1
+                #if err_add < top_error:
+                #    top_error = err_add
 
-                errors.append(err_add)
+                #errors.append(err_add)
 
                 # box deviatio in camera frame
                 tDbox = R_gt.dot(ori_points.T).T
@@ -528,10 +529,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 box_devs.append(box_dev)
                 loc_scores.append(cls_mask[cls_indices[0][hypdx]])
 
+                '''
                 colGT = (255, 0, 0)
                 colEst = (0, 0, 215)
-                if err_add < model_dia[true_cat] * 0.1:
-                    colEst = (255, 255, 255)
+                #if err_add < model_dia[true_cat] * 0.1:
+                #    colEst = (255, 255, 255)
 
                 image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
                 image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
@@ -576,10 +578,37 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                      2)
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                                      2)
+                '''
 
-            norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
-            errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
-            box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
+            pose_votes = boxes3D[0, cls_indices[0], :]
+            box_devs = np.asarray(box_devs)
+            gpr = GaussianProcessRegressor().fit(pose_votes, box_devs)
+
+            y_mean, y_std = gpr.predict(pose_votes, return_std=True)
+            #x_ax = np.arange(len(cls_indices[0]))
+            #plt.plot(x_ax, y_mean, 'r', lw=1)#, zorder=9)
+            #plt.fill(np.concatenate([x_ax, x_ax[::-1]], axis=0),
+            #         np.concatenate([y_mean - (1.9600 * y_std * 50000.0),
+            #                         (y_mean + (1.9600 * y_std * 50000.0))[::-1]], axis=0),
+            #         alpha=.5, fc='b', ec='None', label='95% confidence interval')
+            #plt.show()
+
+            min_hyp = np.argmin(y_std)
+            print(min_hyp)
+
+            #y_samples = gpr.sample_y(pose_votes, 10)
+            #plt.plot(X_, y_samples, lw=1)
+            #plt.scatter(X[:, 0], y, c='r', s=50, zorder=10, edgecolors=(0, 0, 0))
+            #plt.xlim(0, 5)
+            #plt.ylim(0, 8)
+            #plt.title("Posterior (kernel: %s)\n Log-Likelihood: %.3f"
+            #          % (gp.kernel_, gp.log_marginal_likelihood(gp.kernel_.theta)),
+            #          fontsize=12)
+
+
+            #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
+            #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
+            #box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
 
             hyps = 20
             sorting = np.argsort(box_devs)
@@ -589,38 +618,38 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #    pass
             #sorted_box_devs = box_devs[sorting]
             #print(sorted_box_devs)
-            filtered_hyps = cls_indices[0][sorting]
-            filtered_errors = errors_norm[sorting]
-            filtered_box_devs = box_devs[sorting]
+            #filtered_hyps = cls_indices[0][sorting]
+            #filtered_errors = errors_norm[sorting]
+            #filtered_box_devs = box_devs[sorting]
 
-            x_axis = range(len(filtered_errors))
-            plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=5)
-            plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=5)
+            #x_axis = range(len(filtered_errors))
+            #plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=5)
+            #plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=5)
             #plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
-            plt.axhline(y=norm_thres, color='r', linestyle='-')
+            #plt.axhline(y=norm_thres, color='r', linestyle='-')
             #plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
             #plt.show()
 
-            min_box_dev = np.argmin(np.array(box_devs))
+            #min_box_dev = np.argmin(np.array(box_devs))
 
-            #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
-            #K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
-
-            #pose_votes = boxes3D[0, cls_indices[0][min_box_dev], :]
-            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
-
-            k_hyp = len(filtered_hyps)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
+            pose_votes = boxes3D[0, cls_indices[0][min_hyp], :]
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+
+            #k_hyp = len(cls_indices[0])
+            #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            #K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+
             ##############################
             # pnp
-            pose_votes = boxes3D[0, filtered_hyps, :]
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            #pose_votes = boxes3D[0, cls_indices, :]
+            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
 
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
                                                                imagePoints=est_points, cameraMatrix=K,
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
@@ -644,8 +673,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
 
-            plt.axhline(y=(err_add * (1 / max(np.asarray(errors)))), color='b', linestyle='-')
-            plt.show()
+            #plt.axhline(y=(err_add * (1 / max(np.asarray(errors)))), color='b', linestyle='-')
+            #plt.show()
 
             #truePoses[int(true_cat)] += true_pose
             print(' ')
@@ -817,7 +846,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
                              colGT,
                              2)
-            '''
+            
 
             image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
             image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
@@ -835,6 +864,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                              2)
             image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                              2)
+            '''
 
             '''
             hyp_mask = np.zeros((640, 480), dtype=np.float32)
@@ -874,9 +904,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
-            cv2.imwrite(name, image_raw)
-            print('break')
+            #name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
+            #cv2.imwrite(name, image_raw)
+            #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
