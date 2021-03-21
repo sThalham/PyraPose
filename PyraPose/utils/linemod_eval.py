@@ -463,6 +463,21 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #below_median = np.where(box_devs < med_box_dev)
             #filtered_hyps = cls_indices[0][below_median]
             # ---------------------------
+            # gaussian process single hypotheses choice
+            #X = np.arange(16)
+            #X = np.repeat(X[:, np.newaxis], repeats=len(cls_indices[0]), axis=1)
+            #X = X.flatten()
+            #X = np.expand_dims(X, axis=1)
+            #col_mean = np.mean(pose_votes, axis=0)
+            #col_std = np.std(pose_votes, axis=0)
+            #row_mean = np.repeat(col_mean[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+            #row_std = np.repeat(col_std[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+            #pose_votes = (pose_votes - row_mean) / row_std
+            #y = pose_votes.T.flatten()
+            #gpr = GaussianProcessRegressor().fit(X, y)
+            #y_mean, y_std = gpr.predict(np.expand_dims(np.arange(16), axis=1), return_std=True)
+            #y_mean = (y_mean * col_std) + col_mean
+            # -------------------------------
 
             true_pose = 0
             top_error = 1
@@ -502,7 +517,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 #    true_pose = 1
                 #if err_add < top_error:
                 #    top_error = err_add
-
                 #errors.append(err_add)
 
                 # box deviatio in camera frame
@@ -581,10 +595,20 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 '''
 
             pose_votes = boxes3D[0, cls_indices[0], :]
-            box_devs = np.asarray(box_devs)
-            gpr = GaussianProcessRegressor().fit(pose_votes, box_devs)
+            #box_devs = np.asarray(box_devs)
+            #gpr = GaussianProcessRegressor().fit(pose_votes, box_devs)
+            #y_mean, y_std = gpr.predict(pose_votes, return_std=True)
+            #print(y_std)
+            #for idx in range(len(y_std)):
+            #    y_std[idx, idx] = 0.0
+            #y_std = y_std * (1/np.nanmax(y_std))
 
-            y_mean, y_std = gpr.predict(pose_votes, return_std=True)
+            #cov_sum = np.sum(y_std, axis=0)
+            #print(cov_sum)
+            #print(np.nanmax(cov_sum), np.argmax(cov_sum))
+            #max_cov = np.argmax(cov_sum)
+            #print(np.nanmax(y_std), np.argmax(y_std))
+
             #x_ax = np.arange(len(cls_indices[0]))
             #plt.plot(x_ax, y_mean, 'r', lw=1)#, zorder=9)
             #plt.fill(np.concatenate([x_ax, x_ax[::-1]], axis=0),
@@ -593,8 +617,52 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #         alpha=.5, fc='b', ec='None', label='95% confidence interval')
             #plt.show()
 
+            X = np.arange(16)
+            X = np.repeat(X[:, np.newaxis], repeats=len(cls_indices[0]), axis=1)
+            X = X.flatten()
+            X = np.expand_dims(X, axis=1)
+            #print(X.shape)
+
+            #print(pose_votes.shape)
+            #print(pose_votes[:5, 0])
+            # normalize y
+            col_mean = np.mean(pose_votes, axis=0)
+            col_std = np.std(pose_votes, axis=0)
+            row_mean = np.repeat(col_mean[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+            row_std = np.repeat(col_std[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+            pose_votes = (pose_votes - row_mean) / row_std
+
+            y = pose_votes.T.flatten()
+            #print(y[:5])
+
+            gpr = GaussianProcessRegressor().fit(X, y)
+            y_mean, y_std = gpr.predict(np.expand_dims(np.arange(16), axis=1), return_std=True)
+            print(y_std.shape, y_std)
+            y_mean = (y_mean * col_std) + col_mean
+
+            # covariance
+            #plt.imshow(y_std, cmap='hot', interpolation='nearest')
+            #plt.show()
+
             min_hyp = np.argmin(y_std)
-            print(min_hyp)
+            #print(min_hyp)
+
+            #x_ax = np.arange(16)
+            #x_ax = np.arange(len(cls_indices[0]))
+            #col_min = np.nanmin(pose_votes, axis=0)
+            #col_max = np.nanmax(pose_votes, axis=0)
+            #row_min = np.repeat(col_min[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+            #row_max = np.repeat(col_max[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+
+            #col_mean = np.mean(pose_votes, axis=0)
+            #col_std = np.std(pose_votes, axis=0)
+            #row_mean = np.repeat(col_mean[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+            #row_std = np.repeat(col_std[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
+
+            #for idx in range(len(cls_indices[0])):
+            #    plt.plot(x_ax, (pose_votes[idx, :] - row_mean[idx, :]) / row_std[idx, :], 'r', lw=1)#, zorder=9)
+                #plt.plot(x_ax, (pose_votes[idx, :] - row_min[idx, :]) * (1 / (row_max[idx, :] - row_min[idx, :])), 'r',lw=1)  # , zorder=9)
+            #plt.show()
 
             #y_samples = gpr.sample_y(pose_votes, 10)
             #plt.plot(X_, y_samples, lw=1)
@@ -622,12 +690,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #filtered_errors = errors_norm[sorting]
             #filtered_box_devs = box_devs[sorting]
 
-            #x_axis = range(len(filtered_errors))
-            #plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=5)
-            #plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=5)
-            #plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
-            #plt.axhline(y=norm_thres, color='r', linestyle='-')
-            #plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
+            #x_axis = range(len(errors_norm))
+            #plt.plot(x_axis, errors_norm, 'bo:', linewidth=2, markersize=5)
+            #plt.plot(x_axis, box_devs, 'rv-.', linewidth=2, markersize=5)
+            ##plt.plot(x_axis, loc_scores, 'k*--', linewidth=2, markersize=5)
+            #plt.axvline(x=max_cov, color='r', linestyle='-')
+            ##plt.axvline(x=np.argmin(box_devs), color='r', linestyle='-')
             #plt.show()
 
             #min_box_dev = np.argmin(np.array(box_devs))
@@ -635,7 +703,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
-            pose_votes = boxes3D[0, cls_indices[0][min_hyp], :]
+            #pose_votes = boxes3D[0, cls_indices[0][max_cov], :]
+            pose_votes = y_mean
             est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
 
             #k_hyp = len(cls_indices[0])
