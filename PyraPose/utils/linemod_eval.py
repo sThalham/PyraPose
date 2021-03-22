@@ -27,7 +27,7 @@ import yaml
 import sys
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.mixture import GaussianMixture
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.metrics import silhouette_score
 
 
@@ -160,7 +160,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -197,7 +197,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
+
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -488,6 +488,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             box_devs = []
             loc_scores = []
             for hypdx in range(k_hyp):
+                '''
                 ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
@@ -509,18 +510,20 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 t_gt = t_gt * 0.001
                 t_est = t_est.T
+                '''
 
-                if cls == 10 or cls == 11:
-                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                else:
-                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                #if cls == 10 or cls == 11:
+                #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                #else:
+                #    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-                if err_add < model_dia[true_cat] * 0.1:
-                    true_pose = 1
-                if err_add < top_error:
-                    top_error = err_add
-                errors.append(err_add)
+                #if err_add < model_dia[true_cat] * 0.1:
+                #    true_pose = 1
+                #if err_add < top_error:
+                #    top_error = err_add
+                #errors.append(err_add)
 
+                '''
                 # box deviatio in camera frame
                 tDbox = R_gt.dot(ori_points.T).T
                 tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
@@ -544,6 +547,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 box_devs.append(box_dev)
                 loc_scores.append(cls_mask[cls_indices[0][hypdx]])
+                '''
 
                 '''
                 colGT = (255, 0, 0)
@@ -645,8 +649,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             '''
             gm = GaussianMixture(n_components=1, random_state=0).fit_predict(pose_votes[:, :2])
-            #silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
-            #print(silhouette_avg)
+            silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
+            print(silhouette_avg)
             #xy1_1 = (gm.means_[0, :] * col_std[:2]) + col_mean[:2]
             print('Point 1')
             gm = GaussianMixture(n_components=2, random_state=0).fit_predict(pose_votes[:, :2])
@@ -664,6 +668,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             gm = GaussianMixture(n_components=6, random_state=0).fit_predict(pose_votes[:, :2])
             silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
             print('6: ', silhouette_avg)
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, :2])
+            print('1: bgm ', bgm.converged_, bgm.weights_)
 
             print('Point 2')
             gm = GaussianMixture(n_components=2, random_state=0).fit_predict(pose_votes[:, 2:4])
@@ -681,10 +687,39 @@ def evaluate_linemod(generator, model, threshold=0.05):
             gm = GaussianMixture(n_components=6, random_state=0).fit_predict(pose_votes[:, 2:4])
             silhouette_avg = silhouette_score(pose_votes[:, 2:4], gm)
             print('6: ', silhouette_avg)
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 2:4])
+            print('2: bgm ', bgm.converged_, bgm.weights_)
             '''
+
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, :2])
+            max_comp = np.argmax(bgm.weights_)
+            xy0 = (bgm.means_[max_comp, :] * col_std[:2]) + col_mean[:2]
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 2:4])
+            max_comp = np.argmax(bgm.weights_)
+            xy1 = (bgm.means_[max_comp, :] * col_std[2:4]) + col_mean[2:4]
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 4:6])
+            max_comp = np.argmax(bgm.weights_)
+            xy2 = (bgm.means_[max_comp, :] * col_std[4:6]) + col_mean[4:6]
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 6:8])
+            max_comp = np.argmax(bgm.weights_)
+            xy3 = (bgm.means_[max_comp, :] * col_std[6:8]) + col_mean[6:8]
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 8:10])
+            max_comp = np.argmax(bgm.weights_)
+            xy4 = (bgm.means_[max_comp, :] * col_std[8:10]) + col_mean[8:10]
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 10:12])
+            max_comp = np.argmax(bgm.weights_)
+            xy5 = (bgm.means_[max_comp, :] * col_std[10:12]) + col_mean[10:12]
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 12:14])
+            max_comp = np.argmax(bgm.weights_)
+            xy6 = (bgm.means_[max_comp, :] * col_std[12:14]) + col_mean[12:14]
+            bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 14:16])
+            max_comp = np.argmax(bgm.weights_)
+            xy7 = (bgm.means_[max_comp, :] * col_std[14:16]) + col_mean[14:16]
+            pose_votes = np.concatenate([xy0, xy1, xy2, xy3, xy4, xy5, xy6, xy7])
 
             # gaussian mixture analysis
             # mixture 1
+            '''
             gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, :2])
             xy0 = (gm.means_[0, :] * col_std[:2]) + col_mean[:2]
             gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 2:4])
@@ -850,6 +885,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
 
             pose_votes = np.concatenate([pose_votes0[np.newaxis, :], pose_votes1[np.newaxis, :], pose_votes2[np.newaxis, :], pose_votes3[np.newaxis, :], pose_votes4[np.newaxis, :], pose_votes5[np.newaxis, :]], axis=0)
+            '''
 
             #plt.imshow(y_std, cmap='hot', interpolation='nearest')
             #plt.show()
@@ -883,25 +919,26 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #          % (gp.kernel_, gp.log_marginal_likelihood(gp.kernel_.theta)),
             #          fontsize=12)
 
+            '''
             # Visulize errors loc_scores, box_devs
             norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
             box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
             #loc_scores = np.asarray(loc_scores)
             #hyps = 20
-            #sorting = np.argsort(loc_scores)
+            sorting = np.argsort(errors)
             #if len(sorting) > hyps:
             #    sorting = sorting[-hyps:]
             #else:
             #    pass
-            #filtered_errors = errors_norm[sorting]
+            filtered_errors = errors_norm[sorting]
             #filtered_box_devs = box_devs[sorting]
             #filtered_loc_scores = loc_scores[sorting]
             x_axis = range(len(errors_norm))
-            plt.plot(x_axis, errors_norm, 'bo:', linewidth=2, markersize=3, label="errors per hypothesis")
+            plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=3, label="errors per hypothesis")
             #plt.plot(x_axis, box_devs, 'rv-.', linewidth=2, markersize=3, label="box_devs")
             #plt.plot(x_axis, filtered_loc_scores, 'k*--', linewidth=2, markersize=3, label="loc scores")
-            plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
+            #plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
             #plt.legend(loc="upper left")
             #plt.show()
 
@@ -913,6 +950,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #pose_votes = boxes3D[0, cls_indices[0][min_box_dev], :]
             #pose_votes = y_mean
             #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
+            '''
 
             '''
             k_hyp = len(cls_indices[0])
@@ -970,23 +1008,25 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #########################
             # vanilla PyraPose
             #######################
-            k_hyp = len(cls_indices[0])
+            #k_hyp = len(cls_indices[0])
+            #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            #K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+            #pose_votes = boxes3D[0, cls_indices, :]
+            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+
+            print(pose_votes)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
 
-            ##############################
-            # pnp
-            pose_votes = boxes3D[0, cls_indices, :]
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
-
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
                                                                imagePoints=est_points, cameraMatrix=K,
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
                                                                reprojectionError=5.0, confidence=0.99,
-                                                               flags=cv2.SOLVEPNP_ITERATIVE)
+                                                               flags=cv2.SOLVEPNP_EPNP)
             R_est, _ = cv2.Rodrigues(orvec)
             t_est = otvec
 
@@ -1012,10 +1052,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
             print(' ')
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
-            norm_add = np.asarray(err_add) * (1 / max(np.asarray(errors)))
-            plt.axhline(y=norm_add, color='b', linestyle='-', label="All Hypotheses")
-            plt.legend(loc="upper left")
-            plt.show()
+            #norm_add = np.asarray(err_add) * (1 / max(np.asarray(errors)))
+            #plt.axhline(y=norm_add, color='b', linestyle='-', label="All Hypotheses")
+            #plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
+            #plt.xlabel('hypothesis')
+            #plt.ylabel('normalized threshold')
+            #plt.legend(loc="upper left")
+            #plt.show()
 
             ###################################
             # other experiments
