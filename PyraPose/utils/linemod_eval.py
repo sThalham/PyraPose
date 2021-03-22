@@ -28,6 +28,7 @@ import sys
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score
 
 
 import progressbar
@@ -595,7 +596,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                      2)
                 '''
 
-            pose_votes = boxes3D[0, cls_indices[0], :]
+            #pose_votes = boxes3D[0, cls_indices[0], :]
             #box_devs = np.asarray(box_devs)
             #gpr = GaussianProcessRegressor().fit(pose_votes, box_devs)
             #y_mean, y_std = gpr.predict(pose_votes, return_std=True)
@@ -618,15 +619,16 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #         alpha=.5, fc='b', ec='None', label='95% confidence interval')
             #plt.show()
 
-            X = np.arange(16)
-            X = np.repeat(X[:, np.newaxis], repeats=len(cls_indices[0]), axis=1)
-            X = X.flatten()
-            X = np.expand_dims(X, axis=1)
+            #X = np.arange(16)
+            #X = np.repeat(X[:, np.newaxis], repeats=len(cls_indices[0]), axis=1)
+            #X = X.flatten()
+            #X = np.expand_dims(X, axis=1)
             #print(X.shape)
 
             #print(pose_votes.shape)
             #print(pose_votes[:5, 0])
             # normalize y
+            pose_votes = boxes3D[0, cls_indices[0], :]
             col_mean = np.mean(pose_votes, axis=0)
             col_std = np.std(pose_votes, axis=0)
             row_mean = np.repeat(col_mean[np.newaxis, :], repeats=len(cls_indices[0]), axis=0)
@@ -641,11 +643,213 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print(y_std.shape, y_std)
             #y_mean = (y_mean * col_std) + col_mean
 
-            # gaussian mixture analysis
+            '''
+            gm = GaussianMixture(n_components=1, random_state=0).fit_predict(pose_votes[:, :2])
+            #silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
+            #print(silhouette_avg)
+            #xy1_1 = (gm.means_[0, :] * col_std[:2]) + col_mean[:2]
+            print('Point 1')
+            gm = GaussianMixture(n_components=2, random_state=0).fit_predict(pose_votes[:, :2])
+            silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
+            print('2: ', silhouette_avg)
+            gm = GaussianMixture(n_components=3, random_state=0).fit_predict(pose_votes[:, :2])
+            silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
+            print('3: ', silhouette_avg)
+            gm = GaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, :2])
+            silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
+            print('4: ', silhouette_avg)
+            gm = GaussianMixture(n_components=5, random_state=0).fit_predict(pose_votes[:, :2])
+            silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
+            print('5: ', silhouette_avg)
+            gm = GaussianMixture(n_components=6, random_state=0).fit_predict(pose_votes[:, :2])
+            silhouette_avg = silhouette_score(pose_votes[:, :2], gm)
+            print('6: ', silhouette_avg)
 
-            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 0][:, np.newaxis])
-            print((gm.means_ * col_std[0]) + col_mean[0])
-            print(gm.covariances_)
+            print('Point 2')
+            gm = GaussianMixture(n_components=2, random_state=0).fit_predict(pose_votes[:, 2:4])
+            silhouette_avg = silhouette_score(pose_votes[:, 2:4], gm)
+            print('2: ', silhouette_avg)
+            gm = GaussianMixture(n_components=3, random_state=0).fit_predict(pose_votes[:, 2:4])
+            silhouette_avg = silhouette_score(pose_votes[:, 2:4], gm)
+            print('3: ', silhouette_avg)
+            gm = GaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 2:4])
+            silhouette_avg = silhouette_score(pose_votes[:, 2:4], gm)
+            print('4: ', silhouette_avg)
+            gm = GaussianMixture(n_components=5, random_state=0).fit_predict(pose_votes[:, 2:4])
+            silhouette_avg = silhouette_score(pose_votes[:, 2:4], gm)
+            print('5: ', silhouette_avg)
+            gm = GaussianMixture(n_components=6, random_state=0).fit_predict(pose_votes[:, 2:4])
+            silhouette_avg = silhouette_score(pose_votes[:, 2:4], gm)
+            print('6: ', silhouette_avg)
+            '''
+
+            # gaussian mixture analysis
+            # mixture 1
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, :2])
+            xy0 = (gm.means_[0, :] * col_std[:2]) + col_mean[:2]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 2:4])
+            xy1 = (gm.means_[0, :] * col_std[2:4]) + col_mean[2:4]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 4:6])
+            xy2 = (gm.means_[0, :] * col_std[4:6]) + col_mean[4:6]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 6:8])
+            xy3 = (gm.means_[0, :] * col_std[6:8]) + col_mean[6:8]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 8:10])
+            xy4 = (gm.means_[0, :] * col_std[8:10]) + col_mean[8:10]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 10:12])
+            xy5 = (gm.means_[0, :] * col_std[10:12]) + col_mean[10:12]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 12:14])
+            xy6 = (gm.means_[0, :] * col_std[12:14]) + col_mean[12:14]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(pose_votes[:, 14:16])
+            xy7 = (gm.means_[0, :] * col_std[14:16]) + col_mean[14:16]
+            pose_votes0 = np.concatenate([xy0, xy1, xy2, xy3, xy4, xy5, xy6, xy7])
+
+            # mixture 2
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, :2])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy0 = (gm.means_[idx, :] * col_std[:2]) + col_mean[:2]
+            xy00 = (gm.means_[0, :] * col_std[:2]) + col_mean[:2]
+            xy01 = (gm.means_[1, :] * col_std[:2]) + col_mean[:2]
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 2:4])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy1 = (gm.means_[idx, :] * col_std[2:4]) + col_mean[2:4]
+            xy10 = (gm.means_[0, :] * col_std[2:4]) + col_mean[2:4]
+            xy11 = (gm.means_[1, :] * col_std[2:4]) + col_mean[2:4]
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 4:6])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy2 = (gm.means_[idx, :] * col_std[4:6]) + col_mean[4:6]
+            xy20 = (gm.means_[0, :] * col_std[4:6]) + col_mean[4:6]
+            xy21 = (gm.means_[1, :] * col_std[4:6]) + col_mean[4:6]
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 6:8])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy3 = (gm.means_[idx, :] * col_std[6:8]) + col_mean[6:8]
+            xy30 = (gm.means_[0, :] * col_std[6:8]) + col_mean[6:8]
+            xy31 = (gm.means_[1, :] * col_std[6:8]) + col_mean[6:8]
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 8:10])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy4 = (gm.means_[idx, :] * col_std[8:10]) + col_mean[8:10]
+            xy40 = (gm.means_[0, :] * col_std[8:10]) + col_mean[8:10]
+            xy41 = (gm.means_[1, :] * col_std[8:10]) + col_mean[8:10]
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 10:12])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy5 = (gm.means_[idx, :] * col_std[10:12]) + col_mean[10:12]
+            xy50 = (gm.means_[0, :] * col_std[10:12]) + col_mean[10:12]
+            xy51 = (gm.means_[1, :] * col_std[10:12]) + col_mean[10:12]
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 12:14])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy6 = (gm.means_[idx, :] * col_std[12:14]) + col_mean[12:14]
+            xy60 = (gm.means_[0, :] * col_std[12:14]) + col_mean[12:14]
+            xy61 = (gm.means_[1, :] * col_std[12:14]) + col_mean[12:14]
+            gm = GaussianMixture(n_components=2, random_state=0).fit(pose_votes[:, 14:16])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            #xy7 = (gm.means_[idx, :] * col_std[14:16]) + col_mean[14:16]
+            xy70 = (gm.means_[0, :] * col_std[14:16]) + col_mean[14:16]
+            xy71 = (gm.means_[1, :] * col_std[14:16]) + col_mean[14:16]
+            pose_votes1 = np.concatenate([xy00, xy10, xy20, xy30, xy40, xy50, xy60, xy70])
+            pose_votes2 = np.concatenate([xy01, xy11, xy21, xy31, xy41, xy51, xy61, xy71])
+
+            # mixture 3
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, :2])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy0 = (gm.means_[idx, :] * col_std[:2]) + col_mean[:2]
+            xy00 = (gm.means_[0, :] * col_std[:2]) + col_mean[:2]
+            xy01 = (gm.means_[1, :] * col_std[:2]) + col_mean[:2]
+            xy02 = (gm.means_[2, :] * col_std[:2]) + col_mean[:2]
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, 2:4])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy1 = (gm.means_[idx, :] * col_std[2:4]) + col_mean[2:4]
+            xy10 = (gm.means_[0, :] * col_std[2:4]) + col_mean[2:4]
+            xy11 = (gm.means_[1, :] * col_std[2:4]) + col_mean[2:4]
+            xy12 = (gm.means_[1, :] * col_std[2:4]) + col_mean[2:4]
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, 4:6])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy2 = (gm.means_[idx, :] * col_std[4:6]) + col_mean[4:6]
+            xy20 = (gm.means_[0, :] * col_std[4:6]) + col_mean[4:6]
+            xy21 = (gm.means_[1, :] * col_std[4:6]) + col_mean[4:6]
+            xy22 = (gm.means_[1, :] * col_std[4:6]) + col_mean[4:6]
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, 6:8])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy3 = (gm.means_[idx, :] * col_std[6:8]) + col_mean[6:8]
+            xy30 = (gm.means_[0, :] * col_std[6:8]) + col_mean[6:8]
+            xy31 = (gm.means_[1, :] * col_std[6:8]) + col_mean[6:8]
+            xy32 = (gm.means_[1, :] * col_std[6:8]) + col_mean[6:8]
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, 8:10])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy4 = (gm.means_[idx, :] * col_std[8:10]) + col_mean[8:10]
+            xy40 = (gm.means_[0, :] * col_std[8:10]) + col_mean[8:10]
+            xy41 = (gm.means_[1, :] * col_std[8:10]) + col_mean[8:10]
+            xy42 = (gm.means_[1, :] * col_std[8:10]) + col_mean[8:10]
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, 10:12])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy5 = (gm.means_[idx, :] * col_std[10:12]) + col_mean[10:12]
+            xy50 = (gm.means_[0, :] * col_std[10:12]) + col_mean[10:12]
+            xy51 = (gm.means_[1, :] * col_std[10:12]) + col_mean[10:12]
+            xy52 = (gm.means_[1, :] * col_std[10:12]) + col_mean[10:12]
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, 12:14])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy6 = (gm.means_[idx, :] * col_std[12:14]) + col_mean[12:14]
+            xy60 = (gm.means_[0, :] * col_std[12:14]) + col_mean[12:14]
+            xy61 = (gm.means_[1, :] * col_std[12:14]) + col_mean[12:14]
+            xy62 = (gm.means_[1, :] * col_std[12:14]) + col_mean[12:14]
+            gm = GaussianMixture(n_components=3, random_state=0).fit(pose_votes[:, 14:16])
+            if np.abs(gm.covariances_[0, 0, 1]) > np.abs(gm.covariances_[1, 0, 1]):
+                idx = 1
+            else:
+                idx = 0
+            # xy7 = (gm.means_[idx, :] * col_std[14:16]) + col_mean[14:16]
+            xy70 = (gm.means_[0, :] * col_std[14:16]) + col_mean[14:16]
+            xy71 = (gm.means_[1, :] * col_std[14:16]) + col_mean[14:16]
+            xy72 = (gm.means_[1, :] * col_std[14:16]) + col_mean[14:16]
+            pose_votes3 = np.concatenate([xy00, xy10, xy20, xy30, xy40, xy50, xy60, xy70])
+            pose_votes4 = np.concatenate([xy01, xy11, xy21, xy31, xy41, xy51, xy61, xy71])
+            pose_votes5 = np.concatenate([xy02, xy12, xy22, xy32, xy42, xy52, xy62, xy72])
+
+
+            pose_votes = np.concatenate([pose_votes0[np.newaxis, :], pose_votes1[np.newaxis, :], pose_votes2[np.newaxis, :], pose_votes3[np.newaxis, :], pose_votes4[np.newaxis, :], pose_votes5[np.newaxis, :]], axis=0)
 
             #plt.imshow(y_std, cmap='hot', interpolation='nearest')
             #plt.show()
@@ -683,21 +887,21 @@ def evaluate_linemod(generator, model, threshold=0.05):
             norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
             box_devs = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
-            loc_scores = np.asarray(loc_scores)
-            hyps = 20
-            sorting = np.argsort(loc_scores)
+            #loc_scores = np.asarray(loc_scores)
+            #hyps = 20
+            #sorting = np.argsort(loc_scores)
             #if len(sorting) > hyps:
             #    sorting = sorting[-hyps:]
             #else:
             #    pass
-            filtered_errors = errors_norm[sorting]
-            filtered_box_devs = box_devs[sorting]
-            filtered_loc_scores = loc_scores[sorting]
+            #filtered_errors = errors_norm[sorting]
+            #filtered_box_devs = box_devs[sorting]
+            #filtered_loc_scores = loc_scores[sorting]
             x_axis = range(len(errors_norm))
-            #plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=3, label="error")
-            #plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=3, label="box_devs")
+            plt.plot(x_axis, errors_norm, 'bo:', linewidth=2, markersize=3, label="errors per hypothesis")
+            #plt.plot(x_axis, box_devs, 'rv-.', linewidth=2, markersize=3, label="box_devs")
             #plt.plot(x_axis, filtered_loc_scores, 'k*--', linewidth=2, markersize=3, label="loc scores")
-            #plt.axhline(y=norm_thres, color='r', linestyle='-', label="error thres")
+            plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
             #plt.legend(loc="upper left")
             #plt.show()
 
@@ -710,42 +914,47 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #pose_votes = y_mean
             #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
 
+            '''
             k_hyp = len(cls_indices[0])
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
             ##############################
             # pnp
-            pose_votes = boxes3D[0, cls_indices, :]
-            print(pose_votes.shape, k_hyp)
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            print(est_points.shape)
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            #pose_votes = boxes3D[0, cls_indices, :]
+            k_hyp = 2
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+            K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
+            true_pose = 0
+            for pdx in range(pose_votes.shape[0]):
+                est_points = np.ascontiguousarray(pose_votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))
+                obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+                obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
 
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                               imagePoints=est_points, cameraMatrix=K,
-                                                               distCoeffs=None, rvec=None, tvec=None,
-                                                               useExtrinsicGuess=False, iterationsCount=300,
-                                                               reprojectionError=5.0, confidence=0.99,
-                                                               flags=cv2.SOLVEPNP_EPNP)
-            R_est, _ = cv2.Rodrigues(orvec)
-            t_est = otvec
+                retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
+                                                                   imagePoints=est_points, cameraMatrix=K,
+                                                                   distCoeffs=None, rvec=None, tvec=None,
+                                                                   useExtrinsicGuess=False, iterationsCount=300,
+                                                                   reprojectionError=5.0, confidence=0.99,
+                                                                   flags=cv2.SOLVEPNP_EPNP)
+                R_est, _ = cv2.Rodrigues(orvec)
+                t_est = otvec
 
-            t_rot_q = tf3d.quaternions.quat2mat(t_rot)
-            R_gt = np.array(t_rot_q, dtype=np.float32).reshape(3, 3)
-            t_gt = np.array(t_tra, dtype=np.float32)
+                t_rot_q = tf3d.quaternions.quat2mat(t_rot)
+                R_gt = np.array(t_rot_q, dtype=np.float32).reshape(3, 3)
+                t_gt = np.array(t_tra, dtype=np.float32)
 
-            t_gt = t_gt * 0.001
-            t_est = t_est.T
+                t_gt = t_gt * 0.001
+                t_est = t_est.T
 
-            if cls == 10 or cls == 11:
-                err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-            else:
-                err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                if cls == 10 or cls == 11:
+                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                else:
+                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-            if err_add < model_dia[true_cat] * 0.1:
-                truePoses[int(true_cat)] += 1
+                if err_add < model_dia[true_cat] * 0.1:
+                    true_pose = 1
+            truePoses[int(true_cat)] += true_pose
 
             #plt.axhline(y=(err_add * (1 / max(np.asarray(errors)))), color='b', linestyle='-')
             #plt.show()
@@ -755,7 +964,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
             #print('errors: ', errors)
             #print('box_devs: ', box_devs)
-
 
             '''
 
@@ -803,7 +1011,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             print(' ')
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
-            '''
+
+            norm_add = np.asarray(err_add) * (1 / max(np.asarray(errors)))
+            plt.axhline(y=norm_add, color='b', linestyle='-', label="All Hypotheses")
+            plt.legend(loc="upper left")
+            plt.show()
 
             ###################################
             # other experiments
@@ -890,8 +1102,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             eDbox = np.reshape(est3D, (16))
             pose = eDbox.astype(np.uint16)
 
-            print('gt: ', tDbox)
-            print('est: ', pose)
+            #print('gt: ', tDbox)
+            #print('est: ', pose)
 
             #colGT = (255, 0, 0)
             colEst = (0, 215, 255)
