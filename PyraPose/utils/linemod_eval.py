@@ -160,7 +160,6 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -197,6 +196,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
+'''
 
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
@@ -691,31 +691,82 @@ def evaluate_linemod(generator, model, threshold=0.05):
             print('2: bgm ', bgm.converged_, bgm.weights_)
             '''
 
+            '''
+            # Dirichlet
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, :2])
             max_comp = np.argmax(bgm.weights_)
-            xy0 = (bgm.means_[max_comp, :] * col_std[:2]) + col_mean[:2]
+            #xy00 = (bgm.means_[max_comp, :] * col_std[:2]) + col_mean[:2]
+            xy00 = (bgm.means_[0, :] * col_std[:2]) + col_mean[:2]
+            xy01 = (bgm.means_[1, :] * col_std[:2]) + col_mean[:2]
+            xy02 = (bgm.means_[2, :] * col_std[:2]) + col_mean[:2]
+            xy03 = (bgm.means_[3, :] * col_std[:2]) + col_mean[:2]
+            xy04 = (bgm.means_[4, :] * col_std[:2]) + col_mean[:2]
+            #print('p1: ', bgm.weights_, bgm.weight_concentration_prior_, bgm.weight_concentration_)
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 2:4])
             max_comp = np.argmax(bgm.weights_)
-            xy1 = (bgm.means_[max_comp, :] * col_std[2:4]) + col_mean[2:4]
+            #xy1 = (bgm.means_[max_comp, :] * col_std[2:4]) + col_mean[2:4]
+            xy10 = (bgm.means_[0, :] * col_std[2:4]) + col_mean[2:4]
+            xy11 = (bgm.means_[1, :] * col_std[2:4]) + col_mean[2:4]
+            xy12 = (bgm.means_[2, :] * col_std[2:4]) + col_mean[2:4]
+            xy13 = (bgm.means_[3, :] * col_std[2:4]) + col_mean[2:4]
+            xy14 = (bgm.means_[4, :] * col_std[2:4]) + col_mean[2:4]
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 4:6])
             max_comp = np.argmax(bgm.weights_)
-            xy2 = (bgm.means_[max_comp, :] * col_std[4:6]) + col_mean[4:6]
+            #xy2 = (bgm.means_[max_comp, :] * col_std[4:6]) + col_mean[4:6]
+            xy20 = (bgm.means_[0, :] * col_std[4:6]) + col_mean[4:6]
+            xy21 = (bgm.means_[1, :] * col_std[4:6]) + col_mean[4:6]
+            xy22 = (bgm.means_[2, :] * col_std[4:6]) + col_mean[4:6]
+            xy23 = (bgm.means_[3, :] * col_std[4:6]) + col_mean[4:6]
+            xy24 = (bgm.means_[4, :] * col_std[4:6]) + col_mean[4:6]
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 6:8])
             max_comp = np.argmax(bgm.weights_)
-            xy3 = (bgm.means_[max_comp, :] * col_std[6:8]) + col_mean[6:8]
+            #xy3 = (bgm.means_[max_comp, :] * col_std[6:8]) + col_mean[6:8]
+            xy30 = (bgm.means_[0, :] * col_std[6:8]) + col_mean[6:8]
+            xy31 = (bgm.means_[1, :] * col_std[6:8]) + col_mean[6:8]
+            xy32 = (bgm.means_[2, :] * col_std[6:8]) + col_mean[6:8]
+            xy33 = (bgm.means_[3, :] * col_std[6:8]) + col_mean[6:8]
+            xy34 = (bgm.means_[4, :] * col_std[6:8]) + col_mean[6:8]
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 8:10])
             max_comp = np.argmax(bgm.weights_)
-            xy4 = (bgm.means_[max_comp, :] * col_std[8:10]) + col_mean[8:10]
+            #xy4 = (bgm.means_[max_comp, :] * col_std[8:10]) + col_mean[8:10]
+            xy40 = (bgm.means_[0, :] * col_std[8:10]) + col_mean[8:10]
+            xy41 = (bgm.means_[1, :] * col_std[8:10]) + col_mean[8:10]
+            xy42 = (bgm.means_[2, :] * col_std[8:10]) + col_mean[8:10]
+            xy43 = (bgm.means_[3, :] * col_std[8:10]) + col_mean[8:10]
+            xy44 = (bgm.means_[4, :] * col_std[8:10]) + col_mean[8:10]
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 10:12])
             max_comp = np.argmax(bgm.weights_)
-            xy5 = (bgm.means_[max_comp, :] * col_std[10:12]) + col_mean[10:12]
+            #xy5 = (bgm.means_[max_comp, :] * col_std[10:12]) + col_mean[10:12]
+            xy50 = (bgm.means_[0, :] * col_std[10:12]) + col_mean[10:12]
+            xy51 = (bgm.means_[1, :] * col_std[10:12]) + col_mean[10:12]
+            xy52 = (bgm.means_[2, :] * col_std[10:12]) + col_mean[10:12]
+            xy53 = (bgm.means_[3, :] * col_std[10:12]) + col_mean[10:12]
+            xy54 = (bgm.means_[4, :] * col_std[10:12]) + col_mean[10:12]
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 12:14])
             max_comp = np.argmax(bgm.weights_)
-            xy6 = (bgm.means_[max_comp, :] * col_std[12:14]) + col_mean[12:14]
+            #xy6 = (bgm.means_[max_comp, :] * col_std[12:14]) + col_mean[12:14]
+            xy60 = (bgm.means_[0, :] * col_std[12:14]) + col_mean[12:14]
+            xy61 = (bgm.means_[1, :] * col_std[12:14]) + col_mean[12:14]
+            xy62 = (bgm.means_[2, :] * col_std[12:14]) + col_mean[12:14]
+            xy63 = (bgm.means_[3, :] * col_std[12:14]) + col_mean[12:14]
+            xy64 = (bgm.means_[4, :] * col_std[12:14]) + col_mean[12:14]
             bgm = BayesianGaussianMixture(n_components=5, random_state=0).fit(pose_votes[:, 14:16])
             max_comp = np.argmax(bgm.weights_)
-            xy7 = (bgm.means_[max_comp, :] * col_std[14:16]) + col_mean[14:16]
-            pose_votes = np.concatenate([xy0, xy1, xy2, xy3, xy4, xy5, xy6, xy7])
+            #xy7 = (bgm.means_[max_comp, :] * col_std[14:16]) + col_mean[14:16]
+            xy70 = (bgm.means_[0, :] * col_std[14:16]) + col_mean[14:16]
+            xy71 = (bgm.means_[1, :] * col_std[14:16]) + col_mean[14:16]
+            xy72 = (bgm.means_[2, :] * col_std[14:16]) + col_mean[14:16]
+            xy73 = (bgm.means_[3, :] * col_std[14:16]) + col_mean[14:16]
+            xy74 = (bgm.means_[4, :] * col_std[14:16]) + col_mean[14:16]
+
+            pose_votes1 = np.concatenate([xy00, xy10, xy20, xy30, xy40, xy50, xy60, xy70])
+            pose_votes2 = np.concatenate([xy01, xy11, xy21, xy31, xy41, xy51, xy61, xy71])
+            pose_votes3 = np.concatenate([xy02, xy12, xy22, xy32, xy42, xy52, xy62, xy72])
+            pose_votes4 = np.concatenate([xy03, xy13, xy23, xy33, xy43, xy53, xy63, xy73])
+            pose_votes5 = np.concatenate([xy04, xy14, xy24, xy34, xy44, xy52, xy64, xy74])
+            pose_votes = np.concatenate([pose_votes1[np.newaxis, :], pose_votes2[np.newaxis, :], pose_votes3[np.newaxis, :], pose_votes4[np.newaxis, :], pose_votes5[np.newaxis, :]], axis=0)
+            '''
+
 
             # gaussian mixture analysis
             # mixture 1
@@ -1005,52 +1056,169 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             '''
 
+            '''
+            # variational hypotheses choice
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, :2])
+            indices_0 = np.where(bgm == 0)
+            votes0 = (pose_votes[indices_0, :2] * col_std[:2]) + col_mean[:2]
+            corr0 = np.repeat(ori_points[0, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 2:4])
+            indices_0 = np.where(bgm == 0)
+            votes1 = (pose_votes[indices_0, 2:4] * col_std[2:4]) + col_mean[2:4]
+            corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 4:6])
+            indices_0 = np.where(bgm == 0)
+            votes2 = (pose_votes[indices_0, 4:6] * col_std[4:6]) + col_mean[4:6]
+            corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 6:8])
+            indices_0 = np.where(bgm == 0)
+            votes3 = (pose_votes[indices_0, 6:8] * col_std[6:8]) + col_mean[6:8]
+            corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 8:10])
+            indices_0 = np.where(bgm == 0)
+            votes4 = (pose_votes[indices_0, 8:10] * col_std[8:10]) + col_mean[8:10]
+            corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 10:12])
+            indices_0 = np.where(bgm == 0)
+            votes5 = (pose_votes[indices_0, 10:12] * col_std[10:12]) + col_mean[10:12]
+            corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 12:14])
+            indices_0 = np.where(bgm == 0)
+            votes6 = (pose_votes[indices_0, 12:14] * col_std[12:14]) + col_mean[12:14]
+            corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 14:16])
+            indices_0 = np.where(bgm == 0)
+            votes7 = (pose_votes[indices_0, 14:16] * col_std[14:16]) + col_mean[14:16]
+            corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+
+            variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=1)
+            variational_votes = np.ascontiguousarray(variational_votes).transpose((1, 0, 2))
+            variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
+            obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
+            '''
+            samples = 10
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, :2])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+            indices_0 = np.where(labels == 0)
+            votes0 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr0 = np.repeat(ori_points[0, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 2:4])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+            indices_0 = np.where(labels == 0)
+            votes1 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 4:6])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+            indices_0 = np.where(labels == 0)
+            votes2 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 6:8])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+            indices_0 = np.where(labels == 0)
+            votes3 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 8:10])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+            indices_0 = np.where(labels == 0)
+            votes4 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 10:12])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+            indices_0 = np.where(labels == 0)
+            votes5 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 12:14])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+
+            indices_0 = np.where(labels == 0)
+            votes6 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 14:16])
+            hyps, labels = bgm.sample(samples)
+            while len(np.where(labels == 0)[0]) < 2:
+                scale_samples = samples * 2
+                hyps, labels = bgm.sample(scale_samples)
+            print(hyps.shape)
+            indices_0 = np.where(labels == 0)
+            votes7 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+
+            variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=0)
+            print(variational_votes.shape)
+            variational_votes = np.ascontiguousarray(variational_votes).reshape((variational_votes.shape[0], 1, 3))
+            variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
+            obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
+
+            #print(variational_votes.shape)
+            #print(obj_points.shape)
+
             #########################
             # vanilla PyraPose
             #######################
             #k_hyp = len(cls_indices[0])
+            #true_pose = 0
+            #k_hyp = 1
+            #for pdx in range(k_hyp):
+
             #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
-            #K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
-            #pose_votes = boxes3D[0, cls_indices, :]
-            #est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
-
-            print(pose_votes)
-            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
-            est_points = np.ascontiguousarray(pose_votes, dtype=np.float32).reshape((8, 1, 2))
-
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
-                                                               imagePoints=est_points, cameraMatrix=K,
+            #pose_votes = boxes3D[0, cls_indices, :]
+            #est_points = np.ascontiguousarray(pose_votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))#((int(k_hyp * 8), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            #obj_points = obj_points.reshape((8, 1, 3))
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+                                                               imagePoints=variational_votes, cameraMatrix=K,
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
                                                                reprojectionError=5.0, confidence=0.99,
                                                                flags=cv2.SOLVEPNP_EPNP)
             R_est, _ = cv2.Rodrigues(orvec)
             t_est = otvec
-
             # t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
-            t_rot = tf3d.quaternions.quat2mat(t_rot)
-            R_gt = np.array(t_rot, dtype=np.float32).reshape(3, 3)
+            t_rot_n = tf3d.quaternions.quat2mat(t_rot)
+            R_gt = np.array(t_rot_n, dtype=np.float32).reshape(3, 3)
             t_gt = np.array(t_tra, dtype=np.float32)
-
             # print(t_est)
             # print(t_gt)
-
             t_gt = t_gt * 0.001
             t_est = t_est.T  # * 0.001
-
             if cls == 10 or cls == 11:
                 err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
             else:
                 err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-
             if err_add < model_dia[true_cat] * 0.1:
+                #true_pose = 1
                 truePoses[int(true_cat)] += 1
 
             print(' ')
             print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+
+            #truePoses[int(true_cat)] += true_pose
+
+
 
             #norm_add = np.asarray(err_add) * (1 / max(np.asarray(errors)))
             #plt.axhline(y=norm_add, color='b', linestyle='-', label="All Hypotheses")
@@ -1132,24 +1300,24 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # result = [int(BOP_scene_id), int(BOP_im_id), int(BOP_obj_id), float(BOP_score), BOP_R, BOP_t]
             # results_image.append(result)
 
-            tDbox = R_gt.dot(ori_points.T).T
-            tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
-            box3D = toPix_array(tDbox)
-            tDbox = np.reshape(box3D, (16))
-            tDbox = tDbox.astype(np.uint16)
+            #tDbox = R_gt.dot(ori_points.T).T
+            #tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
+            #box3D = toPix_array(tDbox)
+            #tDbox = np.reshape(box3D, (16))
+            #tDbox = tDbox.astype(np.uint16)
 
-            eDbox = R_est.dot(ori_points.T).T
-            #eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
-            eDbox = eDbox + np.repeat(t_est, 8, axis=0)
-            est3D = toPix_array(eDbox)
-            eDbox = np.reshape(est3D, (16))
-            pose = eDbox.astype(np.uint16)
+            #eDbox = R_est.dot(ori_points.T).T
+            ##eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
+            #eDbox = eDbox + np.repeat(t_est, 8, axis=0)
+            #est3D = toPix_array(eDbox)
+            #eDbox = np.reshape(est3D, (16))
+            #pose = eDbox.astype(np.uint16)
 
             #print('gt: ', tDbox)
             #print('est: ', pose)
 
             #colGT = (255, 0, 0)
-            colEst = (0, 215, 255)
+            #colEst = (0, 215, 255)
 
             '''
             image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
