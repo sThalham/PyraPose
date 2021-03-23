@@ -160,6 +160,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -196,7 +197,6 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
 
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
@@ -1101,75 +1101,83 @@ def evaluate_linemod(generator, model, threshold=0.05):
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, :2])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
             indices_0 = np.where(labels == 0)
             votes0 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
             corr0 = np.repeat(ori_points[0, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 2:4])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
             indices_0 = np.where(labels == 0)
-            votes1 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            votes1 = (hyps[indices_0, :] * col_std[2:4]) + col_mean[2:4]
             corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 4:6])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
             indices_0 = np.where(labels == 0)
-            votes2 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            votes2 = (hyps[indices_0, :] * col_std[4:6]) + col_mean[4:6]
             corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 6:8])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
             indices_0 = np.where(labels == 0)
-            votes3 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            votes3 = (hyps[indices_0, :] * col_std[6:8]) + col_mean[6:8]
             corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 8:10])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
             indices_0 = np.where(labels == 0)
-            votes4 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            votes4 = (hyps[indices_0, :] * col_std[8:10]) + col_mean[8:10]
             corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 10:12])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
             indices_0 = np.where(labels == 0)
-            votes5 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            votes5 = (hyps[indices_0, :] * col_std[10:12]) + col_mean[10:12]
             corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 12:14])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
-
             indices_0 = np.where(labels == 0)
-            votes6 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            votes6 = (hyps[indices_0, :] * col_std[12:14]) + col_mean[12:14]
             corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 14:16])
             hyps, labels = bgm.sample(samples)
-            while len(np.where(labels == 0)[0]) < 2:
-                scale_samples = samples * 2
+            scale_samples = samples
+            while len(np.where(labels == 0)[0]) < 1:
+                scale_samples = scale_samples * 2
                 hyps, labels = bgm.sample(scale_samples)
-            print(hyps.shape)
             indices_0 = np.where(labels == 0)
-            votes7 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
+            votes7 = (hyps[indices_0, :] * col_std[14:16]) + col_mean[14:16]
             corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
 
-            variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=0)
-            print(variational_votes.shape)
-            variational_votes = np.ascontiguousarray(variational_votes).reshape((variational_votes.shape[0], 1, 3))
+            #print(votes0.shape)
+            variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=1)
+            #print(variational_votes.shape)
+            variational_votes = np.ascontiguousarray(variational_votes).transpose((1, 0, 2))
             variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
+            print(variational_corrs.shape)
             obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
 
             #print(variational_votes.shape)
