@@ -1057,6 +1057,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             '''
 
             '''
+            # BGMM 2d: n=4, use hypotheses belonging to highest concentration: 55.85
             # variational hypotheses choice
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, :2])
@@ -1097,6 +1098,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
             obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
             '''
+
+            '''
+            # BGMM 2d: n = 4, use resampling from highest concentration: 52.00
             samples = 10
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, :2])
@@ -1179,6 +1183,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
             variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
             print(variational_corrs.shape)
             obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
+            '''
+
+            # one BGMM with multi-dimensional data
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes)
+            votes0 = (bgm.means_[0,:] * col_std) + col_mean
 
             #print(variational_votes.shape)
             #print(obj_points.shape)
@@ -1194,11 +1204,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
             #pose_votes = boxes3D[0, cls_indices, :]
-            #est_points = np.ascontiguousarray(pose_votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))#((int(k_hyp * 8), 1, 2))
+            est_points = np.ascontiguousarray(votes0, dtype=np.float32).reshape((8, 1, 2))#((int(k_hyp * 8), 1, 2))
             #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            #obj_points = obj_points.reshape((8, 1, 3))
+            obj_points = ori_points.reshape((8, 1, 3))
             retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
-                                                               imagePoints=variational_votes, cameraMatrix=K,
+                                                               imagePoints=est_points, cameraMatrix=K,
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
                                                                reprojectionError=5.0, confidence=0.99,
