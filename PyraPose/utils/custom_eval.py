@@ -161,7 +161,7 @@ def load_pcd(cat):
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
     model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
-    pcd_model = open3d.read_point_cloud(ply_path)
+    #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
 
@@ -219,9 +219,9 @@ def evaluate_custom(generator, model, threshold=0.5):
     test_path = generator
 
     # InDex cube
-    mesh_info = '/home/stefan/data/Meshes/Meshes_color_invert/InDex/models_info.yml'
-    mesh_path = '/home/stefan/data/Meshes/Meshes_color_invert/InDex'
-    results_path = '/home/stefan/data/datasets/index/bookshelf_results'
+    mesh_info = '/home/stefan/data/Meshes/CIT_inv/models_info.yml'
+    mesh_path = '/home/stefan/data/Meshes/CIT_inv'
+    results_path = '/home/stefan/data/datasets/CIT_data/some_results'
 
     #metal Markus
     #mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
@@ -271,7 +271,6 @@ def evaluate_custom(generator, model, threshold=0.5):
         if mesh_now[-4:] != '.ply':
             continue
         mesh_id = int(mesh_now[:-4])
-        mesh_id = 1
         print(mesh_id, mesh_path_now)
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)

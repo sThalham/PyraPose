@@ -348,9 +348,9 @@ def retinanet_bbox(
     #other = model.outputs[3:]
 
     # MHP
-    #boxes3D = layers.DenormBoxes3D(name='boxes3D')([anchors, regression3D])
+    boxes3D = layers.DenormBoxes3D(name='boxes3D')([anchors, regression3D])
     # Tranformer
-    boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
+    #boxes3D = layers.RegressBoxes3D(name='boxes3D')([anchors, regression3D])
 
 
     # construct the model
