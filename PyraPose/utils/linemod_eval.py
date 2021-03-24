@@ -162,7 +162,7 @@ def load_pcd(cat):
     # open3d.draw_geometries([pcd_model])
     model_vsd_mm = copy.deepcopy(model_vsd)
     model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
-    pcd_model = open3d.read_point_cloud(ply_path)
+    #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
 
@@ -302,14 +302,16 @@ def evaluate_linemod(generator, model, threshold=0.05):
         #    t_tra = anno['poses'][0][:3]
         #    t_rot = anno['poses'][0][3:]
 
-        if anno['labels'][0] != 13:
-            continue
+        #if anno['labels'][0] != 13:
+        #    continue
 
         # run network
         images = []
         images.append(image)
         images.append(image_dep)
         boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
+
+        #print(np.nanmax(scores))
 
         for inv_cls in range(scores.shape[2]):
 
@@ -554,6 +556,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             eDbox = np.reshape(est3D, (16))
             pose = eDbox.astype(np.uint16)
 
+            '''
             colGT = (255, 0, 0)
             colEst = colEst = (0, 204, 0)
 
@@ -612,7 +615,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw[:, :, 1] = np.where(hyp_mask > 0, 0, image_raw[:, :, 1])
             image_raw[:, :, 2] = np.where(hyp_mask > 0, hyp_mask, image_raw[:, :, 2])
 
-
+            '''
             '''
             idx = 0
             for i in range(k_hyp):
@@ -638,9 +641,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
             '''
 
-            name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
-            cv2.imwrite(name, image_raw)
-            print('break')
+            #name = '/home/stefan/RGBDPose_viz/detection_LM.jpg'
+            #cv2.imwrite(name, image_raw)
+            #print('break')
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
