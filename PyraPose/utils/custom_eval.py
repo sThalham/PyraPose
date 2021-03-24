@@ -219,8 +219,8 @@ def evaluate_custom(generator, model, threshold=0.5):
     test_path = generator
 
     # InDex cube
-    mesh_info = '/home/stefan/data/Meshes/CIT_inv/models_info.yml'
-    mesh_path = '/home/stefan/data/Meshes/CIT_inv'
+    mesh_info = '/home/stefan/data/Meshes/CIT/CIT_inv/models_info.yml'
+    mesh_path = '/home/stefan/data/Meshes/CIT/CIT_inv'
     results_path = '/home/stefan/data/datasets/CIT_data/some_results'
 
     #metal Markus
@@ -288,7 +288,7 @@ def evaluate_custom(generator, model, threshold=0.5):
 
     anchor_params = anchors_for_shape((480, 640))
 
-    for img_idx, img_name in enumerate(os.listdir(test_path)):
+    for img_idx, img_name in enumerate(os.listdir(test_path)[:10]):
         img_path = os.path.join(test_path, img_name)
 
         print('------------------------------------')
@@ -405,7 +405,7 @@ def evaluate_custom(generator, model, threshold=0.5):
                                                                    distCoeffs=None, rvec=None, tvec=None,
                                                                    useExtrinsicGuess=False, iterationsCount=300,
                                                                    reprojectionError=5.0, confidence=0.99,
-                                                                   flags=cv2.SOLVEPNP_ITERATIVE)
+                                                                   flags=cv2.SOLVEPNP_EPNP)
                 R_est, _ = cv2.Rodrigues(orvec)
                 t_est = otvec
 
@@ -466,11 +466,12 @@ def evaluate_custom(generator, model, threshold=0.5):
                 light_spec_weight = 0.25
                 light_spec_shine = 1.0
 
-                print(R_list)
-                print(t_list)
+                #print(R_list)
+                #print(t_list)
                 ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
-                ren.render_object(1, R_list, t_list, fxkin, fykin, cxkin, cykin)
-                pose_img = ren.get_color_image(1)
+                ren.render_object(cls, R_list, t_list, fxkin, fykin, cxkin, cykin)
+                print(cls)
+                pose_img = ren.get_color_image(cls)
                 #out_path = os.path.join(results_path, 'pose_' + str(img_idx) + '.png')
                 #cv2.imwrite(out_path, pose_img)
                 image_pose_rep = np.where(pose_img > 0, pose_img, image_pose_rep)
@@ -478,7 +479,7 @@ def evaluate_custom(generator, model, threshold=0.5):
         ori_mask = np.concatenate([image_ori, image_mask], axis=1)
         box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
         image_out = np.concatenate([ori_mask, box_rep], axis=0)
-        out_path = os.path.join(results_path, 'sample_' + str(img_idx) + '.png')
+        out_path = os.path.join(results_path, 'sequence_6_' + str(img_idx) + '.png')
         cv2.imwrite(out_path, image_out)
 
     print('Look at what you did... are you proud of yourself?')
