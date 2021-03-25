@@ -487,8 +487,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             errors = []
             box_devs = []
             loc_scores = []
+            '''
             for hypdx in range(k_hyp):
-                '''
                 ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
@@ -510,20 +510,18 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 t_gt = t_gt * 0.001
                 t_est = t_est.T
-                '''
 
-                #if cls == 10 or cls == 11:
-                #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                #else:
-                #    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                if cls == 10 or cls == 11:
+                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                else:
+                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
 
-                #if err_add < model_dia[true_cat] * 0.1:
-                #    true_pose = 1
-                #if err_add < top_error:
-                #    top_error = err_add
-                #errors.append(err_add)
+                if err_add < model_dia[true_cat] * 0.1:
+                    true_pose = 1
+                if err_add < top_error:
+                    top_error = err_add
+                errors.append(err_add)
 
-                '''
                 # box deviatio in camera frame
                 tDbox = R_gt.dot(ori_points.T).T
                 tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
@@ -547,9 +545,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 box_devs.append(box_dev)
                 loc_scores.append(cls_mask[cls_indices[0][hypdx]])
-                '''
 
-                '''
                 colGT = (255, 0, 0)
                 colEst = (0, 0, 215)
                 #if err_add < model_dia[true_cat] * 0.1:
@@ -598,7 +594,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                      2)
                 image_raw = cv2.line(image_raw, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                                      2)
-                '''
+            '''
 
             #pose_votes = boxes3D[0, cls_indices[0], :]
             #box_devs = np.asarray(box_devs)
@@ -983,16 +979,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #else:
             #    pass
             filtered_errors = errors_norm[sorting]
-            #filtered_box_devs = box_devs[sorting]
+            filtered_box_devs = box_devs[sorting]
             #filtered_loc_scores = loc_scores[sorting]
             x_axis = range(len(errors_norm))
             plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=3, label="errors per hypothesis")
-            #plt.plot(x_axis, box_devs, 'rv-.', linewidth=2, markersize=3, label="box_devs")
+            plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=3, label="box_devs")
             #plt.plot(x_axis, filtered_loc_scores, 'k*--', linewidth=2, markersize=3, label="loc scores")
-            #plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
+            plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
             #plt.legend(loc="upper left")
-            #plt.show()
-
+            plt.show()
+            '''
+            '''
             min_box_dev = np.argmin(np.array(box_devs))
 
             #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -1185,16 +1182,36 @@ def evaluate_linemod(generator, model, threshold=0.05):
             obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
             '''
 
+            # LS = (A.t A).inv A.t y
+            # A = box_devs
+            # y = image location
+            
+            
+
             # one BGMM with multi-dimensional data
-            components = 16
+            components = 8
             if pose_votes.shape[0] < components:
                 components = pose_votes.shape[0]
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
-            bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
+
+            bgm = BayesianGaussianMixture(n_components=components, covariance_type='tied', random_state=0).fit(pose_votes)
+            max_w = np.argmax(bgm.weights_)
+            votes0 = (bgm.means_[max_w, :] * col_std) + col_mean
+            print('max w: ', max_w)
+            print('label: ', bgm.predict(pose_votes))
+            print('proba: ', bgm.predict_proba(pose_votes).shape)
+            print('score: ', np.sum(np.exp(bgm.score_samples(pose_votes)) /np.nanmax(np.exp(bgm.score_samples(pose_votes)))))
+            #hyps, labels = bgm.sample(samples)
+            #scale_samples = samples
+            #while len(np.where(labels == 0)[0]) < 1:
+            #    scale_samples = scale_samples * 2
+            #    hyps, labels = bgm.sample(scale_samples)
+            #indices_0 = np.where(labels == 0)
+            #votes0 = (hyps[indices_0, :] * col_std[:2]) + col_mean[:2]
             #print('weights: ', bgm.weights_)
             #print('weights: ', bgm.weight_concentration_prior_)
             #print('concentrations: ', bgm.weight_concentration_)
-            votes0 = (bgm.means_[0,:] * col_std) + col_mean
+
 
             #print(variational_votes.shape)
             #print(obj_points.shape)
