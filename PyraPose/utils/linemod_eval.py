@@ -544,7 +544,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 box_devs.append(box_dev)
                 loc_scores.append(cls_mask[cls_indices[0][hypdx]])
-  
+<
                 colGT = (255, 0, 0)
                 colEst = (0, 0, 215)
                 #if err_add < model_dia[true_cat] * 0.1:
@@ -978,16 +978,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #else:
             #    pass
             filtered_errors = errors_norm[sorting]
-            #filtered_box_devs = box_devs[sorting]
+            filtered_box_devs = box_devs[sorting]
             #filtered_loc_scores = loc_scores[sorting]
             x_axis = range(len(errors_norm))
             plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=3, label="errors per hypothesis")
-            #plt.plot(x_axis, box_devs, 'rv-.', linewidth=2, markersize=3, label="box_devs")
+            plt.plot(x_axis, filtered_box_devs, 'rv-.', linewidth=2, markersize=3, label="box_devs")
             #plt.plot(x_axis, filtered_loc_scores, 'k*--', linewidth=2, markersize=3, label="loc scores")
-            #plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
+            plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
             #plt.legend(loc="upper left")
-            #plt.show()
-
+            plt.show()
+            '''
+            '''
             min_box_dev = np.argmin(np.array(box_devs))
 
             #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
