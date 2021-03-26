@@ -143,6 +143,23 @@ def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia
     return tf,inlier_rmse,tf_pcd,reg_p2p.fitness
 
 
+def plot_ellipses(img, means, covars, weights):
+    norm_weights = (weights * (255/np.nanmax(weights))).astype(np.uint8)
+    for n in range(means.shape[0]):
+        center_coordinates = means[n]
+        axesLength = covars[n]
+        angle = 0
+        startAngle = 0
+        endAngle = 360
+        color = norm_weights[n]
+        color = (int(color), int(color), int(color))
+        print(color, type(color))
+        thickness = 1
+        img = cv2.ellipse(img=img, box=(center_coordinates.astype(np.uint16), np.ceil(axesLength).astype(np.uint16), angle), color=color, thickness=thickness)
+
+    return img
+
+
 def toPix_array(translation):
 
     xpix = ((translation[:, 0] * fxkin) / translation[:, 2]) + cxkin
@@ -160,7 +177,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -197,7 +214,6 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -545,7 +561,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 box_devs.append(box_dev)
                 loc_scores.append(cls_mask[cls_indices[0][hypdx]])
-<
+
                 colGT = (255, 0, 0)
                 colEst = (0, 0, 215)
                 #if err_add < model_dia[true_cat] * 0.1:
@@ -1053,48 +1069,50 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             '''
 
-            '''
             # BGMM 2d: n=4, use hypotheses belonging to highest concentration: 55.85
             # variational hypotheses choice
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, :2])
-            indices_0 = np.where(bgm == 0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, :2])
+            indices_0 = np.argmax(bgm.weights_)
             votes0 = (pose_votes[indices_0, :2] * col_std[:2]) + col_mean[:2]
-            corr0 = np.repeat(ori_points[0, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 2:4])
-            indices_0 = np.where(bgm == 0)
+            means = (bgm.means_ * col_std[:2]) + col_mean[:2]
+            covars = np.concatenate([bgm.covariances_[:, 0, 0][:, np.newaxis], bgm.covariances_[:, 1, 1][:, np.newaxis]], axis=1)
+            covars = (covars * col_std[:2]) * 3.0
+            weights = bgm.weights_
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 2:4])
+            indices_0 = np.argmax(np.array(bgm.weights_))
             votes1 = (pose_votes[indices_0, 2:4] * col_std[2:4]) + col_mean[2:4]
-            corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 4:6])
-            indices_0 = np.where(bgm == 0)
+            #corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 4:6])
+            indices_0 = np.argmax(np.array(bgm.weights_))
             votes2 = (pose_votes[indices_0, 4:6] * col_std[4:6]) + col_mean[4:6]
-            corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 6:8])
-            indices_0 = np.where(bgm == 0)
+            #corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 6:8])
+            indices_0 = np.argmax(np.array(bgm.weights_))
             votes3 = (pose_votes[indices_0, 6:8] * col_std[6:8]) + col_mean[6:8]
-            corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 8:10])
-            indices_0 = np.where(bgm == 0)
+            #corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 8:10])
+            indices_0 = np.argmax(np.array(bgm.weights_))
             votes4 = (pose_votes[indices_0, 8:10] * col_std[8:10]) + col_mean[8:10]
-            corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 10:12])
-            indices_0 = np.where(bgm == 0)
+            #corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 10:12])
+            indices_0 = np.argmax(np.array(bgm.weights_))
             votes5 = (pose_votes[indices_0, 10:12] * col_std[10:12]) + col_mean[10:12]
-            corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 12:14])
-            indices_0 = np.where(bgm == 0)
+            #corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 12:14])
+            indices_0 = np.argmax(np.array(bgm.weights_))
             votes6 = (pose_votes[indices_0, 12:14] * col_std[12:14]) + col_mean[12:14]
-            corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit_predict(pose_votes[:, 14:16])
-            indices_0 = np.where(bgm == 0)
+            #corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 14:16])
+            indices_0 = np.argmax(np.array(bgm.weights_))
             votes7 = (pose_votes[indices_0, 14:16] * col_std[14:16]) + col_mean[14:16]
-            corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            #corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
 
-            variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=1)
-            variational_votes = np.ascontiguousarray(variational_votes).transpose((1, 0, 2))
-            variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
-            obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
-            '''
+            variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=0)
+            #print(variational_votes.shape)
+            est_points = np.ascontiguousarray(variational_votes, dtype=np.float32).reshape((8, 1, 2))
+            #variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
+            #obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
 
             '''
             # BGMM 2d: n = 4, use resampling from highest concentration: 52.00
@@ -1196,6 +1214,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #hyp_indices = np.where(sample_labels==min_wp)
             #filtered_votes = boxes3D[0, cls_indices[0][hyp_indices], :]
 
+            '''
+            # BGMM with 16 dimensions
             #components = int(pose_votes.shape[0] / 6)
             components = 8
             if pose_votes.shape[0] < 8:
@@ -1206,7 +1226,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             sample_labels = bgm.predict(pose_votes)
             post_prob = bgm.predict_proba(pose_votes)
             #bgm_scores = bgm.score(pose_votes)
-            #print(bgm.weight_concentration_)
+            print(bgm.weight_concentration_)
             min_wp = np.argmax(np.array(bgm.weights_))
             min_wp = 0
             #print('weights: ', bgm.weights_)
@@ -1222,6 +1242,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print('bgm_scores: ', bgm_scores)
             #print('min_wp: ', min_wp)
             #print('hyp_indinces: ', hyp_indices)
+            '''
 
             #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
@@ -1251,7 +1272,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #########################
             # vanilla PyraPose
             #######################
-            k_hyp = len(hyp_indices[0])
+            #k_hyp = len(hyp_indices[0])
             #true_pose = 0
             #k_hyp = 1
             #for pdx in range(k_hyp):
@@ -1259,10 +1280,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
             #pose_votes = boxes3D[0, hyp_indices, :]
-            est_points = np.ascontiguousarray(filtered_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
+            #est_points = np.ascontiguousarray(filtered_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
                                                                imagePoints=est_points, cameraMatrix=K,
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
@@ -1373,11 +1394,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # result = [int(BOP_scene_id), int(BOP_im_id), int(BOP_obj_id), float(BOP_score), BOP_R, BOP_t]
             # results_image.append(result)
 
-            #tDbox = R_gt.dot(ori_points.T).T
-            #tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
-            #box3D = toPix_array(tDbox)
-            #tDbox = np.reshape(box3D, (16))
-            #tDbox = tDbox.astype(np.uint16)
+            tDbox = R_gt.dot(ori_points.T).T
+            tDbox = tDbox + np.repeat(t_gt[:, np.newaxis], 8, axis=1).T
+            box3D = toPix_array(tDbox)
+            tDbox = np.reshape(box3D, (16))
+            tDbox = tDbox.astype(np.uint16)
 
             #eDbox = R_est.dot(ori_points.T).T
             ##eDbox = eDbox + np.repeat(t_est[:, np.newaxis], 8, axis=1).T
@@ -1389,10 +1410,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print('gt: ', tDbox)
             #print('est: ', pose)
 
-            #colGT = (255, 0, 0)
+            colGT = (255, 0, 0)
             #colEst = (0, 215, 255)
 
-            '''
             image_raw = cv2.line(image_raw, tuple(tDbox[0:2].ravel()), tuple(tDbox[2:4].ravel()), colGT, 2)
             image_raw = cv2.line(image_raw, tuple(tDbox[2:4].ravel()), tuple(tDbox[4:6].ravel()), colGT, 2)
             image_raw = cv2.line(image_raw, tuple(tDbox[4:6].ravel()), tuple(tDbox[6:8].ravel()), colGT,
@@ -1419,7 +1439,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             image_raw = cv2.line(image_raw, tuple(tDbox[14:16].ravel()), tuple(tDbox[8:10].ravel()),
                              colGT,
                              2)
-            
+            '''            
 
             image_raw = cv2.line(image_raw, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), colEst, 2)
             image_raw = cv2.line(image_raw, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), colEst, 2)
@@ -1548,21 +1568,22 @@ def evaluate_linemod(generator, model, threshold=0.05):
             plt.imshow(image_raw)
             plt.show()
             '''
+
             '''
-            max_x = int(np.max(est_points[:, :, 0]) + 5)
-            min_x = int(np.min(est_points[:, :, 0]) - 5)
-            max_y = int(np.max(est_points[:, :, 1]) + 5)
-            min_y = int(np.min(est_points[:, :, 1]) - 5)
+            # visualize covariances 
+            max_x = int(np.max(tDbox[0]) + 20)
+            min_x = int(np.min(tDbox[0]) - 20)
+            max_y = int(np.max(tDbox[1]) + 20)
+            min_y = int(np.min(tDbox[1]) - 20)
 
-            print(max_x, min_x, max_y, min_y)
-
+            image_raw = plot_ellipses(image_raw, means, covars, weights)
             image_crop = image_raw[min_y:max_y, min_x:max_x, :]
-            image_crop = cv2.resize(image_crop, None, fx=2, fy=2)
-            '''
+            image_crop = cv2.resize(image_crop, None, fx=10, fy=10)
 
-            #name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
-            #cv2.imwrite(name, image_raw)
-            #print('break')
+            name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
+            cv2.imwrite(name, image_crop)
+            print('break')
+            '''
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
