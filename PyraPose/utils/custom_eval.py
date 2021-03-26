@@ -31,10 +31,16 @@ assert(callable(progressbar.progressbar)), "Using wrong progressbar module, inst
 
 
 # LineMOD
-fxkin = 572.41140
-fykin = 573.57043
-cxkin = 325.26110
-cykin = 242.04899
+#fxkin = 572.41140
+#fykin = 573.57043
+#cxkin = 325.26110
+#cykin = 242.04899
+
+# CIT
+fxkin = 615.40063
+fykin = 615.04529
+cxkin = 312.87567
+cykin = 250.85875
 
 
 def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
@@ -214,14 +220,14 @@ def boxoverlap(a, b):
     return ovlap
 
 
-def evaluate_custom(generator, model, threshold=0.5):
+def evaluate_custom(generator, model, threshold=0.3):
 
     test_path = generator
 
     # InDex cube
-    mesh_info = '/home/stefan/data/Meshes/CIT/CIT_inv/models_info.yml'
-    mesh_path = '/home/stefan/data/Meshes/CIT/CIT_inv'
-    results_path = '/home/stefan/data/datasets/CIT_data/some_results'
+    mesh_info = '/home/stefan/data/Meshes/CIT_inv/models_info.yml'
+    mesh_path = '/home/stefan/data/Meshes/CIT_inv'
+    results_path = '/home/stefan/data/datasets/CIT_data/test_samples'
 
     #metal Markus
     #mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
@@ -295,6 +301,9 @@ def evaluate_custom(generator, model, threshold=0.5):
         print('processing image: ', img_path)
 
         image_raw = cv2.imread(img_path, 1)
+        image_raw = image_raw[:, 160:-160, :]
+        image_raw = cv2.resize(image_raw, (640, 480))
+
         image_mask = copy.deepcopy(image_raw)
         image_mask = cv2.resize(image_mask, (640, 480))
         image_pose = copy.deepcopy(image_mask)
@@ -461,8 +470,8 @@ def evaluate_custom(generator, model, threshold=0.5):
                 t_list = t_est.flatten().tolist()
                 light_pose = [1.0, 1.0, 0.0]
                 light_color = [1.0, 1.0, 1.0]
-                light_ambient_weight = 1.0
-                light_diffuse_weight = 0.75
+                light_ambient_weight = 0.5
+                light_diffuse_weight = 0.5
                 light_spec_weight = 0.25
                 light_spec_shine = 1.0
 
@@ -479,7 +488,7 @@ def evaluate_custom(generator, model, threshold=0.5):
         ori_mask = np.concatenate([image_ori, image_mask], axis=1)
         box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
         image_out = np.concatenate([ori_mask, box_rep], axis=0)
-        out_path = os.path.join(results_path, 'sequence_6_' + str(img_idx) + '.png')
+        out_path = os.path.join(results_path, 'sequence_2_' + str(img_idx) + '.png')
         cv2.imwrite(out_path, image_out)
 
     print('Look at what you did... are you proud of yourself?')

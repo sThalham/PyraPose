@@ -160,7 +160,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-'''
+
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -197,6 +197,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
+'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -1199,15 +1200,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
             components = 8
             if pose_votes.shape[0] < 8:
                 components = 2
-            print('components: ', components)
+            #print('components: ', components)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
             sample_labels = bgm.predict(pose_votes)
             post_prob = bgm.predict_proba(pose_votes)
             #bgm_scores = bgm.score(pose_votes)
-            print(post_prob)
-            #print(bgm_scores)
+            #print(bgm.weight_concentration_)
             min_wp = np.argmax(np.array(bgm.weights_))
+            min_wp = 0
             #print('weights: ', bgm.weights_)
             #print('concentration: ', bgm.weight_concentration_)
             #comp_scores = []
