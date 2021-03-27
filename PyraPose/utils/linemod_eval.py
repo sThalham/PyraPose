@@ -1069,50 +1069,166 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             '''
 
+            '''
             # BGMM 2d: n=4, use hypotheses belonging to highest concentration: 55.85
             # variational hypotheses choice
+            min_samples = 200
+            components = 8
+            if pose_votes.shape[0] < components:
+                components = 2
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, :2])
-            indices_0 = np.argmax(bgm.weights_)
-            votes0 = (pose_votes[indices_0, :2] * col_std[:2]) + col_mean[:2]
-            means = (bgm.means_ * col_std[:2]) + col_mean[:2]
-            covars = np.concatenate([bgm.covariances_[:, 0, 0][:, np.newaxis], bgm.covariances_[:, 1, 1][:, np.newaxis]], axis=1)
-            covars = (covars * col_std[:2]) * 3.0
-            weights = bgm.weights_
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 2:4])
-            indices_0 = np.argmax(np.array(bgm.weights_))
-            votes1 = (pose_votes[indices_0, 2:4] * col_std[2:4]) + col_mean[2:4]
-            #corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 4:6])
-            indices_0 = np.argmax(np.array(bgm.weights_))
-            votes2 = (pose_votes[indices_0, 4:6] * col_std[4:6]) + col_mean[4:6]
-            #corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 6:8])
-            indices_0 = np.argmax(np.array(bgm.weights_))
-            votes3 = (pose_votes[indices_0, 6:8] * col_std[6:8]) + col_mean[6:8]
-            #corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 8:10])
-            indices_0 = np.argmax(np.array(bgm.weights_))
-            votes4 = (pose_votes[indices_0, 8:10] * col_std[8:10]) + col_mean[8:10]
-            #corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 10:12])
-            indices_0 = np.argmax(np.array(bgm.weights_))
-            votes5 = (pose_votes[indices_0, 10:12] * col_std[10:12]) + col_mean[10:12]
-            #corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 12:14])
-            indices_0 = np.argmax(np.array(bgm.weights_))
-            votes6 = (pose_votes[indices_0, 12:14] * col_std[12:14]) + col_mean[12:14]
-            #corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
-            bgm = BayesianGaussianMixture(n_components=4, random_state=0).fit(pose_votes[:, 14:16])
-            indices_0 = np.argmax(np.array(bgm.weights_))
-            votes7 = (pose_votes[indices_0, 14:16] * col_std[14:16]) + col_mean[14:16]
-            #corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=len(indices_0[0]), axis=0)
+            bgm0 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, :2])
+            print('cov pre: ', bgm0.covariances_)
+            bgm0.covariance_ = bgm0.covariances_ * 2.0
+            print('cov post: ', bgm0.covariances_)
+            indices_0 = np.argmax(bgm0.weights_)
+            # sample from components
+            pose_samples, sample_labels = bgm0.sample(min_samples)
+            min_wp = np.where(sample_labels==indices_0)
+            votes0 = (pose_samples[min_wp] * col_std[:2]) + col_mean[:2]
+            # sample from hyps
+            # sample_labels = bgm0.predict(pose_votes[:, :2])
+            #min_wp = np.where(sample_labels == indices_0)
+            #votes0 = (pose_votes[min_wp, :2] * col_std[:2]) + col_mean[:2]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr0 = np.repeat(ori_points[0, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
+            #means = (bgm.means_ * col_std[:2]) + col_mean[:2]
+            #covars = np.concatenate([bgm.covariances_[:, 0, 0][:, np.newaxis], bgm.covariances_[:, 1, 1][:, np.newaxis]], axis=1)
+            #covars = (covars * col_std[:2]) * 3.0
+            #weights = bgm.weights_
+            bgm1 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, 2:4])
+            indices_1 = np.argmax(np.array(bgm1.weights_))
+            # sample from components
+            pose_samples, sample_labels = bgm1.sample(min_samples)
+            min_wp = np.where(sample_labels == indices_1)
+            votes1 = (pose_samples[min_wp] * col_std[2:4]) + col_mean[2:4]
+            # sample from hyps
+            #sample_labels = bgm1.predict(pose_votes[:, 2:4])
+            #min_wp = np.where(sample_labels == indices_1)
+            #votes1 = (pose_votes[min_wp, 2:4] * col_std[2:4]) + col_mean[2:4]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
+            bgm2 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, 4:6])
+            indices_2 = np.argmax(np.array(bgm2.weights_))
+            # sample from components
+            pose_samples, sample_labels = bgm2.sample(min_samples)
+            min_wp = np.where(sample_labels == indices_2)
+            votes2 = (pose_samples[min_wp] * col_std[4:6]) + col_mean[4:6]
+            # sample from hyps
+            #sample_labels = bgm2.predict(pose_votes[:, 4:6])
+            #min_wp = np.where(sample_labels == indices_2)
+            #votes2 = (pose_votes[min_wp, 4:6] * col_std[4:6]) + col_mean[4:6]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
+            bgm3 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, 6:8])
+            indices_3 = np.argmax(np.array(bgm3.weights_))
+            # sample from components
+            pose_samples, sample_labels = bgm3.sample(min_samples)
+            min_wp = np.where(sample_labels == indices_3)
+            votes3 = (pose_samples[min_wp] * col_std[6:8]) + col_mean[6:8]
+            # sample from hyps
+            #sample_labels = bgm3.predict(pose_votes[:, 6:8])
+            #min_wp = np.where(sample_labels == indices_3)
+            #votes3 = (pose_votes[min_wp, 6:8] * col_std[6:8]) + col_mean[6:8]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
+            bgm4 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, 8:10])
+            indices_4 = np.argmax(np.array(bgm4.weights_))
+            # sample from components
+            pose_samples, sample_labels = bgm4.sample(min_samples)
+            min_wp = np.where(sample_labels == indices_4)
+            votes4 = (pose_samples[min_wp] * col_std[8:10]) + col_mean[8:10]
+            # sample from hyps
+            #sample_labels = bgm4.predict(pose_votes[:, 8:10])
+            #min_wp = np.where(sample_labels == indices_4)
+            #votes4 = (pose_votes[min_wp, 8:10] * col_std[8:10]) + col_mean[8:10]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
+            bgm5 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, 10:12])
+            indices_5 = np.argmax(np.array(bgm5.weights_))
+            # sample from components
+            pose_samples, sample_labels = bgm5.sample(min_samples)
+            min_wp = np.where(sample_labels == indices_5)
+            votes5 = (pose_samples[min_wp] * col_std[10:12]) + col_mean[10:12]
+            # sample from hyps
+            #sample_labels = bgm5.predict(pose_votes[:, 10:12])
+            #min_wp = np.where(sample_labels == indices_5)
+            #votes5 = (pose_votes[min_wp, 10:12] * col_std[10:12]) + col_mean[10:12]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
+            bgm6 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, 12:14])
+            indices_6 = np.argmax(np.array(bgm6.weights_))
+            # sample from components
+            pose_samples, sample_labels = bgm6.sample(min_samples)
+            min_wp = np.where(sample_labels == indices_6)
+            votes6 = (pose_samples[min_wp] * col_std[12:14]) + col_mean[12:14]
+            # sample from hyps
+            #sample_labels = bgm6.predict(pose_votes[:, 12:14])
+            #min_wp = np.where(sample_labels == indices_6)
+            #votes6 = (pose_votes[min_wp, 12:14] * col_std[12:14]) + col_mean[12:14]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
+            bgm7 = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes[:, 14:16])
+            indices_7 = np.argmax(np.array(bgm7.weights_))
+            # sample from components
+            print(bgm7.weights_)
+            print(min_samples)
+            pose_samples, sample_labels = bgm7.sample(min_samples)
+            min_wp = np.where(sample_labels == indices_7)
+            print(pose_samples.shape)
+            votes7 = (pose_samples[min_wp] * col_std[14:16]) + col_mean[14:16]
+            # sample from hyps
+            #sample_labels = bgm7.predict(pose_votes[:, 14:16])
+            #min_wp = np.where(sample_labels == indices_7)
+            #votes7 = (pose_votes[min_wp, 14:16] * col_std[14:16]) + col_mean[14:16]
+            #if min_samples > len(min_wp[0]):
+            #    min_samples = len(min_wp[0])
+            corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=len(min_wp[0]), axis=0)
 
+            '''
+            '''
+            # sample from hyps
+            #votes_s = np.random.choice(np.arange(votes0.shape[1]), size=min_samples)
+            #votes0 = votes0[:, votes_s, :]
+            #votes_s = np.random.choice(np.arange(votes1.shape[1]), size=min_samples)
+            #votes1 = votes1[:, votes_s, :]
+            #votes_s = np.random.choice(np.arange(votes2.shape[1]), size=min_samples)
+            #votes2 = votes2[:, votes_s, :]
+            #votes_s = np.random.choice(np.arange(votes3.shape[1]), size=min_samples)
+            #votes3 = votes3[:, votes_s, :]
+            #votes_s = np.random.choice(np.arange(votes4.shape[1]), size=min_samples)
+            #votes4 = votes4[:, votes_s, :]
+            #votes_s = np.random.choice(np.arange(votes5.shape[1]), size=min_samples)
+            #votes5 = votes5[:, votes_s, :]
+            #votes_s = np.random.choice(np.arange(votes6.shape[1]), size=min_samples)
+            #votes6 = votes6[:, votes_s, :]
+            #votes_s = np.random.choice(np.arange(votes7.shape[1]), size=min_samples)
+            #votes7 = votes7[:, votes_s, :]
+            corr0 = np.repeat(ori_points[0, :][np.newaxis, :], repeats=min_samples, axis=0)
+            corr1 = np.repeat(ori_points[1, :][np.newaxis, :], repeats=min_samples, axis=0)
+            corr2 = np.repeat(ori_points[2, :][np.newaxis, :], repeats=min_samples, axis=0)
+            corr3 = np.repeat(ori_points[3, :][np.newaxis, :], repeats=min_samples, axis=0)
+            corr4 = np.repeat(ori_points[4, :][np.newaxis, :], repeats=min_samples, axis=0)
+            corr5 = np.repeat(ori_points[5, :][np.newaxis, :], repeats=min_samples, axis=0)
+            corr6 = np.repeat(ori_points[6, :][np.newaxis, :], repeats=min_samples, axis=0)
+            corr7 = np.repeat(ori_points[7, :][np.newaxis, :], repeats=min_samples, axis=0)
+            variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=1)
+            est_points = np.ascontiguousarray(variational_votes, dtype=np.float32).transpose((1, 0, 2))
+
+            print(votes4.shape)
             variational_votes = np.concatenate([votes0, votes1, votes2, votes3, votes4, votes5, votes6, votes7], axis=0)
-            #print(variational_votes.shape)
-            est_points = np.ascontiguousarray(variational_votes, dtype=np.float32).reshape((8, 1, 2))
-            #variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
-            #obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
+            est_points = np.ascontiguousarray(variational_votes, dtype=np.float32).reshape((variational_votes.shape[0], 1, 2))
+
+            variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
+            obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
+            '''
 
             '''
             # BGMM 2d: n = 4, use resampling from highest concentration: 52.00
@@ -1244,6 +1360,19 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print('hyp_indinces: ', hyp_indices)
             '''
 
+            # DPGMM with 16 dimensions
+            # components = int(pose_votes.shape[0] / 6)
+            components = 8
+            if pose_votes.shape[0] < 8:
+                components = 2
+            # print('components: ', components)
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
+            bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
+            sample_labels = bgm.predict(pose_votes)
+            min_wp = np.argmax(np.array(bgm.weights_))
+            hyp_indices = np.where(sample_labels == min_wp)
+            filtered_votes = boxes3D[0, cls_indices[0][hyp_indices], :]
+
             #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
             #bgm_scores_norm = np.asarray(bgm_scores) * (1 / np.nanmax(np.asarray(bgm_scores)))
@@ -1272,7 +1401,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #########################
             # vanilla PyraPose
             #######################
-            #k_hyp = len(hyp_indices[0])
+            k_hyp = len(hyp_indices[0])
             #true_pose = 0
             #k_hyp = 1
             #for pdx in range(k_hyp):
@@ -1280,10 +1409,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
             #pose_votes = boxes3D[0, hyp_indices, :]
-            #est_points = np.ascontiguousarray(filtered_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
-            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
-            #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
-            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=ori_points,
+            est_points = np.ascontiguousarray(filtered_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
+            retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
                                                                imagePoints=est_points, cameraMatrix=K,
                                                                distCoeffs=None, rvec=None, tvec=None,
                                                                useExtrinsicGuess=False, iterationsCount=300,
