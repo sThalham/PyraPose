@@ -77,11 +77,11 @@ if __name__ == "__main__":
     # InDex
     mesh_path = '/home/stefan/data/Meshes/CIT_inv/'
     background = '/home/stefan/data/datasets/cocoval2017/'
-    target = '/home/stefan/data/train_data/CIT/'
+    target = '/home/stefan/data/train_data/CIT_3/'
 
     # metal Markus
 
-    objsperimg = 9
+    objsperimg = 4
 
     #print(open3d.__version__)
     #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
@@ -125,6 +125,7 @@ if __name__ == "__main__":
     mesh_id = 1
     categories = []
 
+    '''
     for mesh_now in os.listdir(mesh_path):
         mesh_path_now = os.path.join(mesh_path, mesh_now)
         if mesh_now[-4:] != '.ply':
@@ -133,6 +134,14 @@ if __name__ == "__main__":
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)
         mesh_id += 1
+    '''
+
+    mesh_id = 3
+    ren.add_object(3, '/home/stefan/data/Meshes/CIT_inv/03.ply')
+    categories.append(mesh_id)
+    mesh_id = 6
+    ren.add_object(6, '/home/stefan/data/Meshes/CIT_inv/06.ply')
+    categories.append(mesh_id)
 
     '''
     # InDex cube
@@ -160,7 +169,7 @@ if __name__ == "__main__":
     '''
 
     # interlude for debugging
-    mesh_info = os.path.join(mesh_path, 'models_info.json')
+    mesh_info = os.path.join(mesh_path, 'models_info.yml')
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
     #sym_cont = np.ndarray((34, 3), dtype=np.float32)
     #sym_disc = np.ndarray((34, 9), dtype=np.float32)
@@ -257,7 +266,7 @@ if __name__ == "__main__":
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns[:20]:
+        for bg_img_path in syns:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
@@ -299,7 +308,7 @@ if __name__ == "__main__":
             mask_idxs = []
             poses = []
             
-            obj_ids = np.random.choice(categories, size=objsperimg, replace=False)
+            obj_ids = np.random.choice(categories, size=objsperimg, replace=True)
 
             right, top = False, False
             seq_obj = 0
@@ -423,8 +432,8 @@ if __name__ == "__main__":
                     light_spec_shine = 0.5 + np.random.rand() * 0.75
                 else:
                     light_diffuse_weight = 0.4 + np.random.rand() * 0.3
-                    light_spec_weight = 0.3 + np.random.rand() * 0.3
-                    light_spec_shine = 0.75 + np.random.rand() * 0.25
+                    light_spec_weight = 0.4 + np.random.rand() * 0.6
+                    light_spec_shine = 0.5 + np.random.rand() * 0.25
 
 
                 ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)

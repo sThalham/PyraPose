@@ -177,7 +177,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-'''
+
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -214,6 +214,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
+'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -881,8 +882,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             est_points = np.ascontiguousarray(variational_votes, dtype=np.float32).transpose((1, 0, 2))
             '''
 
-
-            '''
             # SMM 2d: n=8, sample 200 hyps from cluster with highest separate weight: 61.13
             # variational hypotheses choice
             min_samples = 200
@@ -983,6 +982,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             variational_corrs = np.concatenate([corr0, corr1, corr2, corr3, corr4, corr5, corr6, corr7], axis=0)
             obj_points = variational_corrs.reshape((variational_corrs.shape[0], 1, 3))
 
+            '''
             # hyps of cluster with lowest weighted likelihood
             #components = int(pose_votes.shape[0] / 3)
             #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
@@ -1029,13 +1029,12 @@ def evaluate_linemod(generator, model, threshold=0.05):
             '''
 
             # Minimum Covariance Determinant
-
-            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
-            CovEst = MinCovDet().fit(pose_votes)
-            votes = (CovEst.location_ * col_std) + col_mean
-            est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape(
-                (8, 1, 2))
-            obj_points = ori_points.reshape((8, 1, 3))
+            #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
+            #CovEst = MinCovDet().fit(pose_votes)
+            #votes = (CovEst.location_ * col_std) + col_mean
+            #est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape(
+            #    (8, 1, 2))
+            #obj_points = ori_points.reshape((8, 1, 3))
 
             #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
