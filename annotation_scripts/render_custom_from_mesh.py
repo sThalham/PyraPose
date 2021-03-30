@@ -75,7 +75,7 @@ if __name__ == "__main__":
     #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
-    mesh_path = '/home/stefan/data/Meshes/CIT7_inv/'
+    mesh_path = '/home/stefan/data/Meshes/CIT_color/'
     background = '/home/stefan/data/datasets/cocoval2017/'
     target = '/home/stefan/data/train_data/CIT/'
 
@@ -135,10 +135,10 @@ if __name__ == "__main__":
         mesh_id += 1
 
     #mesh_id = 3
-    #ren.add_object(3, '/home/stefan/data/Meshes/CIT_inv/03.ply')
+    #ren.add_object(3, '/home/stefan/data/Meshes/CIT_color/03.ply')
     #categories.append(mesh_id)
     #mesh_id = 6
-    #ren.add_object(6, '/home/stefan/data/Meshes/CIT_inv/06.ply')
+    #ren.add_object(6, '/home/stefan/data/Meshes/CIT_color/06.ply')
     #categories.append(mesh_id)
 
     '''
