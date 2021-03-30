@@ -75,13 +75,13 @@ if __name__ == "__main__":
     #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
-    mesh_path = '/home/stefan/data/Meshes/CIT_inv/'
+    mesh_path = '/home/stefan/data/Meshes/CIT7_inv/'
     background = '/home/stefan/data/datasets/cocoval2017/'
-    target = '/home/stefan/data/train_data/CIT_3/'
+    target = '/home/stefan/data/train_data/CIT/'
 
     # metal Markus
 
-    objsperimg = 4
+    objsperimg = 9
 
     #print(open3d.__version__)
     #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
@@ -125,7 +125,6 @@ if __name__ == "__main__":
     mesh_id = 1
     categories = []
 
-    '''
     for mesh_now in os.listdir(mesh_path):
         mesh_path_now = os.path.join(mesh_path, mesh_now)
         if mesh_now[-4:] != '.ply':
@@ -134,14 +133,13 @@ if __name__ == "__main__":
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)
         mesh_id += 1
-    '''
 
-    mesh_id = 3
-    ren.add_object(3, '/home/stefan/data/Meshes/CIT_inv/03.ply')
-    categories.append(mesh_id)
-    mesh_id = 6
-    ren.add_object(6, '/home/stefan/data/Meshes/CIT_inv/06.ply')
-    categories.append(mesh_id)
+    #mesh_id = 3
+    #ren.add_object(3, '/home/stefan/data/Meshes/CIT_inv/03.ply')
+    #categories.append(mesh_id)
+    #mesh_id = 6
+    #ren.add_object(6, '/home/stefan/data/Meshes/CIT_inv/06.ply')
+    #categories.append(mesh_id)
 
     '''
     # InDex cube
@@ -419,18 +417,18 @@ if __name__ == "__main__":
                 #    light_spec_shine = np.random.rand() * 6.0
                 # CIT
                 if objID == 4 or objID == 7:
-                    light_diffuse_weight = 0.1 + np.random.rand() * 0.2
-                    light_spec_weight = 0.6 + np.random.rand() * 0.3
+                    light_diffuse_weight = 0.3 + np.random.rand() * 0.2
+                    light_spec_weight = 0.6 + np.random.rand() * 0.4
                     light_spec_shine = 0.5 + np.random.rand() * 1.0
-                elif objID == 1:
+                elif objID == 1: # fine with that
                     light_diffuse_weight = 0.6 + np.random.rand() * 0.3
                     light_spec_weight = 0.1 + np.random.rand() * 0.3
                     light_spec_shine = 0.9 + np.random.rand() * 0.2
-                elif objID == 8 or objID == 9:
-                    light_diffuse_weight = 0.25 + np.random.rand() * 0.2
-                    light_spec_weight = 0.45 + np.random.rand() * 0.3
-                    light_spec_shine = 0.5 + np.random.rand() * 0.75
-                else:
+                #elif objID == 8 or objID == 9:
+                #    light_diffuse_weight = 0.25 + np.random.rand() * 0.2
+                #    light_spec_weight = 0.45 + np.random.rand() * 0.3
+                #    light_spec_shine = 0.5 + np.random.rand() * 0.75
+                else: # fine with that
                     light_diffuse_weight = 0.4 + np.random.rand() * 0.3
                     light_spec_weight = 0.4 + np.random.rand() * 0.6
                     light_spec_shine = 0.5 + np.random.rand() * 0.25
