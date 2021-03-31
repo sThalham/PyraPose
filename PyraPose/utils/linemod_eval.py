@@ -177,6 +177,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -213,7 +214,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
+
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -1065,36 +1066,55 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             # BGMM with 16 dimensions
             # using all components means
-            components = 6
-            if pose_votes.shape[0] < 4:
+            components = 8
+            if pose_votes.shape[0] < 8:
                 components = 2
             # print('components: ', components)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
-            hyps = bgm.means_
-            #print(hyps.shape, hyps)
-            col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=components, axis=0)
-            col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=components, axis=0)
+            smallest_indixes = np.argpartition(bgm.weights_, 2)
+            hyps = bgm.means_[smallest_indixes[2:], :]
+            #print('weights: ', bgm.weights_)
+            #print('higher weights: ', bgm.weights_[smallest_indixes[2:]])
+            #max_con = np.argmax(bgm.weight_concentration_[0])
+            #votes = (bgm.means_[max_con, :] * col_std) + col_mean
+
+            #indices_b_a = np.where(bgm.weight_concentration_[0] < bgm.weight_concentration_[1])
+            #print(' ')
+            #print('#############################################')
+            #print('b>a: ', indices_b_a)
+            #print('alpha: ', bgm.weight_concentration_[0])
+            #print('beta: ', bgm.weight_concentration_[1])
+            #print('b-a: ', bgm.weight_concentration_[1]-bgm.weight_concentration_[0])
+            #abs_diffs = bgm.weight_concentration_[1]-bgm.weight_concentration_[0]
+            #med_diff = np.where(abs_diffs==np.sort(abs_diffs)[len(abs_diffs)//2])
+            #votes = (bgm.means_[med_diff, :] * col_std) + col_mean
+
+            #hyps = bgm.means_
+            col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=hyps.shape[0], axis=0)
+            col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=hyps.shape[0], axis=0)
             votes = (hyps * col_std_exp) + col_mean_exp
 
             #########################
             # vanilla PyraPose
             #######################
             #k_hyp = len(hyp_indices[0])
-            k_hyp = components
+            k_hyp = hyps.shape[0]
             true_pose = 0
             top_error = 1
             box_devs = []
             errors = []
             retvals = []
+            highest_ind = 10
 
             #k_hyp = 1
+
             for pdx in range(k_hyp):
                 est_points = np.ascontiguousarray(votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))
-                #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+                ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
                 #pose_votes = boxes3D[0, hyp_indices, :]
-                #est_points = np.ascontiguousarray(filtered_votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
+                #est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((int(k_hyp * 8), 1, 2))
                 #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
                 #obj_points = obj_points.reshape((int(k_hyp * 8), 1, 3))
                 obj_points = np.repeat(ori_points[np.newaxis, :, :], 1, axis=0)
@@ -1124,12 +1144,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
                     true_pose = 1
                 if err_add < top_error:
                     top_error = err_add
+                    highest_ind = pdx
 
-                print(pdx, bgm.weights_, bgm.weight_concentration_)
+                #print(pdx, bgm.weights_, bgm.weight_concentration_)
                 #print(bgm.covariances_[pdx, :, :])
-                print('error: ', err_add)
+                #print('error: ', err_add)
 
-                #errors.append(err_add)
+                errors.append(err_add)
                 #retvals.append(inliers)
 
                 # box deviatio in camera frame
@@ -1150,7 +1171,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 #print(' ')
                 #print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
-            '''
 
             #med_box_dev = np.median(box_devs)
             #below_median = np.where(box_devs < med_box_dev)
@@ -1161,11 +1181,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print(filtered_votes.shape)
             #votes = filtered_votes[below_median, :]
             #print(votes.shape)
-            votes = filtered_votes
 
-            est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((int(8 * votes.shape[0]), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], votes.shape[0], axis=0)
-            obj_points = obj_points.reshape((int(8 * votes.shape[0]), 1, 3))
+            #est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((int(8 * votes.shape[0]), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], votes.shape[0], axis=0)
+            #obj_points = obj_points.reshape((int(8 * votes.shape[0]), 1, 3))
+
+            '''
+            est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((8, 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], 1, axis=0)
+            obj_points = obj_points.reshape((8, 1, 3))
 
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
             retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
@@ -1190,13 +1214,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
-
             '''
+
             truePoses[int(true_cat)] += true_pose
             print(' ')
-            #print(pose_votes.shape, filtered_votes.shape)
+            #print(bgm.weights_)
+            #print(bgm.weights_[highest_ind])
+            #print(highest_ind, bgm.weight_concentration_[0][highest_ind], bgm.weight_concentration_[1][highest_ind])
             print(index, 'error: ', top_error, 'threshold', model_dia[cls] * 0.1)
-
+            #print(errors)
 
             #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
@@ -1206,7 +1232,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #filtered_errors = errors_norm[sorting]
             #filtered_retvals = retvals_norm[sorting]
             #x_axis = range(len(errors_norm))
-            #plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=3, label="errors per hypothesis")
+            #plt.plot(x_axis, filtered_errors, 'bo:'bgm.weight_concentration_[0], linewidth=2, markersize=3, label="errors per hypothesis")
             #plt.plot(x_axis, filtered_retvals, 'rv-', linewidth=2, markersize=3, label="retvals")
             #plt.show()
 
