@@ -88,7 +88,7 @@ class CustomGenerator(Generator):
                 for sdx, sym in enumerate(value['symmetries_discrete']):
                     self.sym_disc[int(key), sdx, :] = np.array(sym)
             else:
-                self.sym_disc[int(key), :, :] = np.zeros((3, 16))
+                self.sym_disc[int(key), :, :] = np.repeat(np.eye((4)).reshape(16)[np.newaxis, :], repeats=3, axis=0) #np.zeros((3, 16))
             if "symmetries_continuous" in value:
                 self.sym_cont[int(key), :] = np.array(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
             else:

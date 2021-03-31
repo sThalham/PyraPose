@@ -29,7 +29,6 @@ import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.covariance import MinCovDet
-import smm
 
 
 import progressbar
@@ -1000,33 +999,19 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #hyp_indices = np.where(sample_labels==min_wp)
             #filtered_votes = boxes3D[0, cls_indices[0][hyp_indices], :]
             '''
-
+            '''
             # BGMM with 16 dimensions
             #components = int(pose_votes.shape[0] / 6)
             components = 8
             if pose_votes.shape[0] < 8:
                 components = 2
-            #print('components: ', components)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
             sample_labels = bgm.predict(pose_votes)
-            #post_prob = bgm.predict_proba(pose_votes)
-            #bgm_scores = bgm.score(pose_votes)
-            #print(bgm.weight_concentration_)
             min_wp = np.argmax(np.array(bgm.weights_))
-            #min_wp = 0
-            #print('weights: ', bgm.weights_)
-            #print('concentration: ', bgm.weight_concentration_)
-            #comp_scores = []
-            #for cdx in range(components):
-            #    indices = np.where(sample_labels == cdx)
-            #    comp_scores.append(np.sum(bgm_scores[indices]) / len(indices[0]))
-            #min_wp = np.argmax(np.array(comp_scores))
             hyp_indices = np.where(sample_labels == min_wp)
             filtered_votes = boxes3D[0, cls_indices[0][hyp_indices], :]
-            #print(pose_votes.shape)
-            #filtered_votes = pose_votes[hyp_indices, :]
-            #print(filtered_votes.shape)
+            '''
 
             #col_mean = np.mean(filtered_votes, axis=0)
             #col_std = np.std(filtered_votes, axis=0)
@@ -1080,17 +1065,34 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print(variational_votes.shape)
             #print(obj_points.shape)
 
+            # BGMM with 16 dimensions
+            # using all components means
+            components = 8
+            if pose_votes.shape[0] < 8:
+                components = 2
+            # print('components: ', components)
+            ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
+            bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
+            hyps = bgm.means_
+            #print(hyps.shape, hyps)
+            col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=components, axis=0)
+            col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=components, axis=0)
+            votes = (hyps * col_std_exp) + col_mean_exp
+
             #########################
             # vanilla PyraPose
             #######################
-            k_hyp = len(hyp_indices[0])
+            #k_hyp = len(hyp_indices[0])
+            k_hyp = components
             true_pose = 0
             top_error = 1
             box_devs = []
+            errors = []
+            retvals = []
 
             #k_hyp = 1
             for pdx in range(k_hyp):
-                est_points = np.ascontiguousarray(filtered_votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))
+                est_points = np.ascontiguousarray(votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))
                 #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
                 #pose_votes = boxes3D[0, hyp_indices, :]
@@ -1105,6 +1107,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                                                    useExtrinsicGuess=False, iterationsCount=300,
                                                                    reprojectionError=5.0, confidence=0.99,
                                                                    flags=cv2.SOLVEPNP_EPNP)
+
                 R_est, _ = cv2.Rodrigues(orvec)
                 t_est = otvec
                 # t_rot = tf3d.euler.euler2mat(t_rot[0], t_rot[1], t_rot[2])
@@ -1115,14 +1118,17 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 # print(t_gt)
                 t_gt = t_gt * 0.001
                 t_est = t_est.T  # * 0.001
-                #if cls == 10 or cls == 11:
-                #    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                #else:
-                #    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
-                #if err_add < model_dia[true_cat] * 0.1:
-                #    true_pose += 1
-                #if err_add < top_error:
-                #    top_error = err_add
+                if cls == 10 or cls == 11:
+                    err_add = adi(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                else:
+                    err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
+                if err_add < model_dia[true_cat] * 0.1:
+                    true_pose += 1
+                if err_add < top_error:
+                    top_error = err_add
+
+                #errors.append(err_add)
+                #retvals.append(inliers)
 
                 # box deviatio in camera frame
                 tDbox = R_gt.dot(ori_points.T).T
@@ -1142,19 +1148,22 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
                 #print(' ')
                 #print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+            '''
 
-            med_box_dev = np.median(box_devs)
-            below_median = np.where(box_devs < med_box_dev)
-            print(below_median)
-            filtered_hyps = hyp_indices[0][below_median]
-            print(len(box_devs))
+            #med_box_dev = np.median(box_devs)
+            #below_median = np.where(box_devs < med_box_dev)
+            #print(below_median)
+            #filtered_hyps = hyp_indices[0][below_median]
+            #print(len(box_devs))
             #ind_choice = np.argmin(box_devs)
-            print(filtered_votes.shape)
-            votes = filtered_votes[below_median, :]
-            print(votes.shape)
-            est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((int(8 * votes.shape[1]), 1, 2))
-            obj_points = np.repeat(ori_points[np.newaxis, :, :], votes.shape[1], axis=0)
-            obj_points = obj_points.reshape((int(8 * votes.shape[1]), 1, 3))
+            #print(filtered_votes.shape)
+            #votes = filtered_votes[below_median, :]
+            #print(votes.shape)
+            votes = filtered_votes
+
+            est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((int(8 * votes.shape[0]), 1, 2))
+            obj_points = np.repeat(ori_points[np.newaxis, :, :], votes.shape[0], axis=0)
+            obj_points = obj_points.reshape((int(8 * votes.shape[0]), 1, 3))
 
             K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
             retval, orvec, otvec, inliers = cv2.solvePnPRansac(objectPoints=obj_points,
@@ -1163,6 +1172,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
                                                                useExtrinsicGuess=False, iterationsCount=300,
                                                                reprojectionError=5.0, confidence=0.99,
                                                                flags=cv2.SOLVEPNP_EPNP)
+
+
             R_est, _ = cv2.Rodrigues(orvec)
             t_est = otvec
             t_rot_n = tf3d.quaternions.quat2mat(t_rot)
@@ -1178,18 +1189,23 @@ def evaluate_linemod(generator, model, threshold=0.05):
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
 
-            #truePoses[int(true_cat)] += true_pose
+            '''
+            truePoses[int(true_cat)] += true_pose
             print(' ')
             #print(pose_votes.shape, filtered_votes.shape)
-            print(index, 'error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+            print(index, 'error: ', top_error, 'threshold', model_dia[cls] * 0.1)
 
 
-            #norm_add = np.asarray(err_add) * (1 / max(np.asarray(errors)))
-            #plt.axhline(y=norm_add, color='b', linestyle='-', label="All Hypotheses")
-            #plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
-            #plt.xlabel('hypothesis')
-            #plt.ylabel('normalized threshold')
-            #plt.legend(loc="upper left")
+            #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
+            #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
+            #retvals_norm = np.asarray(retvals) * (1 / np.nanmax(np.asarray(retvals)))
+
+            #sorting = np.argsort(errors_norm)
+            #filtered_errors = errors_norm[sorting]
+            #filtered_retvals = retvals_norm[sorting]
+            #x_axis = range(len(errors_norm))
+            #plt.plot(x_axis, filtered_errors, 'bo:', linewidth=2, markersize=3, label="errors per hypothesis")
+            #plt.plot(x_axis, filtered_retvals, 'rv-', linewidth=2, markersize=3, label="retvals")
             #plt.show()
 
             ###################################
