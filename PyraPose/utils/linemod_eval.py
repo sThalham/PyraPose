@@ -177,7 +177,6 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -214,7 +213,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-
+'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -1066,7 +1065,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             # BGMM with 16 dimensions
             # using all components means
-            components = 4
+            components = 6
             if pose_votes.shape[0] < 4:
                 components = 2
             # print('components: ', components)
@@ -1125,6 +1124,10 @@ def evaluate_linemod(generator, model, threshold=0.05):
                     true_pose = 1
                 if err_add < top_error:
                     top_error = err_add
+
+                print(pdx, bgm.weights_, bgm.weight_concentration_)
+                #print(bgm.covariances_[pdx, :, :])
+                print('error: ', err_add)
 
                 #errors.append(err_add)
                 #retvals.append(inliers)
