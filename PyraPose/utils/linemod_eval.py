@@ -177,7 +177,6 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -214,7 +213,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-
+'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -1073,6 +1072,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
             smallest_indixes = np.argpartition(bgm.weights_, 2)
+
             if components > 3:
                 hyps = bgm.means_[smallest_indixes[2:], :]
                 weights = bgm.weights_[smallest_indixes[2:]]
@@ -1083,23 +1083,33 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 weights = bgm.weights_
                 alphas = bgm.weight_concentration_[0]
                 betas = bgm.weight_concentration_[1]
+            '''
 
-            smallest_var = 10
-            k_idx = 0
-            for btx in range(len(hyps)):
-                a = alphas[btx]
-                b = betas[btx]
+            print('### post ###')
+            print('hyps: ', hyps[:, 0])
+            print('alphas: ', alphas)
+            print('betas: ', betas)
+
+            max_idx = np.argmax(alphas + betas)
+            votes = (hyps[max_idx, :] * col_std) + col_mean
+            print('max_idx: ', max_idx)
+            '''
+
+            #smallest_var = 10
+            #k_idx = 0
+            #for btx in range(len(hyps)):
+            #    a = alphas[btx]
+            #    b = betas[btx]
                 #var = (a * b) / ((a + b + 1) * np.power((a + b), 2))
-                var = a / (a+b)
-                if np.abs(0.5 - var) < smallest_var:
-                    smallest_var = var
-                    k_idx = btx
-            print(k_idx, smallest_var)
+            #    var = a / (a+b)
+            #    if np.abs(0.5 - var) < smallest_var:
+            #        smallest_var = var
+            #        k_idx = btx
+            #print(k_idx, smallest_var)
             #print('weights: ', bgm.weights_)
             #print('higher weights: ', bgm.weights_[smallest_indixes[2:]])
             #max_con = np.argmax(bgm.weight_concentration_[0])
-            votes = (bgm.means_[k_idx, :] * col_std) + col_mean
-            '''
+            #votes = (bgm.means_[k_idx, :] * col_std) + col_mean
 
             #indices_b_a = np.where(bgm.weight_concentration_[0] < bgm.weight_concentration_[1])
             #print(' ')
@@ -1113,9 +1123,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #votes = (bgm.means_[med_diff, :] * col_std) + col_mean
 
             #hyps = bgm.means_
-            #col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=hyps.shape[0], axis=0)
-            #col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=hyps.shape[0], axis=0)
-            #votes = (hyps * col_std_exp) + col_mean_exp
+            col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=hyps.shape[0], axis=0)
+            col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=hyps.shape[0], axis=0)
+            votes = (hyps * col_std_exp) + col_mean_exp
 
             #########################
             # vanilla PyraPose
@@ -1237,15 +1247,87 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
+            '''
 
-            #truePoses[int(true_cat)] += true_pose
+
+            corrs = []
+
+            cov0 = bgm.covariances_[0, :, :]
+            n_cov0 = np.diagonal(cov0)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov0)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr0 = D_inv @ cov0 @ D_inv
+            corrs.append(np.mean(corr0))
+
+            cov1 = bgm.covariances_[1, :, :]
+            n_cov1 = np.diagonal(cov1)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov1)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr1 = D_inv @ cov1 @ D_inv
+            corrs.append(np.mean(corr1))
+
+            cov2 = bgm.covariances_[2, :, :]
+            n_cov2 = np.diagonal(cov2)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov2)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr2 = D_inv @ cov2 @ D_inv
+            corrs.append(np.mean(corr2))
+
+            cov3 = bgm.covariances_[3, :, :]
+            n_cov3 = np.diagonal(cov3)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov3)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr3 = D_inv @ cov3 @ D_inv
+            corrs.append(np.mean(corr3))
+
+            cov4 = bgm.covariances_[4, :, :]
+            n_cov4 = np.diagonal(cov4)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov4)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr4 = D_inv @ cov4 @ D_inv
+            corrs.append(np.mean(corr4))
+
+            cov5 = bgm.covariances_[5, :, :]
+            n_cov5 = np.diagonal(cov5)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov5)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr5 = D_inv @ cov5 @ D_inv
+            corrs.append(np.mean(corr5))
+
+            fig, axs = plt.subplots(3, 2)
+            i1 = axs[0 ,0].matshow(corr0, cmap='hot', interpolation='nearest')
+            i2 = axs[0, 1].matshow(corr1, cmap='hot', interpolation='nearest')
+            i3 = axs[1, 0].matshow(corr2, cmap='hot', interpolation='nearest')
+            i4 = axs[1, 1].matshow(corr3, cmap='hot', interpolation='nearest')
+            i5 = axs[2, 0].matshow(corr4, cmap='hot', interpolation='nearest')
+            i6 = axs[2, 1].matshow(corr5, cmap='hot', interpolation='nearest')
+
+            fig.colorbar(i1, ax=axs[0 ,0])
+            fig.colorbar(i2, ax=axs[0 ,1])
+            fig.colorbar(i3, ax=axs[1 ,0])
+            fig.colorbar(i4, ax=axs[1 ,1])
+            fig.colorbar(i5, ax=axs[2 ,0])
+            fig.colorbar(i6, ax=axs[2 ,1])
+
+            # truePoses[int(true_cat)] += true_pose
             print(' ')
-            #print(highest_ind)
-            #print('weights: ', weights)
-            #print('alphas: ', alphas)
-            #print('betas: ', betas)
-            #print('errors: ', errors)
-            print(index, 'error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+            print('min error id: ', highest_ind)
+            # print('weights: ', weights)
+            # print('|a-b|: ', np.abs(alphas - betas))
+            # aab = np.concatenate([alphas[np.newaxis, :], betas[np.newaxis, :]], axis=0)
+            # normalizer = np.nanmax(aab, axis=0)
+            # print('||a|-|b||: ', np.abs((alphas/normalizer) - (betas/normalizer)))
+            print('errors: ', errors)
+            print('corrs: ', corrs)
+            print(index, 'error: ', top_error, 'threshold', model_dia[cls] * 0.1)
+
+            plt.show()
 
             #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
