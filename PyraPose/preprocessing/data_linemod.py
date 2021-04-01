@@ -629,7 +629,7 @@ class LinemodDataset(tf.data.Dataset):
                     image_source_batch[image_index, :image.shape[0], :image.shape[1], :image.shape[2]] = image
 
                 image_target_batch = np.zeros((batch_size,) + max_shape, dtype=keras.backend.floatx())
-                for image_index, image in enumerate(x_s):
+                for image_index, image in enumerate(x_t):
                     image_target_batch[image_index, :image.shape[0], :image.shape[1], :image.shape[2]] = image
 
                 target_batch = compute_anchor_targets(anchors, x_s, y_s, len(classes))
