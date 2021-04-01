@@ -19,7 +19,7 @@ import keras
 import transforms3d as tf3d
 import cv2
 from PIL import Image
-import copy
+import tensorflow as tf
 
 from ..utils.compute_overlap import compute_overlap
 
@@ -46,20 +46,20 @@ class AnchorParameters:
 """
 The default anchor parameters.
 """
-AnchorParameters.default = AnchorParameters(
-    sizes   = [32, 64, 128],
-    strides = [8, 16, 32],
-    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
-    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
-)
-
-# YCB-video
 #AnchorParameters.default = AnchorParameters(
-#    sizes   = [48, 96, 192],
+#    sizes   = [32, 64, 128],
 #    strides = [8, 16, 32],
 #    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
-#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
+#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
 #)
+
+# YCB-video
+AnchorParameters.default = AnchorParameters(
+    sizes   = [48, 96, 192],
+    strides = [8, 16, 32],
+    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
+)
 defaultHypotheses = 12
 
 # homebrewed
@@ -139,7 +139,7 @@ def anchor_targets_bbox(
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
         # w/o mask
-        mask = annotations['mask'][0]
+        mask = annotations['mask']
         image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
@@ -371,7 +371,8 @@ def anchor_targets_bbox(
             # Transformer
             #regression_3D[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, mask_batch
+    #return regression_3D, labels_batch, mask_batch
+    return tf.convert_to_tensor(regression_3D), tf.convert_to_tensor(labels_batch), tf.convert_to_tensor(mask_batch)
 
 
 def compute_gt_annotations(

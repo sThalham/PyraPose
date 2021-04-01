@@ -397,9 +397,40 @@ def main(args=None):
 
 
     # start training
-    training_model.fit_generator(
-        generator=train_generator,
-        steps_per_epoch=train_generator.size()/args.batch_size,
+    #training_model.fit_generator(
+    #    generator=train_generator,
+    #    steps_per_epoch=train_generator.size()/args.batch_size,
+    #    epochs=args.epochs,
+    #    verbose=1,
+    #    callbacks=callbacks,
+    #    workers=args.workers,
+    #    use_multiprocessing=use_multiprocessing,
+    #    max_queue_size=args.max_queue_size
+    #)
+
+
+    # debugging
+    transform_generator = random_transform_generator(
+        min_translation=(-0.2, -0.2),
+        max_translation=(0.2, 0.2),
+        min_scaling=(0.8, 0.8),
+        max_scaling=(1.2, 1.2),
+    )
+    from ..preprocessing.data_custom import CustomDataset
+    #benchmark(
+    #    LinemodDataset().prefetch(tf.data.AUTOTUNE)
+    #)
+
+    dataset = CustomDataset(args.custom_path, 'train', batch_size=args.batch_size)
+    dataset = tf.data.Dataset.range(args.workers).interleave(
+        lambda _: dataset,
+        #num_parallel_calls=tf.data.experimental.AUTOTUNE
+        num_parallel_calls=args.workers
+    )
+
+    training_model.fit(
+        x=dataset,
+        steps_per_epoch=train_generator.size() / args.batch_size,
         epochs=args.epochs,
         verbose=1,
         callbacks=callbacks,
@@ -407,7 +438,6 @@ def main(args=None):
         use_multiprocessing=use_multiprocessing,
         max_queue_size=args.max_queue_size
     )
-
 
 if __name__ == '__main__':
     main()
