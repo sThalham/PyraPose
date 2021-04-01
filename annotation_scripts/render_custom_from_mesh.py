@@ -315,7 +315,7 @@ if __name__ == "__main__":
                 R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
                 # CIT
                 z = 0.4 + np.random.rand() * 0.6
-                if objID == 3 or objID == 6:
+                if objID == 2 or objID == 5:
                     x = (2 * (0.35 * z)) * np.random.rand() - (0.35 * z)  # 0.55 each side kinect
                     y = (2 * (0.2 * z)) * np.random.rand() - (0.2 * z)  # 0.40 each side kinect
                 else:

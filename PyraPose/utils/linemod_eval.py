@@ -1066,28 +1066,40 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             # BGMM with 16 dimensions
             # using all components means
-            components = 6
-            if pose_votes.shape[0] < 6:
+            components = 8
+            if pose_votes.shape[0] < 8:
                 components = 2
             # print('components: ', components)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
             smallest_indixes = np.argpartition(bgm.weights_, 2)
             if components > 3:
-                hyps = bgm.means_[smallest_indixes[3:], :]
-                weights = bgm.weights_[smallest_indixes[3:]]
-                alphas = bgm.weight_concentration_[0][smallest_indixes[3:]]
-                betas = bgm.weight_concentration_[1][smallest_indixes[3:]]
+                hyps = bgm.means_[smallest_indixes[2:], :]
+                weights = bgm.weights_[smallest_indixes[2:]]
+                alphas = bgm.weight_concentration_[0][smallest_indixes[2:]]
+                betas = bgm.weight_concentration_[1][smallest_indixes[2:]]
             else:
                 hyps = bgm.means_
                 weights = bgm.weights_
                 alphas = bgm.weight_concentration_[0]
                 betas = bgm.weight_concentration_[1]
 
+            smallest_var = 10
+            k_idx = 0
+            for btx in range(len(hyps)):
+                a = alphas[btx]
+                b = betas[btx]
+                #var = (a * b) / ((a + b + 1) * np.power((a + b), 2))
+                var = a / (a+b)
+                if np.abs(0.5 - var) < smallest_var:
+                    smallest_var = var
+                    k_idx = btx
+            print(k_idx, smallest_var)
             #print('weights: ', bgm.weights_)
             #print('higher weights: ', bgm.weights_[smallest_indixes[2:]])
             #max_con = np.argmax(bgm.weight_concentration_[0])
-            #votes = (bgm.means_[max_con, :] * col_std) + col_mean
+            votes = (bgm.means_[k_idx, :] * col_std) + col_mean
+            '''
 
             #indices_b_a = np.where(bgm.weight_concentration_[0] < bgm.weight_concentration_[1])
             #print(' ')
@@ -1101,9 +1113,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #votes = (bgm.means_[med_diff, :] * col_std) + col_mean
 
             #hyps = bgm.means_
-            col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=hyps.shape[0], axis=0)
-            col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=hyps.shape[0], axis=0)
-            votes = (hyps * col_std_exp) + col_mean_exp
+            #col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=hyps.shape[0], axis=0)
+            #col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=hyps.shape[0], axis=0)
+            #votes = (hyps * col_std_exp) + col_mean_exp
 
             #########################
             # vanilla PyraPose
@@ -1182,6 +1194,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 #print(' ')
                 #print('error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
+
             #med_box_dev = np.median(box_devs)
             #below_median = np.where(box_devs < med_box_dev)
             #print(below_median)
@@ -1192,9 +1205,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #votes = filtered_votes[below_median, :]
             #print(votes.shape)
 
-            #est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((int(8 * votes.shape[0]), 1, 2))
-            #obj_points = np.repeat(ori_points[np.newaxis, :, :], votes.shape[0], axis=0)
-            #obj_points = obj_points.reshape((int(8 * votes.shape[0]), 1, 3))
+            #est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((int(8 * k_hyp), 1, 2))
+            #obj_points = np.repeat(ori_points[np.newaxis, :, :], k_hyp, axis=0)
+            #obj_points = obj_points.reshape((int(8 * k_hyp), 1, 3))
 
             '''
             est_points = np.ascontiguousarray(votes, dtype=np.float32).reshape((8, 1, 2))
@@ -1224,15 +1237,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 err_add = add(R_est, t_est, R_gt, t_gt, model_vsd["pts"])
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
-            '''
 
-            truePoses[int(true_cat)] += true_pose
+            #truePoses[int(true_cat)] += true_pose
             print(' ')
-            print(weights)
-            #print(bgm.weights_[highest_ind])
-            print(highest_ind, alphas, betas)
-            print(index, 'error: ', top_error, 'threshold', model_dia[cls] * 0.1)
-            #print(errors)
+            #print(highest_ind)
+            #print('weights: ', weights)
+            #print('alphas: ', alphas)
+            #print('betas: ', betas)
+            #print('errors: ', errors)
+            print(index, 'error: ', err_add, 'threshold', model_dia[cls] * 0.1)
 
             #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
             #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
