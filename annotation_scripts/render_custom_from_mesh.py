@@ -416,7 +416,7 @@ if __name__ == "__main__":
                 #    light_spec_weight = 0.5 + np.random.rand() * 0.4
                 #    light_spec_shine = np.random.rand() * 6.0
                 # CIT
-                if objID == 4 or objID == 7:
+                if objID == 3 or objID == 6:
                     light_diffuse_weight = 0.3 + np.random.rand() * 0.2
                     light_spec_weight = 0.6 + np.random.rand() * 0.4
                     light_spec_shine = 0.5 + np.random.rand() * 1.0

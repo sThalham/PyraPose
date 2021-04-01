@@ -1066,14 +1066,24 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             # BGMM with 16 dimensions
             # using all components means
-            components = 8
-            if pose_votes.shape[0] < 8:
+            components = 6
+            if pose_votes.shape[0] < 6:
                 components = 2
             # print('components: ', components)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
             smallest_indixes = np.argpartition(bgm.weights_, 2)
-            hyps = bgm.means_[smallest_indixes[2:], :]
+            if components > 3:
+                hyps = bgm.means_[smallest_indixes[3:], :]
+                weights = bgm.weights_[smallest_indixes[3:]]
+                alphas = bgm.weight_concentration_[0][smallest_indixes[3:]]
+                betas = bgm.weight_concentration_[1][smallest_indixes[3:]]
+            else:
+                hyps = bgm.means_
+                weights = bgm.weights_
+                alphas = bgm.weight_concentration_[0]
+                betas = bgm.weight_concentration_[1]
+
             #print('weights: ', bgm.weights_)
             #print('higher weights: ', bgm.weights_[smallest_indixes[2:]])
             #max_con = np.argmax(bgm.weight_concentration_[0])
@@ -1218,9 +1228,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             truePoses[int(true_cat)] += true_pose
             print(' ')
-            #print(bgm.weights_)
+            print(weights)
             #print(bgm.weights_[highest_ind])
-            #print(highest_ind, bgm.weight_concentration_[0][highest_ind], bgm.weight_concentration_[1][highest_ind])
+            print(highest_ind, alphas, betas)
             print(index, 'error: ', top_error, 'threshold', model_dia[cls] * 0.1)
             #print(errors)
 
