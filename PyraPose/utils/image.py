@@ -149,6 +149,8 @@ class TransformParameters:
 
 def apply_transform(matrix, image, params):
 
+
+    print(image.shape)
     # rgb
     # seq describes an object for rgb image augmentation using aleju/imgaug
     seq = iaa.Sequential([

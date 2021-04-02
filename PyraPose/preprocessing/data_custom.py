@@ -45,7 +45,7 @@ from ..utils.image import (
     resize_image,
     read_image_bgr,
 )
-from ..utils.transform import transform_aabb
+from ..utils.transform import transform_aabb, random_transform_generator
 
 
 def _isArrayLike(obj):
@@ -54,7 +54,7 @@ def _isArrayLike(obj):
 
 class CustomDataset(tf.data.Dataset):
 
-    def _generate(data_dir, set_name, self_dir, batch_size=8, transform_generator=None, image_min_side=480,
+    def _generate(data_dir, set_name, batch_size=8, image_min_side=480,
                          image_max_side=640):
 
         def _isArrayLike(obj):
@@ -156,6 +156,13 @@ class CustomDataset(tf.data.Dataset):
                 sym_cont[int(key), :] = np.array(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
             else:
                 sym_cont[int(key), :] = np.zeros((3))
+
+            transform_generator = random_transform_generator(
+                min_translation=(-0.2, -0.2),
+                max_translation=(0.2, 0.2),
+                min_scaling=(0.8, 0.8),
+                max_scaling=(1.2, 1.2),
+            )
 
         def load_image(image_index):
             """ Load an image at the image_index.

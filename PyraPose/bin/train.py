@@ -410,12 +410,6 @@ def main(args=None):
 
 
     # debugging
-    transform_generator = random_transform_generator(
-        min_translation=(-0.2, -0.2),
-        max_translation=(0.2, 0.2),
-        min_scaling=(0.8, 0.8),
-        max_scaling=(1.2, 1.2),
-    )
     from ..preprocessing.data_custom import CustomDataset
     #benchmark(
     #    LinemodDataset().prefetch(tf.data.AUTOTUNE)
