@@ -177,6 +177,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -213,7 +214,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
+
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -1250,7 +1251,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             '''
 
 
-            corrs = []
+            covs = []
+            covs_abs = []
 
             cov0 = bgm.covariances_[0, :, :]
             n_cov0 = np.diagonal(cov0)
@@ -1258,7 +1260,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov0)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr0 = D_inv @ cov0 @ D_inv
-            corrs.append(np.mean(corr0))
+            #corrs.append(np.mean(corr0))
+            cov_nd = cov0
+            cov_nd[np.diag_indices(16)] = 0
+            covs.append(np.sum(cov_nd)/2)
+            covs_abs.append(np.sum(np.abs(cov_nd))/2)
 
             cov1 = bgm.covariances_[1, :, :]
             n_cov1 = np.diagonal(cov1)
@@ -1266,7 +1272,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov1)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr1 = D_inv @ cov1 @ D_inv
-            corrs.append(np.mean(corr1))
+            #corrs.append(np.mean(corr1))
+            cov_nd = cov1
+            cov_nd[np.diag_indices(16)] = 0
+            covs.append(np.sum(cov_nd) / 2)
+            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov2 = bgm.covariances_[2, :, :]
             n_cov2 = np.diagonal(cov2)
@@ -1274,7 +1284,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov2)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr2 = D_inv @ cov2 @ D_inv
-            corrs.append(np.mean(corr2))
+            #corrs.append(np.mean(corr2))
+            cov_nd = cov2
+            cov_nd[np.diag_indices(16)] = 0
+            covs.append(np.sum(cov_nd) / 2)
+            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov3 = bgm.covariances_[3, :, :]
             n_cov3 = np.diagonal(cov3)
@@ -1282,7 +1296,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov3)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr3 = D_inv @ cov3 @ D_inv
-            corrs.append(np.mean(corr3))
+            #corrs.append(np.mean(corr3))
+            cov_nd = cov3
+            cov_nd[np.diag_indices(16)] = 0
+            covs.append(np.sum(cov_nd) / 2)
+            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov4 = bgm.covariances_[4, :, :]
             n_cov4 = np.diagonal(cov4)
@@ -1290,7 +1308,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov4)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr4 = D_inv @ cov4 @ D_inv
-            corrs.append(np.mean(corr4))
+            #corrs.append(np.mean(corr4))
+            cov_nd = cov4
+            cov_nd[np.diag_indices(16)] = 0
+            covs.append(np.sum(cov_nd) / 2)
+            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov5 = bgm.covariances_[5, :, :]
             n_cov5 = np.diagonal(cov5)
@@ -1298,7 +1320,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov5)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr5 = D_inv @ cov5 @ D_inv
-            corrs.append(np.mean(corr5))
+            #corrs.append(np.mean(corr5))
+            cov_nd = cov5
+            cov_nd[np.diag_indices(16)] = 0
+            covs.append(np.sum(cov_nd) / 2)
+            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             fig, axs = plt.subplots(3, 2)
             i1 = axs[0 ,0].matshow(corr0, cmap='hot', interpolation='nearest')
@@ -1324,7 +1350,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # normalizer = np.nanmax(aab, axis=0)
             # print('||a|-|b||: ', np.abs((alphas/normalizer) - (betas/normalizer)))
             print('errors: ', errors)
-            print('corrs: ', corrs)
+            #print('corrs: ', corrs)
+            print('covs: ', covs)
+            print('covs_abs: ', covs_abs)
             print(index, 'error: ', top_error, 'threshold', model_dia[cls] * 0.1)
 
             plt.show()
