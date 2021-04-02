@@ -48,7 +48,7 @@ from ..utils.image import (
     resize_image,
     read_image_bgr,
 )
-from ..utils.transform import transform_aabb
+from ..utils.transform import transform_aabb, random_transform_generator
 
 
 def _isArrayLike(obj):
@@ -454,6 +454,13 @@ class LinemodDataset(tf.data.Dataset):
                                        [x_minus, y_minus, z_minus],
                                        [x_minus, y_minus, z_plus]])
             TDboxes[int(key), :, :] = three_box_solo
+
+            transform_generator = random_transform_generator(
+                min_translation=(-0.2, -0.2),
+                max_translation=(0.2, 0.2),
+                min_scaling=(0.8, 0.8),
+                max_scaling=(1.2, 1.2),
+            )
 
         def load_image(image_index):
             """ Load an image at the image_index.
