@@ -143,19 +143,22 @@ def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia
     return tf,inlier_rmse,tf_pcd,reg_p2p.fitness
 
 
-def plot_ellipses(img, means, covars, weights):
-    norm_weights = (weights * (255/np.nanmax(weights))).astype(np.uint8)
+def plot_ellipses(img, means, covars, highest_ind):
+    #norm_weights = (weights * (255/np.nanmax(weights))).astype(np.uint8)
+    cov_scale = 5 / np.nanmin(covars[highest_ind, :])
+    covars = covars * cov_scale
     for n in range(means.shape[0]):
         center_coordinates = means[n]
-        axesLength = covars[n]
+        axesLength = covars[n, :]
         angle = 0
         startAngle = 0
         endAngle = 360
-        color = norm_weights[n]
-        color = (int(color), int(color), int(color))
-        print(color, type(color))
+        color = 50 + int(np.random.random()*120)
+        #color = (int(color), int(color), int(color))
+        color = (0, 0, 255)
         thickness = 1
         img = cv2.ellipse(img=img, box=(center_coordinates.astype(np.uint16), np.ceil(axesLength).astype(np.uint16), angle), color=color, thickness=thickness)
+    img = cv2.ellipse(img=img, box=(means[highest_ind,:].astype(np.uint16), np.ceil(covars[highest_ind,:]).astype(np.uint16), 0), color=(255, 255, 255), thickness=thickness)
 
     return img
 
@@ -177,7 +180,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-'''
+
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -214,7 +217,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-
+'''
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -1079,11 +1082,15 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 weights = bgm.weights_[smallest_indixes[2:]]
                 alphas = bgm.weight_concentration_[0][smallest_indixes[2:]]
                 betas = bgm.weight_concentration_[1][smallest_indixes[2:]]
+                covars = bgm.covariances_[smallest_indixes[2:], :, :]
             else:
                 hyps = bgm.means_
                 weights = bgm.weights_
                 alphas = bgm.weight_concentration_[0]
                 betas = bgm.weight_concentration_[1]
+                covars = bgm.covariances_
+
+            
 
             covs = []
             covs_abs = []
@@ -1170,10 +1177,13 @@ def evaluate_linemod(generator, model, threshold=0.05):
             covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
             cov_max = np.argmax(np.array([np.sum(np.abs(corrs[0])), np.sum(np.abs(corrs[1])), np.sum(np.abs(corrs[2])), np.sum(np.abs(corrs[3])), np.sum(np.abs(corrs[4])), np.sum(np.abs(corrs[5]))]))
 
+            covars = np.concatenate([covars[:, 0, 0][:, np.newaxis], covars[:, 1, 1][:, np.newaxis]], axis=1)
+            covars = (covars * col_std[:2]) * 5.0
+
             #print(covs)
             #print(cov_max)
-            vote = weights[cov_max]
-            votes = (hyps[cov_max, :] * col_std) + col_mean
+
+            #votes = (hyps[cov_max, :] * col_std) + col_mean
 
             #print('### post ###')
             #print('hyps: ', hyps[:, 0])
@@ -1211,9 +1221,9 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #med_diff = np.where(abs_diffs==np.sort(abs_diffs)[len(abs_diffs)//2])
             #votes = (bgm.means_[med_diff, :] * col_std) + col_mean
 
-            #col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=hyps.shape[0], axis=0)
-            #col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=hyps.shape[0], axis=0)
-            #votes = (hyps * col_std_exp) + col_mean_exp
+            col_std_exp = np.repeat(col_std[np.newaxis, :], repeats=hyps.shape[0], axis=0)
+            col_mean_exp = np.repeat(col_mean[np.newaxis, :], repeats=hyps.shape[0], axis=0)
+            votes = (hyps * col_std_exp) + col_mean_exp
 
             #########################
             # vanilla PyraPose
@@ -1228,7 +1238,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
             highest_ind = 10
 
             #k_hyp = 1
-            '''
             for pdx in range(k_hyp):
                 est_points = np.ascontiguousarray(votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))
                 ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -1335,6 +1344,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             if err_add < model_dia[true_cat] * 0.1:
                 truePoses[int(true_cat)] += 1
             '''
+            '''
 
             fig, axs = plt.subplots(3, 2)
             i1 = axs[0 ,0].matshow(corr0, cmap='hot', interpolation='nearest')
@@ -1352,7 +1362,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             fig.colorbar(i6, ax=axs[2 ,1])
             '''
 
-            # truePoses[int(true_cat)] += true_pose
+            truePoses[int(true_cat)] += true_pose
             print(' ')
             #print('min error id: ', highest_ind)
             # print('weights: ', weights)
@@ -1366,7 +1376,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #print('abs sum: ', np.sum(np.abs(corrs[0])), np.sum(np.abs(corrs[1])), np.sum(np.abs(corrs[2])), np.sum(np.abs(corrs[3])), np.sum(np.abs(corrs[4])), np.sum(np.abs(corrs[5])))
             #print('covs: ', covs)
             #print('covs_abs: ', covs_abs)
-            print(index, 'error: ', err_add, 'threshold', model_dia[cls] * 0.1)
+            print(index, 'error: ', top_error, 'threshold', model_dia[cls] * 0.1)
 
             #plt.show()
 
@@ -1629,21 +1639,20 @@ def evaluate_linemod(generator, model, threshold=0.05):
             plt.show()
             '''
 
-            '''
             # visualize covariances 
             max_x = int(np.max(tDbox[0]) + 20)
             min_x = int(np.min(tDbox[0]) - 20)
             max_y = int(np.max(tDbox[1]) + 20)
             min_y = int(np.min(tDbox[1]) - 20)
 
-            image_raw = plot_ellipses(image_raw, means, covars, weights)
+            print(votes.shape)
+            image_raw = plot_ellipses(image_raw, votes[:, :2], covars, highest_ind)
             image_crop = image_raw[min_y:max_y, min_x:max_x, :]
             image_crop = cv2.resize(image_crop, None, fx=10, fy=10)
 
             name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
             cv2.imwrite(name, image_crop)
             print('break')
-            '''
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
