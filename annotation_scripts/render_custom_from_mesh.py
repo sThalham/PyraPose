@@ -172,6 +172,11 @@ if __name__ == "__main__":
     #sym_cont = np.ndarray((34, 3), dtype=np.float32)
     #sym_disc = np.ndarray((34, 9), dtype=np.float32)
 
+    max_box = [0, 0, 0, 0]
+    max_box_area = 0
+    min_box = [0, 0, 0, 0]
+    min_box_area = 300 * 300
+
     #for key, value in yaml.load(open(mesh_info)).items():
     for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
@@ -258,7 +263,7 @@ if __name__ == "__main__":
     annoID = 0
     gloCo = 1
     times = 0
-    loops = 6
+    loops = 11
 
     syns = os.listdir(background)
     all_data = (len(syns) * loops) + 1
@@ -519,6 +524,16 @@ if __name__ == "__main__":
 
                 #print(sym_disc_anno)
 
+                if visib_fract > 0.5:
+
+                    if area < min_box_area:
+                        min_box_area = area
+                        min_box = obj_bb
+
+                    if area > max_box_area:
+                        max_box_area = area
+                        max_box = obj_bb
+
                 tempTA = {
                     "id": annoID,
                     "image_id": img_id,
@@ -672,5 +687,11 @@ if __name__ == "__main__":
 
     with open(valAnno, 'w') as fpT:
         json.dump(dict, fpT)
+
+    box_anno = target + 'annotations/boxes.txt'
+
+    with open(box_anno, "w") as text_file:
+        text_file.write("maximum box: %s \n" % str(max_box))
+        text_file.write("minimum box: %s" % str(min_box))
 
     print('everythings done')
