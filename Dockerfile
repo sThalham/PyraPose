@@ -37,7 +37,7 @@ RUN apt-get update -qq \
 RUN pip install --upgrade pip
 
 # install Keras
-RUN pip3 install keras==2.3.1
+RUN pip3 install keras==2.4.3
 RUN pip3 install opencv-python==3.4.0.14
 RUN pip3 install progressbar2
 RUN pip3 install keras-resnet
@@ -56,7 +56,6 @@ RUN pip3 install imgaug
 
 RUN git clone https://github.com/sThalham/PyraPose.git /PyraPose
 
-# Go to pix2pix root
 WORKDIR /PyraPose
 
 
