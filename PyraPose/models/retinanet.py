@@ -42,14 +42,14 @@ def default_classification_model(
             filters=classification_feature_size,
             activation='relu',
             #name='pyramid_classification_{}'.format(i),
-            kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+            kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
             bias_initializer='zeros',
             **options
         )(outputs)
 
     outputs = keras.layers.Conv2D(
         filters=num_classes * num_anchors,
-        kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
         bias_initializer=initializers.PriorProbability(probability=prior_probability),
         #name='pyramid_classification',
         **options
@@ -87,14 +87,14 @@ def default_mask_model(
         outputs = keras.layers.Conv2D(
             filters=classification_feature_size,
             activation='relu',
-            kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+            kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
             bias_initializer='zeros',
             **options
         )(outputs)
 
     outputs = keras.layers.Conv2D(
         filters=num_classes,
-        kernel_initializer=keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
         bias_initializer=initializers.PriorProbability(probability=prior_probability),
         **options
     )(outputs)
@@ -113,7 +113,7 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
         'kernel_size'        : 3,
         'strides'            : 1,
         'padding'            : 'same',
-        'kernel_initializer' : keras.initializers.normal(mean=0.0, stddev=0.01, seed=None),
+        'kernel_initializer' : keras.initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None),
         'bias_initializer'   : 'zeros',
         'kernel_regularizer' : keras.regularizers.l2(0.001),
     }

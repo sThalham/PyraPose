@@ -19,7 +19,7 @@ import keras
 import transforms3d as tf3d
 import cv2
 from PIL import Image
-import copy
+import tensorflow as tf
 
 from ..utils.compute_overlap import compute_overlap
 
@@ -144,10 +144,10 @@ def anchor_targets_bbox(
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        image_raw = image
-        image_raw[..., 0] += 103.939
-        image_raw[..., 1] += 116.779
-        image_raw[..., 2] += 123.68
+        #image_raw = image
+        #image_raw[..., 0] += 103.939
+        #image_raw[..., 1] += 116.779
+        #image_raw[..., 2] += 123.68
 
         #image_raw_sym = copy.deepcopy(image_raw)
 
@@ -250,8 +250,8 @@ def anchor_targets_bbox(
                                      colEst,
 
                                      2)
-
                 '''
+
 
                 hyps_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=defaultHypotheses, axis=1)
                 calculated_boxes = np.concatenate([calculated_boxes, hyps_boxes], axis=0)
@@ -371,7 +371,8 @@ def anchor_targets_bbox(
             # Transformer
             #regression_3D[index, indices, -1] = -1
 
-    return regression_3D, labels_batch, mask_batch
+    #return regression_3D, labels_batch, mask_batch
+    return tf.convert_to_tensor(regression_3D), tf.convert_to_tensor(labels_batch), tf.convert_to_tensor(mask_batch)
 
 
 def compute_gt_annotations(

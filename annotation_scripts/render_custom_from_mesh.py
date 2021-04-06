@@ -269,7 +269,7 @@ if __name__ == "__main__":
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns:
+        for bg_img_path in syns[:10]:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
@@ -320,7 +320,7 @@ if __name__ == "__main__":
                 R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
                 # CIT
                 z = 0.4 + np.random.rand() * 0.6
-                if objID == 3 or objID == 6:
+                if objID == 2 or objID == 5:
                     x = (2 * (0.35 * z)) * np.random.rand() - (0.35 * z)  # 0.55 each side kinect
                     y = (2 * (0.2 * z)) * np.random.rand() - (0.2 * z)  # 0.40 each side kinect
                 else:
