@@ -365,7 +365,7 @@ class Generator(keras.utils.Sequence):
         annotations_group = self.load_annotations_group(group)
 
         # check validity of annotations
-        image_group, annotations_group = self.filter_annotations(image_group, annotations_group, group)
+        #image_group, annotations_group = self.filter_annotations(image_group, annotations_group, group)
 
         # randomly transform data
         image_group, annotations_group = self.random_transform_group(image_group, annotations_group)

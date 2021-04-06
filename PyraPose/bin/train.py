@@ -94,7 +94,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # compile model
     training_model.compile(
         loss={
-            '3Dbox'        : losses.sym_orthogonal_l1(),
+            '3Dbox'        : losses.orthogonal_l1(),
             'cls'          : losses.focal(),
             'mask'          : losses.focal(),
         },
@@ -170,10 +170,10 @@ def create_generators(args, preprocess_image):
     }
 
     transform_generator = random_transform_generator(
-            min_translation=(-0.2, -0.2),
-            max_translation=(0.2, 0.2),
-            min_scaling=(0.8, 0.8),
-            max_scaling=(1.2, 1.2),
+            min_translation=(0.0, 0.0),
+            max_translation=(0.0, 0.0),
+            min_scaling=(0.95, 0.95),
+            max_scaling=(1.05, 1.05),
         )
 
     if args.dataset_type == 'ycbv':

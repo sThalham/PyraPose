@@ -225,8 +225,8 @@ def evaluate_custom(generator, model, threshold=0.3):
     test_path = generator
 
     # InDex cube
-    mesh_info = '/home/stefan/data/Meshes/CIT_inv/models_info.yml'
-    mesh_path = '/home/stefan/data/Meshes/CIT_inv'
+    mesh_info = '/home/stefan/data/Meshes/CIT_color/models_info.yml'
+    mesh_path = '/home/stefan/data/Meshes/CIT_color'
     results_path = '/home/stefan/data/datasets/CIT_data/test_samples'
 
     #metal Markus
@@ -294,7 +294,7 @@ def evaluate_custom(generator, model, threshold=0.3):
 
     anchor_params = anchors_for_shape((480, 640))
 
-    for img_idx, img_name in enumerate(os.listdir(test_path)[:10]):
+    for img_idx, img_name in enumerate(os.listdir(test_path)):
         img_path = os.path.join(test_path, img_name)
 
         print('------------------------------------')
@@ -320,7 +320,8 @@ def evaluate_custom(generator, model, threshold=0.3):
 
         clust_t = time.time()
         for inv_cls in range(scores.shape[2]):
-            cls = inv_cls + 1
+            #cls = inv_cls + 1
+            cls = 2
             cls_mask = scores[0, :, inv_cls]
             obj_mask = mask[0, :, inv_cls]
 

@@ -269,7 +269,7 @@ if __name__ == "__main__":
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns[:10]:
+        for bg_img_path in syns:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
