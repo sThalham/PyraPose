@@ -179,8 +179,8 @@ if __name__ == "__main__":
     specific_object_set = False
     spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/LM_BOP_test/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/linemod_split_50_50/'
+    root = "/home/stefan/data/datasets/lm_test_all/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/linemod_PBR_BOP/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -264,6 +264,8 @@ if __name__ == "__main__":
     syns = os.listdir(root)
 
     for set in syns:
+        if '0' not in set:
+            continue
         set_root = os.path.join(root, set)
 
         rgbPath = set_root + "/rgb/"
@@ -273,6 +275,9 @@ if __name__ == "__main__":
         camPath = set_root + "/scene_camera.json"
         gtPath = set_root + "/scene_gt.json"
         infoPath = set_root + "/scene_gt_info.json"
+
+        target_path = os.path.join(root, 'linemod_training_real', 'training_range_' + set + '.txt')
+        real_image_list = np.loadtxt(fname=target_path, dtype=np.uint16, delimiter="\n")
 
         with open(camPath, 'r') as streamCAM:
             camjson = json.load(streamCAM)
@@ -353,10 +358,12 @@ if __name__ == "__main__":
             calib_K = []
             # if rnd == 1:
 
-            valtest = None
-            if split_count < 1:
-                fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_rgb.png'
-                valtest = 'val'
+            #valtest = None
+            #if split_count < 1:
+
+            if int(samp) in real_image_list:
+                fileName = target + 'images/' + 'target/' + imgNam[:-4] + '_rgb.png'
+                valtest = 'target'
                 split_count += 1
             else:
                 fileName = target + 'images/' + 'test/' + imgNam[:-4] + '_rgb.png'
@@ -471,7 +478,7 @@ if __name__ == "__main__":
                     elif obj_id == 21:
                         obj_id = 5
 
-                if valtest == 'val':
+                if valtest == 'target':
                     annoID_val = annoID_val + 1
                     tempTA = {
                         "id": annoID_val,
@@ -505,7 +512,7 @@ if __name__ == "__main__":
 
                 count = count + 1
 
-            if valtest == 'val':
+            if valtest == 'target':
                 tempTL = {
                     "url": "https://bop.felk.cvut.cz/home/",
                     "id": img_id,
@@ -524,7 +531,7 @@ if __name__ == "__main__":
             mask_safe_path = fileName[:-8] + '_mask.png'
             cv2.imwrite(mask_safe_path, mask_img)
 
-            if valtest == 'val':
+            if valtest == 'target':
                 tempTV = {
                     "license": 2,
                     "url": "https://bop.felk.cvut.cz/home/",
@@ -627,7 +634,7 @@ if __name__ == "__main__":
         }
         dict_test["categories"].append(tempC)
 
-    valAnno = target + 'annotations/instances_val.json'
+    valAnno = target + 'annotations/instances_target.json'
     with open(valAnno, 'w') as fpT:
         json.dump(dict_val, fpT)
     testAnno = target + 'annotations/instances_test.json'

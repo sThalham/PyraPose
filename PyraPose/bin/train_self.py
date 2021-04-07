@@ -422,18 +422,12 @@ def main(args=None):
     #)
 
     # debugging
-    transform_generator = random_transform_generator(
-        min_translation=(-0.2, -0.2),
-        max_translation=(0.2, 0.2),
-        min_scaling=(0.8, 0.8),
-        max_scaling=(1.2, 1.2),
-    )
     from ..preprocessing.data_linemod import LinemodDataset
     #benchmark(
     #    LinemodDataset().prefetch(tf.data.AUTOTUNE)
     #)
 
-    dataset = LinemodDataset(args.linemod_path, 'train', 'val', batch_size=args.batch_size)
+    dataset = LinemodDataset(args.linemod_path, 'train', 'target', batch_size=args.batch_size)
     dataset = tf.data.Dataset.range(args.workers).interleave(
         lambda _: dataset,
         #num_parallel_calls=tf.data.experimental.AUTOTUNE

@@ -174,6 +174,7 @@ def anchor_targets_bbox(
                 box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
                 box3D = np.reshape(box3D, (16))
                 calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
+
                 '''
                 pose = box3D.reshape((16)).astype(np.int16)
 
@@ -239,7 +240,7 @@ def anchor_targets_bbox(
             #rind = np.random.randint(0, 1000)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_RGB.jpg'
             #viz_img = np.concatenate([image_lr, np.repeat((depth + 125.0).astype(np.uint8)[:, :, np.newaxis], repeats=3, axis=2)], axis=1)
-            #cv2.imwrite(name, viz_img)
+            #cv2.imwrite(name, image_raw)
             #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
             #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
             #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'

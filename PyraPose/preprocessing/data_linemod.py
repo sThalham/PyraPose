@@ -456,16 +456,24 @@ class LinemodDataset(tf.data.Dataset):
             TDboxes[int(key), :, :] = three_box_solo
 
             transform_generator = random_transform_generator(
-                min_translation=(-0.2, -0.2),
-                max_translation=(0.2, 0.2),
-                min_scaling=(0.8, 0.8),
-                max_scaling=(1.2, 1.2),
+                min_translation=(0.0, 0.0),
+                max_translation=(0.0, 0.0),
+                min_scaling=(0.95, 0.95),
+                max_scaling=(1.05, 1.05),
             )
 
         def load_image(image_index):
             """ Load an image at the image_index.
             """
             path = image_paths[image_index]
+            path = path[:-4] + '_rgb' + path[-4:]
+
+            return read_image_bgr(path)
+
+        def load_image_real(image_index):
+            """ Load an image at the image_index.
+            """
+            path = image_paths_ss[image_index]
             path = path[:-4] + '_rgb' + path[-4:]
 
             return read_image_bgr(path)
@@ -587,20 +595,20 @@ class LinemodDataset(tf.data.Dataset):
                            range(0, len(order_real), batch_size)]
 
             batches_syn = np.arange(len(groups_syn))
-            batches_real = np.arange(len(groups_real))
 
             for btx in range(len(batches_syn)):
                 x_s, y_s, x_t = [], [], []
 
                 rbtx = np.random.choice(len(groups_real), size=1, replace=False)
                 x_s = [load_image(image_index) for image_index in groups_syn[btx]]
-                x_t = [load_image(image_index) for image_index in groups_real[rbtx[0]]]
+                x_t = [load_image_real(image_index) for image_index in groups_real[rbtx[0]]]
                 y_s = [load_annotations(image_index) for image_index in groups_syn[btx]]
 
                 assert (len(x_s) == len(y_s) == len(x_t))
 
                 # filter annotations
                 for index, (image, annotations) in enumerate(zip(x_s, y_s)):
+                    '''
                     # test x2 < x1 | y2 < y1 | x1 < 0 | y1 < 0 | x2 <= 0 | y2 <= 0 | x2 >= image.shape[1] | y2 >= image.shape[0]
                     invalid_indices = np.where(
                         (annotations['bboxes'][:, 2] <= annotations['bboxes'][:, 0]) |
@@ -617,6 +625,7 @@ class LinemodDataset(tf.data.Dataset):
                             if k == 'target_domain' or k == 'mask' or k == 'depth':
                                 continue
                             y_s[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
+                    '''
 
                     # transform a single group entry
                     x_s[index], y_s[index] = random_transform_group_entry(x_s[index], y_s[index])
@@ -647,7 +656,6 @@ class LinemodDataset(tf.data.Dataset):
 
                 # print(type(image_source_batch))
                 # print(type(target_batch))
-                # print(type(image_target_batch))
 
                 yield image_source_batch, target_batch, image_target_batch
 
