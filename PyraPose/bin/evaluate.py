@@ -115,6 +115,17 @@ def create_generator(args):
             config=args.config
         )
     elif args.dataset_type == 'custom':
+        from ..preprocessing.custom import CustomGenerator
+
+        validation_generator = CustomGenerator(
+            args.custom_path,
+            'test',
+            image_min_side=args.image_min_side,
+            image_max_side=args.image_max_side,
+            config=args.config
+        )
+
+    elif args.dataset_type == 'debug':
         # import here to prevent unnecessary dependency on cocoapi
         from ..preprocessing.custom import CustomGenerator
 
@@ -251,6 +262,10 @@ def main(args=None):
 
     elif args.dataset_type == 'custom':
         from ..utils.custom_eval import evaluate_custom
+        evaluate_custom(generator, model, args.score_threshold)
+
+    elif args.dataset_type == 'debug':
+        from ..utils.custom_debug import evaluate_custom
         evaluate_custom(generator, model, args.score_threshold)
 
     else:
