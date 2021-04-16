@@ -75,13 +75,13 @@ if __name__ == "__main__":
     #target = '/home/stefan/data/train_data/sanity_check/'
 
     # InDex
-    mesh_path = '/home/stefan/data/Meshes/CIT_color/'
+    mesh_path = '/home/stefan/data/Meshes/InDex/'
     background = '/home/stefan/data/datasets/cocoval2017/'
-    target = '/home/stefan/data/train_data/CIT/'
+    target = '/home/stefan/data/train_data/index_RV/'
 
     # metal Markus
 
-    objsperimg = 9
+    objsperimg = 4
 
     #print(open3d.__version__)
     #pcd = open3d.io.read_point_cloud("/media/stefan/CBED-050F/MMAssist/models_reconstructed/pcd/sidepanel_left/3D_model.pcd")
@@ -177,8 +177,8 @@ if __name__ == "__main__":
     min_box = [0, 0, 0, 0]
     min_box_area = 300 * 300
 
-    #for key, value in yaml.load(open(mesh_info)).items():
-    for key, value in json.load(open(mesh_info)).items():
+    for key, value in yaml.load(open(mesh_info)).items():
+    #for key, value in json.load(open(mesh_info)).items():
         fac = 0.001
         x_minus = value['min_x']
         y_minus = value['min_y']
@@ -263,13 +263,13 @@ if __name__ == "__main__":
     annoID = 0
     gloCo = 1
     times = 0
-    loops = 11
+    loops = 2
 
     syns = os.listdir(background)
     all_data = (len(syns) * loops) + 1
 
     for o_idx in range(1,loops):
-        for bg_img_path in syns:
+        for bg_img_path in syns[:4000]:
             start_t = time.time()
 
             bg_img_path_j = os.path.join(background, bg_img_path)
@@ -318,14 +318,18 @@ if __name__ == "__main__":
             for objID in obj_ids:
                 # sample rotation and append
                 R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
-                # CIT
+
                 z = 0.4 + np.random.rand() * 0.6
+
+                # CIT
+                '''
                 if objID == 2 or objID == 5:
                     x = (2 * (0.35 * z)) * np.random.rand() - (0.35 * z)  # 0.55 each side kinect
                     y = (2 * (0.2 * z)) * np.random.rand() - (0.2 * z)  # 0.40 each side kinect
                 else:
                     x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z)  # 0.55 each side kinect
                     y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z)  # 0.40 each side kinect
+                '''
                 # fronius
                 #z = 0.6 + np.random.rand() * 1.0
                 # InDex
@@ -350,20 +354,22 @@ if __name__ == "__main__":
                     x = (0.45 * z) * np.random.rand()
                     y = (0.3 * z) * np.random.rand()
                 '''
-                '''
+
                 # InDex cube
+                #x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z)  # 0.55 each side kinect
+                #y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z)  # 0.40 each side kinect
                 if right == False and top == False:
-                    x = ((-0.4 * z) * np.random.rand()) - 0.05
-                    y = ((-0.25 * z) * np.random.rand()) - 0.05
+                    x = ((-0.4 * z) * np.random.rand())# - 0.05
+                    y = ((-0.25 * z) * np.random.rand())# - 0.05
                 elif right == False and top == True:
-                    x = ((-0.4 * z) * np.random.rand()) - 0.05
-                    y = ((0.25 * z) * np.random.rand()) + 0.05
+                    x = ((-0.4 * z) * np.random.rand()) #- 0.05
+                    y = ((0.25 * z) * np.random.rand()) #+ 0.05
                 elif right == True and top == False:
-                    x = ((0.4 * z) * np.random.rand()) + 0.05
-                    y = ((-0.25 * z) * np.random.rand()) - 0.05
+                    x = ((0.4 * z) * np.random.rand()) #+ 0.05
+                    y = ((-0.25 * z) * np.random.rand())# - 0.05
                 elif right == True and top == True:
-                    x = ((0.4 * z) * np.random.rand()) + 0.05
-                    y = ((0.25 * z) * np.random.rand()) + 0.05
+                    x = ((0.4 * z) * np.random.rand()) #+ 0.05
+                    y = ((0.25 * z) * np.random.rand()) #+ 0.05
 
                 if seq_obj == 0 or seq_obj == 2:
                     top = True
@@ -372,7 +378,6 @@ if __name__ == "__main__":
                 if seq_obj > 0:
                     right = True
                 seq_obj += 1
-                '''
 
                 t = np.array([[x, y, z]]).T
                 rotations.append(R_ren)
@@ -411,6 +416,11 @@ if __name__ == "__main__":
                 light_color = [1.0, 1.0, 1.0]
                 light_ambient_weight = 0.2 + np.random.rand() * 0.5 # pretty good
                 #light_ambient_weight = 0.2 + np.random.rand() * 0.8
+
+                # InDex
+                light_diffuse_weight = 0.3 + np.random.rand() * 0.2
+                light_spec_weight = 0.6 + np.random.rand() * 0.4
+                light_spec_shine = 0.5 + np.random.rand() * 1.0
                 # Fronius
                 #if objID != 1:
                 #    light_diffuse_weight = 0.75 + np.random.rand() * 0.25
@@ -421,22 +431,22 @@ if __name__ == "__main__":
                 #    light_spec_weight = 0.5 + np.random.rand() * 0.4
                 #    light_spec_shine = np.random.rand() * 6.0
                 # CIT
-                if objID == 3 or objID == 6:
-                    light_diffuse_weight = 0.3 + np.random.rand() * 0.2
-                    light_spec_weight = 0.6 + np.random.rand() * 0.4
-                    light_spec_shine = 0.5 + np.random.rand() * 1.0
-                elif objID == 1: # fine with that
-                    light_diffuse_weight = 0.6 + np.random.rand() * 0.3
-                    light_spec_weight = 0.1 + np.random.rand() * 0.3
-                    light_spec_shine = 0.9 + np.random.rand() * 0.2
+                #if objID == 3 or objID == 6:
+                #    light_diffuse_weight = 0.3 + np.random.rand() * 0.2
+                #    light_spec_weight = 0.6 + np.random.rand() * 0.4
+                #    light_spec_shine = 0.5 + np.random.rand() * 1.0
+                #elif objID == 1: # fine with that
+                #    light_diffuse_weight = 0.6 + np.random.rand() * 0.3
+                #    light_spec_weight = 0.1 + np.random.rand() * 0.3
+                #    light_spec_shine = 0.9 + np.random.rand() * 0.2
                 #elif objID == 8 or objID == 9:
                 #    light_diffuse_weight = 0.25 + np.random.rand() * 0.2
                 #    light_spec_weight = 0.45 + np.random.rand() * 0.3
                 #    light_spec_shine = 0.5 + np.random.rand() * 0.75
-                else: # fine with that
-                    light_diffuse_weight = 0.4 + np.random.rand() * 0.3
-                    light_spec_weight = 0.4 + np.random.rand() * 0.6
-                    light_spec_shine = 0.5 + np.random.rand() * 0.25
+                #else: # fine with that
+                #    light_diffuse_weight = 0.4 + np.random.rand() * 0.3
+                #    light_spec_weight = 0.4 + np.random.rand() * 0.6
+                #    light_spec_shine = 0.5 + np.random.rand() * 0.25
 
 
                 ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
