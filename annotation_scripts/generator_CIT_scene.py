@@ -224,12 +224,11 @@ for num_set in np.arange(total_set):
         object_label.append(object_idx)
         obj_object = bpy.context.selected_objects[0]
         mat_obj = mat.copy()
-        #tree_mesh = mat_obj.node_tree
-        #nodes_mesh = tree_mesh.nodes
-        
+        tree_mesh = mat_obj.node_tree
+        nodes_mesh = tree_mesh.nodes
+        nodes_mesh['Attribute'].color = (0.5, 0.5, 0.5)
         
         obj_object.active_material = mat_obj
-        obj_object.active_material = mat
         obj_object.pass_index = object_idx +2 # don't add?
         print(object_idx)
         anchor_pose[object_idx+1,0] = random()*0.5 - 0.25
@@ -582,23 +581,23 @@ for num_set in np.arange(total_set):
     
     
 bpy.ops.object.select_all(action='DESELECT')
-    scene = bpy.context.scene
-    scene.objects.active = bpy.data.objects["template"]
-    for obj in scene.objects:
-        if obj.type == 'MESH':
-            if obj.name[:2] == '':
-                obj.select = False
-            elif obj.name[0:5] == 'Plane':
-                obj.select = False
-            elif obj.name[0:3] == 'dis':
-                obj.select = False
-            elif obj.name == 'InvisibleCube':
-                obj.select = False
-            else:
-                obj.select = True
-        if obj.name[0:6] == 'light_':
+scene = bpy.context.scene
+scene.objects.active = bpy.data.objects["template"]
+for obj in scene.objects:
+    if obj.type == 'MESH':
+        if obj.name[:2] == 'template':
+            obj.select = False
+        elif obj.name[0:5] == 'Plane':
+            obj.select = False
+        elif obj.name[0:3] == 'dis':
+            obj.select = False
+        elif obj.name == 'InvisibleCube':
+            obj.select = False
+        else:
             obj.select = True
+    if obj.name[0:6] == 'light_':
+        obj.select = True
 
-    bpy.ops.object.delete()    
+bpy.ops.object.delete()    
 
 print("Relax, all good and finished")
