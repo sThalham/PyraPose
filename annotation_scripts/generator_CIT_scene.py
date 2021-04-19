@@ -125,7 +125,7 @@ base_dir = "/home/stefan/data/Meshes/CIT_color"
 back_img_path = '/home/stefan/data/datasets/cocoval2017'
 all_backgrounds = os.listdir(back_img_path)
 total_set = 1 #10000 set of scenes, each set has identical objects with varied poses to anchor pose (+-15)
-pair_set = 3 #number of pair scene for each set, 10
+pair_set = 1 #number of pair scene for each set, 10
 sample_dir = '/home/stefan/data/renderings/CIT_render' #directory for temporary files (cam_L, cam_R, masks..~)
 target_dir = '/home/stefan/data/renderings/CIT_render/patches'
 index=0
@@ -213,33 +213,60 @@ for num_set in np.arange(total_set):
     anchor_pose = np.zeros(((num_distractor + num_object+1),6)) 
     object_idx = 0
     
-    print(num_distractor)
-    print(num_object)
-    print(anchor_pose.shape)
-    
     for file_idx in ObjDraw:
         file_model = model_file[file_idx]
         solo_model = model_solo[file_idx]
         imported_object = bpy.ops.import_mesh.ply(filepath=file_model, filter_glob="*.ply", files=[{"name":solo_model, "name":solo_model}], directory=root)
         object_label.append(object_idx)
         obj_object = bpy.context.selected_objects[0]
+        
         mat_obj = mat.copy()
-        tree_mesh = mat_obj.node_tree
-        nodes_mesh = tree_mesh.nodes
-        nodes_mesh['Attribute'].color = (0.5, 0.5, 0.5)
+        nodes = mat_obj.node_tree.nodes
+        pbr = nodes.get("Principled BSDF")
+        attr = nodes.get("Attribute")
+        if obj_object.name[:2] == '01':
+            #pbr.inputs[0].default_value[:3] = (0.66, 0.66, 0.66)
+            pbr.inputs[4].default_value = 0.1 # Metallic
+            pbr.inputs[5].default_value = 0.1 # specular
+            pbr.inputs[6].default_value = 1.0 # specular tint
+            pbr.inputs[7].default_value = 0.4 # reoghness
+            # plastics 1.3 - 1.6, higly refractive ~ 1.75
+            # polished stainless steel 2.75
+            ior = 1.3
+            pbr.inputs[14].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # IOR
+        elif obj_object.name[:2] == '03' or obj_object.name[:2] == '06':
+            #pbr.inputs[0].default_value[:3] = (0.879, 0.874, 0.859)
+            pbr.inputs[4].default_value = 0.95 # Metallic
+            pbr.inputs[5].default_value = 0.9 # specular
+            pbr.inputs[6].default_value = 0.2 # specular tint
+            pbr.inputs[7].default_value = 0.05 # reoghness
+            # plastics 1.3 - 1.6, higly refractive ~ 1.75
+            # polished stainless steel 2.75
+            ior = 1.6
+            pbr.inputs[14].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08
+        else:
+            #pbr.inputs[0].default_value[:3] = (0.6, 0.6, 0.6)
+            pbr.inputs[4].default_value = 0.4 # Metallic
+            pbr.inputs[5].default_value = 0.3 # specular
+            pbr.inputs[6].default_value = 0.8 # specular tint
+            pbr.inputs[7].default_value = 0.1 # reoghness
+            # plastics 1.3 - 1.6, higly refractive ~ 1.75
+            # polished stainless steel 2.75
+            ior = 2.75
+            pbr.inputs[14].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08
         
         obj_object.active_material = mat_obj
+        
         obj_object.pass_index = object_idx +2 # don't add?
-        print(object_idx)
-        anchor_pose[object_idx+1,0] = random()*0.5 - 0.25
-        anchor_pose[object_idx+1, 1] = random()*0.5 - 0.25
+        #anchor_pose[object_idx+1,0] = random()*0.5 - 0.25
+        #anchor_pose[object_idx+1, 1] = random()*0.5 - 0.25
+        anchor_pose[object_idx+1,0] = normal(loc=0, scale=0.05)
+        anchor_pose[object_idx+1, 1] = normal(loc=0, scale=0.05)
         anchor_pose[object_idx+1,2] = 0.3 + random()*0.5
         anchor_pose[object_idx+1,3] = radians(random()*360.0)
         anchor_pose[object_idx+1,4] = radians(random()*360.0)
         anchor_pose[object_idx+1,5] = radians(random()*360.0)
-        print(anchor_pose[object_idx+1, :])
         object_idx += 1
-        print(obj_object, obj_object.pass_index, object_idx)
         
     print("FOREGROUND IMPORTED")
     # Background objects
@@ -253,14 +280,15 @@ for num_set in np.arange(total_set):
         obj_object.hide_render = False
         obj_object.active_material = mat
         obj_object.pass_index = object_idx+2
-        anchor_pose[object_idx+1,0] = random()*0.5 - 0.25
-        anchor_pose[object_idx+1, 1] = random()*0.5 - 0.25
+        #anchor_pose[object_idx+1,0] = random()*0.5 - 0.25
+        #anchor_pose[object_idx+1, 1] = random()*0.5 - 0.25
+        anchor_pose[object_idx+1,0] = normal(loc=0, scale=0.05)
+        anchor_pose[object_idx+1, 1] = normal(loc=0, scale=0.05)
         anchor_pose[object_idx+1,2] = 0.3 + random()*0.5
         anchor_pose[object_idx+1,3] = radians(random()*360.0)
         anchor_pose[object_idx+1,4] = radians(random()*360.0)
         anchor_pose[object_idx+1,5] = radians(random()*360.0)
         object_idx += 1
-        print(obj_object, obj_object.pass_index, object_idx)
  
     # FOR BACKGROUND OBJECTS 
     print("BACKGROUND IMPORTED")
@@ -335,7 +363,7 @@ for num_set in np.arange(total_set):
 
             if obj.type == 'CAMERA' and  obj.name=='cam_L':
                 obj_object = bpy.data.objects[obj.name]
-                obj_object.location.z = random()*0.25+0.45  #1.0-2.5
+                obj_object.location.z = random()*0.2+0.5  #1.0-2.5
                 
         print("start running physics")    
 
@@ -350,7 +378,7 @@ for num_set in np.arange(total_set):
             if f <= 1:
                 continue
             
-        print("pyshics ran")
+        print("physics ran")
                 
         tree = bpy.context.scene.node_tree
         nodes = tree.nodes
@@ -361,29 +389,23 @@ for num_set in np.arange(total_set):
         prefix='{:08}_'.format(index)
         index+=1
         
-        scene.cycles.samples=20
+        scene.cycles.samples=60
         
         # randomize lights and position
-        light_numbers = list(range(1,3))
-        light_number = np.bincount(light_numbers)
-        lights = np.random.choice(np.arange(len(light_number)), 1, p=light_number / len(light_numbers), replace=False)
-        lights = np.asscalar(lights)
-    
-        for lamp in range(1, lights):
+        lights = np.random.randint(low=2, high=4)
+        for lamp in range(0, lights):
             lamp_types = ['POINT', 'SPOT', 'HEMI', 'AREA']
             lamp_type = Rchoice(lamp_types)
-            print('lamp_type: ', lamp_type)
             lamp_name = 'light_' + str(lamp)
-            print('lamp_name: ', lamp_name)
             lamp_position = ((random()*5.0-2.5), (random()*2.5-1.25), (random()*1.5+1.5))
-            print('lamp_position: ', lamp_position)
             lamp_data = bpy.data.lamps.new(name=lamp_name, type=lamp_type)
             lamp_object = bpy.data.objects.new(name=lamp_name, object_data=lamp_data)
             scene.objects.link(lamp_object)
             lamp_object.location = lamp_position
             lamp_object.select = True
-            #scene.objects.active = lamp_object
-        
+            bpy.data.lamps[lamp_name].use_nodes =  True
+            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (100.0 + random()* 50.0) * (1/lights) # to normalize scene illuminations
+            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.1 + 0.9, random() * 0.1 + 0.9, random() * 0.1 + 0.9)
 
         maskfile = os.path.join(target_dir+'/mask' , 'mask.png')  # correspondence mask
         rgbfile= os.path.join(target_dir+"/rgb", prefix+'rgb.png')   # rgb image
@@ -407,7 +429,7 @@ for num_set in np.arange(total_set):
                     node= nodes['rgbimage.001']
                     node.file_slots[0].path = ob.name
                     node_mix = nodes['Render Layers']
-                    link_rgb = tree.links.new(node_mix.outputs["DiffCol"], node.inputs[0])
+                    link_rgb = tree.links.new(node_mix.outputs["Image"], node.inputs[0])
                     node.base_path=sample_dir+'/rgb/'
                   
                     scene.render.filepath = file_L
@@ -585,7 +607,7 @@ scene = bpy.context.scene
 scene.objects.active = bpy.data.objects["template"]
 for obj in scene.objects:
     if obj.type == 'MESH':
-        if obj.name[:2] == 'template':
+        if obj.name == 'template':
             obj.select = False
         elif obj.name[0:5] == 'Plane':
             obj.select = False
