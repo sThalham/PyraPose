@@ -180,7 +180,7 @@ def to3D_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -217,7 +217,7 @@ def load_pcd(cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
+
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -1075,22 +1075,20 @@ def evaluate_linemod(generator, model, threshold=0.05):
             # print('components: ', components)
             ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)
             bgm = BayesianGaussianMixture(n_components=components, random_state=0).fit(pose_votes)
-            smallest_indixes = np.argpartition(bgm.weights_, 2)
+            #smallest_indixes = np.argpartition(bgm.weights_, 2)
 
-            if components > 3:
-                hyps = bgm.means_[smallest_indixes[2:], :]
-                weights = bgm.weights_[smallest_indixes[2:]]
-                alphas = bgm.weight_concentration_[0][smallest_indixes[2:]]
-                betas = bgm.weight_concentration_[1][smallest_indixes[2:]]
-                covars = bgm.covariances_[smallest_indixes[2:], :, :]
-            else:
-                hyps = bgm.means_
-                weights = bgm.weights_
-                alphas = bgm.weight_concentration_[0]
-                betas = bgm.weight_concentration_[1]
-                covars = bgm.covariances_
-
-            
+            #if components > 3:
+            #    hyps = bgm.means_[smallest_indixes[2:], :]
+            #    weights = bgm.weights_[smallest_indixes[2:]]
+            #    alphas = bgm.weight_concentration_[0][smallest_indixes[2:]]
+            #    betas = bgm.weight_concentration_[1][smallest_indixes[2:]]
+            #    covars = bgm.covariances_[smallest_indixes[2:], :, :]
+            #else:
+            hyps = bgm.means_
+            weights = bgm.weights_
+            alphas = bgm.weight_concentration_[0]
+            betas = bgm.weight_concentration_[1]
+            covars = bgm.covariances_
 
             covs = []
             covs_abs = []
@@ -1104,12 +1102,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov0)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr0 = D_inv @ cov0 @ D_inv
-            off_diag = corr0.flatten()[off_diag_idx]
-            corrs.append(off_diag)
-            cov_nd = corr0
-            cov_nd[np.diag_indices(16)] = 0
-            covs.append(np.sum(cov_nd)/2)
-            covs_abs.append(np.sum(np.abs(cov_nd))/2)
+            correlation = (np.sum(corr0) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+            #off_diag = corr0.flatten()[off_diag_idx]
+            #corrs.append(off_diag)
+            #cov_nd = corr0
+            #cov_nd[np.diag_indices(16)] = 0
+            #covs.append(np.sum(cov_nd)/2)
+            #covs_abs.append(np.sum(np.abs(cov_nd))/2)
 
             cov1 = bgm.covariances_[1, :, :]
             n_cov1 = np.diagonal(cov1)
@@ -1117,12 +1117,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov1)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr1 = D_inv @ cov1 @ D_inv
-            off_diag = corr1.flatten()[off_diag_idx]
-            corrs.append(off_diag)
-            cov_nd = corr1
-            cov_nd[np.diag_indices(16)] = 0
-            covs.append(np.sum(cov_nd) / 2)
-            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
+            correlation = (np.sum(corr1) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+            #off_diag = corr1.flatten()[off_diag_idx]
+            #corrs.append(off_diag)
+            #cov_nd = corr1
+            #cov_nd[np.diag_indices(16)] = 0
+            #covs.append(np.sum(cov_nd) / 2)
+            #covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov2 = bgm.covariances_[2, :, :]
             n_cov2 = np.diagonal(cov2)
@@ -1130,12 +1132,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov2)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr2 = D_inv @ cov2 @ D_inv
-            off_diag = corr2.flatten()[off_diag_idx]
-            corrs.append(off_diag)
-            cov_nd = corr2
-            cov_nd[np.diag_indices(16)] = 0
-            covs.append(np.sum(cov_nd) / 2)
-            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
+            correlation = (np.sum(corr2) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+            #off_diag = corr2.flatten()[off_diag_idx]
+            #corrs.append(off_diag)
+            #cov_nd = corr2
+            #cov_nd[np.diag_indices(16)] = 0
+            #covs.append(np.sum(cov_nd) / 2)
+            #covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov3 = bgm.covariances_[3, :, :]
             n_cov3 = np.diagonal(cov3)
@@ -1143,12 +1147,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov3)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr3 = D_inv @ cov3 @ D_inv
-            off_diag = corr3.flatten()[off_diag_idx]
-            corrs.append(off_diag)
-            cov_nd = corr3
-            cov_nd[np.diag_indices(16)] = 0
-            covs.append(np.sum(cov_nd) / 2)
-            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
+            correlation = (np.sum(corr3) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+            #off_diag = corr3.flatten()[off_diag_idx]
+            #corrs.append(off_diag)
+            #cov_nd = corr3
+            #cov_nd[np.diag_indices(16)] = 0
+            #covs.append(np.sum(cov_nd) / 2)
+            #covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov4 = bgm.covariances_[4, :, :]
             n_cov4 = np.diagonal(cov4)
@@ -1156,12 +1162,14 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov4)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr4 = D_inv @ cov4 @ D_inv
-            off_diag = corr4.flatten()[off_diag_idx]
-            corrs.append(off_diag)
-            cov_nd = corr4
-            cov_nd[np.diag_indices(16)] = 0
-            covs.append(np.sum(cov_nd) / 2)
-            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
+            correlation = (np.sum(corr4) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+            #off_diag = corr4.flatten()[off_diag_idx]
+            #corrs.append(off_diag)
+            #cov_nd = corr4
+            #cov_nd[np.diag_indices(16)] = 0
+            #covs.append(np.sum(cov_nd) / 2)
+            #covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
 
             cov5 = bgm.covariances_[5, :, :]
             n_cov5 = np.diagonal(cov5)
@@ -1169,16 +1177,38 @@ def evaluate_linemod(generator, model, threshold=0.05):
             np.fill_diagonal(D, n_cov5)
             D_inv = np.linalg.inv(np.sqrt(D))
             corr5 = D_inv @ cov5 @ D_inv
-            off_diag = corr5.flatten()[off_diag_idx]
-            corrs.append(off_diag)
-            cov_nd = corr5
-            cov_nd[np.diag_indices(16)] = 0
-            covs.append(np.sum(cov_nd) / 2)
-            covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
+            correlation = (np.sum(corr5) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+            #off_diag = corr5.flatten()[off_diag_idx]
+            #corrs.append(off_diag)
+            #cov_nd = corr5
+            #cov_nd[np.diag_indices(16)] = 0
+            #covs.append(np.sum(cov_nd) / 2)
+            #covs_abs.append(np.sum(np.abs(cov_nd)) / 2)
+
+            cov6 = bgm.covariances_[6, :, :]
+            n_cov6 = np.diagonal(cov6)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov6)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr6 = D_inv @ cov6 @ D_inv
+            correlation = (np.sum(corr6) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+
+            cov7 = bgm.covariances_[7, :, :]
+            n_cov7 = np.diagonal(cov7)
+            D = np.eye(16)
+            np.fill_diagonal(D, n_cov7)
+            D_inv = np.linalg.inv(np.sqrt(D))
+            corr7 = D_inv @ cov7 @ D_inv
+            correlation = (np.sum(corr7) - 16) / (np.power(16, 2) - 16)
+            corrs.append(correlation)
+
             cov_max = np.argmax(np.array([np.sum(np.abs(corrs[0])), np.sum(np.abs(corrs[1])), np.sum(np.abs(corrs[2])), np.sum(np.abs(corrs[3])), np.sum(np.abs(corrs[4])), np.sum(np.abs(corrs[5]))]))
 
-            covars = np.concatenate([covars[:, 0, 0][:, np.newaxis], covars[:, 1, 1][:, np.newaxis]], axis=1)
-            covars = (covars * col_std[:2]) * 5.0
+            #covars = np.concatenate([covars[:, 0, 0][:, np.newaxis], covars[:, 1, 1][:, np.newaxis]], axis=1)
+            #covars = (covars * col_std[:2]) * 5.0
+
 
             #print(covs)
             #print(cov_max)
@@ -1238,6 +1268,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             highest_ind = 10
 
             #k_hyp = 1
+            print(k_hyp)
             for pdx in range(k_hyp):
                 est_points = np.ascontiguousarray(votes[pdx, :], dtype=np.float32).reshape((8, 1, 2))
                 ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
@@ -1295,7 +1326,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
                 est3D = toPix_array(eDbox)
                 eDbox = np.reshape(est3D, (16))
                 pose = eDbox.astype(np.uint16)
-                box_dev = np.linalg.norm(eDbox - pose_votes)
+                box_dev = np.linalg.norm(eDbox - votes[pdx, :])
                 box_devs.append(box_dev)
 
                 #print(' ')
@@ -1305,7 +1336,8 @@ def evaluate_linemod(generator, model, threshold=0.05):
             #med_box_dev = np.median(box_devs)
             #below_median = np.where(box_devs < med_box_dev)
             #print(below_median)
-            #filtered_hyps = hyp_indices[0][below_median]
+            #filtered_hyps = hyp_indices[0][below_medi            print(hyps.shape)
+            votes = (hyps * col_std) + col_meanan]
             #print(len(box_devs))
             #ind_choice = np.argmin(box_devs)
             #print(filtered_votes.shape)
@@ -1362,7 +1394,11 @@ def evaluate_linemod(generator, model, threshold=0.05):
             fig.colorbar(i6, ax=axs[2 ,1])
             '''
 
-            truePoses[int(true_cat)] += true_pose
+            top_error = np.array(errors)[np.argmin(np.array(corrs))]
+            if top_error < model_dia[true_cat] * 0.1:
+                truePoses[int(true_cat)] += 1
+
+            #truePoses[int(true_cat)] += true_pose
             print(' ')
             #print('min error id: ', highest_ind)
             # print('weights: ', weights)
@@ -1380,17 +1416,23 @@ def evaluate_linemod(generator, model, threshold=0.05):
 
             #plt.show()
 
-            #norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
-            #errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
-            #retvals_norm = np.asarray(retvals) * (1 / np.nanmax(np.asarray(retvals)))
+            '''
+            norm_thres = np.asarray(model_dia[true_cat] * 0.1) * (1 / max(np.asarray(errors)))
+            errors_norm = np.asarray(errors) * (1 / np.nanmax(np.asarray(errors)))
+            retvals_norm = np.asarray(box_devs) * (1 / np.nanmax(np.asarray(box_devs)))
+            corrs_norm = np.asarray(corrs) * (1 / np.nanmax(np.asarray(corrs)))
 
-            #sorting = np.argsort(errors_norm)
-            #filtered_errors = errors_norm[sorting]
-            #filtered_retvals = retvals_norm[sorting]
-            #x_axis = range(len(errors_norm))
-            #plt.plot(x_axis, filtered_errors, 'bo:'bgm.weight_concentration_[0], linewidth=2, markersize=3, label="errors per hypothesis")
-            #plt.plot(x_axis, filtered_retvals, 'rv-', linewidth=2, markersize=3, label="retvals")
-            #plt.show()
+            sorting = np.argsort(corrs_norm)
+            filtered_errors = errors_norm[sorting]
+            filtered_retvals = retvals_norm[sorting]
+            filtered_corrs = corrs_norm[sorting]
+            x_axis = range(len(errors_norm))
+            plt.plot(x_axis, filtered_errors, 'ro:', linewidth=2, markersize=3, label="errors per hypothesis")
+            #plt.plot(x_axis, filtered_retvals, 'bv-', linewidth=2, markersize=3, label="boxdevs")
+            plt.plot(x_axis, filtered_corrs, 'bv-', linewidth=2, markersize=3, label="corrs")
+            plt.axhline(y=norm_thres, color='r', linestyle='-', label="ADD-0.1 threshold")
+            plt.show()
+            '''
 
             ###################################
             # other experiments
@@ -1638,7 +1680,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             plt.imshow(image_raw)
             plt.show()
             '''
-
+            '''
             # visualize covariances 
             max_x = int(np.max(tDbox[0]) + 20)
             min_x = int(np.min(tDbox[0]) - 20)
@@ -1653,6 +1695,7 @@ def evaluate_linemod(generator, model, threshold=0.05):
             name = '/home/stefan/PyraPose_viz/detection_LM.jpg'
             cv2.imwrite(name, image_crop)
             print('break')
+            '''
 
     recall = np.zeros((16), dtype=np.float32)
     precision = np.zeros((16), dtype=np.float32)
