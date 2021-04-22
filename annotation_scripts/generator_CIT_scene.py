@@ -225,35 +225,35 @@ for num_set in np.arange(total_set):
         pbr = nodes.get("Principled BSDF")
         attr = nodes.get("Attribute")
         if obj_object.name[:2] == '01':
+            ior = 1.3
             #pbr.inputs[0].default_value[:3] = (0.66, 0.66, 0.66)
-            pbr.inputs[4].default_value = 0.1 # Metallic
-            pbr.inputs[5].default_value = 0.1 # specular
-            pbr.inputs[6].default_value = 1.0 # specular tint
+            pbr.inputs[4].default_value = 0.0 # Metallic
+            pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
+            pbr.inputs[6].default_value = 0.9 # specular tint
             pbr.inputs[7].default_value = 0.4 # reoghness
             # plastics 1.3 - 1.6, higly refractive ~ 1.75
-            # polished stainless steel 2.75
-            ior = 1.3
-            pbr.inputs[14].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # IOR
+            # polished stainless steel 2.75      
+            #pbr.inputs[14].default_value = ior
         elif obj_object.name[:2] == '03' or obj_object.name[:2] == '06':
+            ior = 2.75
             #pbr.inputs[0].default_value[:3] = (0.879, 0.874, 0.859)
-            pbr.inputs[4].default_value = 0.95 # Metallic
-            pbr.inputs[5].default_value = 0.9 # specular
+            pbr.inputs[4].default_value = 1.0 # Metallic
+            pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
             pbr.inputs[6].default_value = 0.2 # specular tint
-            pbr.inputs[7].default_value = 0.05 # reoghness
+            pbr.inputs[7].default_value = random() * 0.2 # reoghness
             # plastics 1.3 - 1.6, higly refractive ~ 1.75
             # polished stainless steel 2.75
-            ior = 1.6
-            pbr.inputs[14].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08
+            #pbr.inputs[14].default_value = ior
         else:
-            #pbr.inputs[0].default_value[:3] = (0.6, 0.6, 0.6)
-            pbr.inputs[4].default_value = 0.4 # Metallic
-            pbr.inputs[5].default_value = 0.3 # specular
+            pbr.inputs[0].default_value[:3] = (0.7725, 0.7843, 0.8078)
+            ior = 1.6
+            pbr.inputs[4].default_value = 0.0 # Metallic
+            pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
             pbr.inputs[6].default_value = 0.8 # specular tint
             pbr.inputs[7].default_value = 0.1 # reoghness
             # plastics 1.3 - 1.6, higly refractive ~ 1.75
             # polished stainless steel 2.75
-            ior = 2.75
-            pbr.inputs[14].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08
+            #pbr.inputs[14].default_value = ior
         
         obj_object.active_material = mat_obj
         
@@ -405,7 +405,7 @@ for num_set in np.arange(total_set):
             lamp_object.select = True
             bpy.data.lamps[lamp_name].use_nodes =  True
             bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (100.0 + random()* 50.0) * (1/lights) # to normalize scene illuminations
-            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.1 + 0.9, random() * 0.1 + 0.9, random() * 0.1 + 0.9)
+            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.1 + 0.9, random() * 0.2 + 0.8)
 
         maskfile = os.path.join(target_dir+'/mask' , 'mask.png')  # correspondence mask
         rgbfile= os.path.join(target_dir+"/rgb", prefix+'rgb.png')   # rgb image
