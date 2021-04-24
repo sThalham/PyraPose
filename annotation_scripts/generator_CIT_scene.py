@@ -225,7 +225,7 @@ for num_set in np.arange(total_set):
         pbr = nodes.get("Principled BSDF")
         attr = nodes.get("Attribute")
         if obj_object.name[:2] == '01':
-            ior = 1.3
+            ior = 1.49 # Polypropylen
             #pbr.inputs[0].default_value[:3] = (0.66, 0.66, 0.66)
             pbr.inputs[4].default_value = 0.0 # Metallic
             pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
@@ -239,14 +239,14 @@ for num_set in np.arange(total_set):
             #pbr.inputs[0].default_value[:3] = (0.879, 0.874, 0.859)
             pbr.inputs[4].default_value = 1.0 # Metallic
             pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
-            pbr.inputs[6].default_value = 0.2 # specular tint
-            pbr.inputs[7].default_value = random() * 0.2 # reoghness
+            pbr.inputs[6].default_value = 0.1 # specular tint
+            pbr.inputs[7].default_value = random() * 0.4 # reoghness
             # plastics 1.3 - 1.6, higly refractive ~ 1.75
             # polished stainless steel 2.75
             #pbr.inputs[14].default_value = ior
         else:
             pbr.inputs[0].default_value[:3] = (0.7725, 0.7843, 0.8078)
-            ior = 1.6
+            ior = 1.49 # Polypropylen
             pbr.inputs[4].default_value = 0.0 # Metallic
             pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
             pbr.inputs[6].default_value = 0.8 # specular tint
@@ -389,7 +389,7 @@ for num_set in np.arange(total_set):
         prefix='{:08}_'.format(index)
         index+=1
         
-        scene.cycles.samples=60
+        scene.cycles.samples=100
         
         # randomize lights and position
         lights = np.random.randint(low=2, high=4)
@@ -397,18 +397,23 @@ for num_set in np.arange(total_set):
             lamp_types = ['POINT', 'SPOT', 'HEMI', 'AREA']
             lamp_type = Rchoice(lamp_types)
             lamp_name = 'light_' + str(lamp)
-            lamp_position = ((random()*5.0-2.5), (random()*2.5-1.25), (random()*1.5+1.5))
+            lamp_position = ((random()*5.0-2.5), (random()*2.5-1.25), (random()*2.0+1.5))
             lamp_data = bpy.data.lamps.new(name=lamp_name, type=lamp_type)
             lamp_object = bpy.data.objects.new(name=lamp_name, object_data=lamp_data)
             scene.objects.link(lamp_object)
             lamp_object.location = lamp_position
             lamp_object.select = True
             bpy.data.lamps[lamp_name].use_nodes =  True
+            print('lmap type: ', lamp_type)
             bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (100.0 + random()* 50.0) * (1/lights) # to normalize scene illuminations
-            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.1 + 0.9, random() * 0.2 + 0.8)
+            print('lamp intensity: ', bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value)
+            #bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.1 + 0.9, random() * 0.2 + 0.8)
+            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.06 + 0.94, random() * 0.1 + 0.9)
+            print('lamp color: ', bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3])
 
         maskfile = os.path.join(target_dir+'/mask' , 'mask.png')  # correspondence mask
         rgbfile= os.path.join(target_dir+"/rgb", prefix+'rgb.png')   # rgb image
+
 
         for ob in scene.objects:
             if ob.type == 'CAMERA':          

@@ -180,7 +180,7 @@ if __name__ == "__main__":
     spec_objs = [5, 8, 9, 10, 21]
 
     root = "/home/stefan/data/datasets/lm_test_all/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/linemod_PBR_BOP/'
+    target = '/home/stefan/data/train_data/linemod_PBR_BOP_50/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
@@ -361,14 +361,18 @@ if __name__ == "__main__":
             #valtest = None
             #if split_count < 1:
 
-            if int(samp) in real_image_list:
+            #that's for official real-syn split
+            #if int(samp) in real_image_list:
+            # 50-50 split
+            domain = 0
+            if domain == 0:
                 fileName = target + 'images/' + 'target/' + imgNam[:-4] + '_rgb.png'
                 valtest = 'target'
-                split_count += 1
+                domain = 1
             else:
-                fileName = target + 'images/' + 'test/' + imgNam[:-4] + '_rgb.png'
+                fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_rgb.png'
                 split_count = 0
-                valtest = 'test'
+                valtest = 'val'
 
             myFile = Path(fileName)
             if myFile.exists():
@@ -493,7 +497,7 @@ if __name__ == "__main__":
                         "feature_visibility": visib_fract
                     }
                     dict_val["annotations"].append(tempTA)
-                elif valtest == 'test':
+                elif valtest == 'val':
                     annoID_val = annoID_val + 1
                     tempTA = {
                         "id": annoID_test,
@@ -519,7 +523,7 @@ if __name__ == "__main__":
                     "name": iname,
                 }
                 dict_val["licenses"].append(tempTL)
-            elif valtest == 'test':
+            elif valtest == 'val':
                 tempTL = {
                     "url": "https://bop.felk.cvut.cz/home/",
                     "id": img_id,
@@ -546,7 +550,7 @@ if __name__ == "__main__":
                     "id": img_id,
                 }
                 dict_val["images"].append(tempTV)
-            elif valtest == 'test':
+            elif valtest == 'val':
                 tempTV = {
                     "license": 2,
                     "url": "https://bop.felk.cvut.cz/home/",
@@ -637,7 +641,7 @@ if __name__ == "__main__":
     valAnno = target + 'annotations/instances_target.json'
     with open(valAnno, 'w') as fpT:
         json.dump(dict_val, fpT)
-    testAnno = target + 'annotations/instances_test.json'
+    testAnno = target + 'annotations/instances_val.json'
     with open(testAnno, 'w') as fpT:
         json.dump(dict_test, fpT)
 
