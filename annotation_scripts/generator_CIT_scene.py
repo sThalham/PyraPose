@@ -236,6 +236,7 @@ for num_set in np.arange(total_set):
             #pbr.inputs[14].default_value = ior
         elif obj_object.name[:2] == '03' or obj_object.name[:2] == '06':
             ior = 2.75
+            # stainless steel 224, 223, 219
             #pbr.inputs[0].default_value[:3] = (0.879, 0.874, 0.859)
             pbr.inputs[4].default_value = 1.0 # Metallic
             pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
@@ -377,8 +378,17 @@ for num_set in np.arange(total_set):
             scene.frame_set(f)
             if f <= 1:
                 continue
-            
+              
         print("physics ran")
+              
+              
+        print('Spawn lamps')
+        for lam in bpy.data.lamps:
+            print(lam.name)
+            lam.select = True
+        bpy.data.lamps.delete()
+            
+        
                 
         tree = bpy.context.scene.node_tree
         nodes = tree.nodes
@@ -391,10 +401,48 @@ for num_set in np.arange(total_set):
         
         scene.cycles.samples=100
         
+        print(list(bpy.data.lamps))
+        
+        lamp_types = ['SPOT', 'HEMI', 'AREA']
+        lamp_type = 'AREA'
+        lamp_name = 'light_1'
+        lamp_position = (2.5, 0.0, 2.75)
+        lamp_data = bpy.data.lamps.new(name=lamp_name, type=lamp_type)
+        lamp_object = bpy.data.objects.new(name=lamp_name, object_data=lamp_data)
+        scene.objects.link(lamp_object)
+        lamp_object.select = True
+        lamp_object.location = lamp_position
+        if lamp_type == 'AREA':
+                bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
+                bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
+                bpy.data.lamps[lamp_name].size_y = 0.1
+        
+        bpy.data.lamps[lamp_name].use_nodes =  True
+        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (60.0) # to normalize scene illuminations
+        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (1.0, 1.0, 1.0)
+        lamp_object.select = False
+        
+        lamp_name = 'light_2'
+        lamp_position = (-2.5, 0.0, 2.75)
+        lamp_data2 = bpy.data.lamps.new(name=lamp_name, type=lamp_type)
+        lamp_object2 = bpy.data.objects.new(name=lamp_name, object_data=lamp_data2)
+        scene.objects.link(lamp_object2)
+        lamp_object2.location = lamp_position
+        lamp_object2.select = True
+        if lamp_type == 'AREA':
+                bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
+                bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
+                bpy.data.lamps[lamp_name].size_y = 0.1
+        
+        bpy.data.lamps[lamp_name].use_nodes =  True
+        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (60.0) # to normalize scene illuminations
+        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (1.0, 1.0, 1.0)
+        '''
+        print('too far')
         # randomize lights and position
         lights = np.random.randint(low=2, high=4)
         for lamp in range(0, lights):
-            lamp_types = ['POINT', 'SPOT', 'HEMI', 'AREA']
+            lamp_types = ['SPOT', 'HEMI', 'AREA']
             lamp_type = Rchoice(lamp_types)
             lamp_name = 'light_' + str(lamp)
             lamp_position = ((random()*5.0-2.5), (random()*2.5-1.25), (random()*2.0+1.5))
@@ -402,6 +450,10 @@ for num_set in np.arange(total_set):
             lamp_object = bpy.data.objects.new(name=lamp_name, object_data=lamp_data)
             scene.objects.link(lamp_object)
             lamp_object.location = lamp_position
+            if lamp_type == 'AREA':
+                bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
+                bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
+                bpy.data.lamps[lamp_name].size_y = 0.1
             lamp_object.select = True
             bpy.data.lamps[lamp_name].use_nodes =  True
             print('lmap type: ', lamp_type)
@@ -410,6 +462,7 @@ for num_set in np.arange(total_set):
             #bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.1 + 0.9, random() * 0.2 + 0.8)
             bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.06 + 0.94, random() * 0.1 + 0.9)
             print('lamp color: ', bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3])
+        '''
 
         maskfile = os.path.join(target_dir+'/mask' , 'mask.png')  # correspondence mask
         rgbfile= os.path.join(target_dir+"/rgb", prefix+'rgb.png')   # rgb image
