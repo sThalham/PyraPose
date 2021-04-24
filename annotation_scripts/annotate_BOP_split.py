@@ -263,6 +263,7 @@ if __name__ == "__main__":
     count = 0
     syns = os.listdir(root)
 
+    split_count = 0
     for set in syns:
         if '0' not in set:
             continue
@@ -288,7 +289,6 @@ if __name__ == "__main__":
         with open(infoPath, 'r') as streamINFO:
             gtjson = json.load(streamINFO)
 
-        split_count = 0
         for samp in os.listdir(rgbPath):
 
             imgname = samp
@@ -364,11 +364,10 @@ if __name__ == "__main__":
             #that's for official real-syn split
             #if int(samp) in real_image_list:
             # 50-50 split
-            domain = 0
-            if domain == 0:
+            if split_count == 0:
                 fileName = target + 'images/' + 'target/' + imgNam[:-4] + '_rgb.png'
                 valtest = 'target'
-                domain = 1
+                split_count = 1
             else:
                 fileName = target + 'images/' + 'val/' + imgNam[:-4] + '_rgb.png'
                 split_count = 0
