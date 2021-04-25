@@ -105,6 +105,12 @@ def getVisibleBoundingBox(objectPassIndex):
     return bb, bbox
 
 
+print('---------------')
+print('###############')
+print('---------------')
+# Quasi Main
+print('Setting variables and clear memory')
+
 # 23.4.2018
 # render image 350 of object 23
 # cam_K: [1076.74064739, 0.0, 215.98264967, 0.0, 1075.17825536, 204.59181836, 0.0, 0.0, 1.0]
@@ -159,6 +165,10 @@ dis_objects = ['dis1_1', 'dis1_2', 'dis1_3', 'dis2_1', 'dis2_2', 'dis2_3']
 
 # FOR BACKGROUND OBJECTS  
 
+print('Done')
+print('----------------')
+print('Start looping through scenes')
+
 iteration_counter = 0
 for num_set in np.arange(total_set):
     bpy.ops.object.select_all(action='DESELECT')
@@ -202,6 +212,12 @@ for num_set in np.arange(total_set):
     for block in bpy.data.images:
         if block.users == 0:
             bpy.data.images.remove(block)
+            
+    print('----------------')
+    print('Loading and placing objects')
+    # load ply
+    # sample object drop location
+    # objects are dropped thorugh physics
 
     # sample objects
     num_object = np.random.randint(low=4, high=12)
