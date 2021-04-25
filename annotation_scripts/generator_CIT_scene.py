@@ -125,7 +125,7 @@ base_dir = "/home/stefan/data/Meshes/CIT_color"
 back_img_path = '/home/stefan/data/datasets/cocoval2017'
 all_backgrounds = os.listdir(back_img_path)
 total_set = 1 #10000 set of scenes, each set has identical objects with varied poses to anchor pose (+-15)
-pair_set = 1 #number of pair scene for each set, 10
+pair_set = 3 #number of pair scene for each set, 10
 sample_dir = '/home/stefan/data/renderings/CIT_render' #directory for temporary files (cam_L, cam_R, masks..~)
 target_dir = '/home/stefan/data/renderings/CIT_render/patches'
 index=0
@@ -159,6 +159,7 @@ dis_objects = ['dis1_1', 'dis1_2', 'dis1_3', 'dis2_1', 'dis2_2', 'dis2_3']
 
 # FOR BACKGROUND OBJECTS  
 
+iteration_counter = 0
 for num_set in np.arange(total_set):
     bpy.ops.object.select_all(action='DESELECT')
     scene = bpy.context.scene
@@ -318,127 +319,88 @@ for num_set in np.arange(total_set):
     
   
     #Define Object position&rotation
-    
+
+
+    tree = bpy.context.scene.node_tree
+    nodes = tree.nodes
+    ind_obj_counter = 0
+    scene.frame_set(0)
+    for obj in scene.objects:
+        if obj.type == 'MESH':
+            obj_object= bpy.data.objects[obj.name]
+                
+        if obj.name[0:5] == 'Plane':
+            obj_object= bpy.data.objects[obj.name]
+            img_choice = Rchoice(all_backgrounds)
+            img_path = os.path.join(back_img_path, img_choice)
+            mat_now = obj_object.active_material
+            tree_mesh = mat_now.node_tree
+            nodes_mesh = tree_mesh.nodes
+            image = bpy.data.images.load(filepath = img_path)
+            nodes_mesh['Image Texture'].image = image
+            
+        if obj_object.pass_index > 1:
+            idx = obj_object.pass_index -1
+            print(obj_object, obj_object.pass_index, idx)
+            obj_object.location.x=anchor_pose[idx,0]
+            obj_object.location.y=anchor_pose[idx,1]
+            obj_object.location.z=anchor_pose[idx,2]
+            obj_object.rotation_euler.x= anchor_pose[idx,3]
+            obj_object.rotation_euler.y= anchor_pose[idx,4]
+            obj_object.rotation_euler.z= anchor_pose[idx,5]
+                 
+            # assign different color
+            rand_color = (random(), random(), random())
+            obj_object.active_material.diffuse_color = rand_color
+            if obj.name[:3] == 'dis':
+            #if obj_object.pass_index > (num_object+1):
+                obj_object.pass_index = 0
+                print('pass_idx to 0')
+              
+        #if obj.name == 'InvisibleCube':
+            #obj_object.rotation_euler.x=radians(random()*60.0 + 15.0) #0~90
+            #obj_object.rotation_euler.y=radians(random()*5.0 - 10.0) #-45-45
+            #obj_object.rotation_euler.z=radians(random()*360.0) #0-360
+
+        #if obj.type == 'CAMERA' and  obj.name=='cam_L':
+            #obj_object = bpy.data.objects[obj.name]
+            #obj_object.location.z = random()*0.2+0.5  #1.0-2.5
+                
+        
+    print("Running physics")
+    #Run physics
+    count = 60
+    scene.frame_start = 1
+    scene.frame_end = count + 1
+    print("Start physics")
+    for f in range(1,scene.frame_end+1):
+        print("scene iteration: ", f, "/60")
+        scene.frame_set(f)
+        if f <= 1:
+            continue
+
+    print("Done")
+    print('---------------')
+    print('Creating pairs')
+    print('---> randomize camera location')
+    print('---> randomize lights')
     for iii in np.arange(pair_set):
 
-        tree = bpy.context.scene.node_tree
-        nodes = tree.nodes
-        ind_obj_counter = 0
-        scene.frame_set(0)
-        for obj in scene.objects:
-            if obj.type == 'MESH':
-                obj_object= bpy.data.objects[obj.name]
-                
-            if obj.name[0:5] == 'Plane':
-                obj_object= bpy.data.objects[obj.name]
-                img_choice = Rchoice(all_backgrounds)
-                img_path = os.path.join(back_img_path, img_choice)
-                mat_now = obj_object.active_material
-                tree_mesh = mat_now.node_tree
-                nodes_mesh = tree_mesh.nodes
-                image = bpy.data.images.load(filepath = img_path)
-                nodes_mesh['Image Texture'].image = image
-            
-            if obj_object.pass_index > 1:
-                idx = obj_object.pass_index -1
-                print(obj_object, obj_object.pass_index, idx)
-                obj_object.location.x=anchor_pose[idx,0]
-                obj_object.location.y=anchor_pose[idx,1]
-                obj_object.location.z=anchor_pose[idx,2]
-                obj_object.rotation_euler.x= anchor_pose[idx,3]
-                obj_object.rotation_euler.y= anchor_pose[idx,4]
-                obj_object.rotation_euler.z= anchor_pose[idx,5]
-                 
-                # assign different color
-                rand_color = (random(), random(), random())
-                obj_object.active_material.diffuse_color = rand_color
-                if obj.name[:3] == 'dis':
-                #if obj_object.pass_index > (num_object+1):
-                    obj_object.pass_index = 0
-                    print('pass_idx to 0')
-              
-            if obj.name == 'InvisibleCube':
-                obj_object.rotation_euler.x=radians(random()*60.0 + 15.0) #0~90
-                obj_object.rotation_euler.y=radians(random()*5.0 - 10.0) #-45-45
-                obj_object.rotation_euler.z=radians(random()*360.0) #0-360
+        #randomize camera
+        obj_object = bpy.data.objects['InvisibleCube']
+        obj_object.rotation_euler.x=radians(random()*60.0 + 15.0) #0~90
+        obj_object.rotation_euler.y=radians(random()*5.0 - 10.0) #-45-45
+        obj_object.rotation_euler.z=radians(random()*360.0) #0-360
 
-            if obj.type == 'CAMERA' and  obj.name=='cam_L':
-                obj_object = bpy.data.objects[obj.name]
-                obj_object.location.z = random()*0.2+0.5  #1.0-2.5
-                
-        print("start running physics")    
+        obj_object = bpy.data.objects['cam_L']
+        obj_object.location.z = random()*0.2+0.5  #1.0-2.5
 
-        #Run physics
-        count = 60
-        scene.frame_start = 1
-        scene.frame_end = count + 1
-        print("Start physics")
-        for f in range(1,scene.frame_end+1):
-            print("scene iteration: ", f, "/60")
-            scene.frame_set(f)
-            if f <= 1:
-                continue
-              
-        print("physics ran")
-              
-              
-        print('Spawn lamps')
+        # spawn lamps and randomize properties
+        print('Spawning lamps')
+
+        # need to remove old lamps first
         for lam in bpy.data.lamps:
-            print(lam.name)
-            lam.select = True
-        bpy.data.lamps.delete()
-            
-        
-                
-        tree = bpy.context.scene.node_tree
-        nodes = tree.nodes
-        
-        print("render images")
-        #When Rander cam_L, render mask together
-
-        prefix='{:08}_'.format(index)
-        index+=1
-        
-        scene.cycles.samples=100
-        
-        print(list(bpy.data.lamps))
-        
-        lamp_types = ['SPOT', 'HEMI', 'AREA']
-        lamp_type = 'AREA'
-        lamp_name = 'light_1'
-        lamp_position = (2.5, 0.0, 2.75)
-        lamp_data = bpy.data.lamps.new(name=lamp_name, type=lamp_type)
-        lamp_object = bpy.data.objects.new(name=lamp_name, object_data=lamp_data)
-        scene.objects.link(lamp_object)
-        lamp_object.select = True
-        lamp_object.location = lamp_position
-        if lamp_type == 'AREA':
-                bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
-                bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
-                bpy.data.lamps[lamp_name].size_y = 0.1
-        
-        bpy.data.lamps[lamp_name].use_nodes =  True
-        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (60.0) # to normalize scene illuminations
-        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (1.0, 1.0, 1.0)
-        lamp_object.select = False
-        
-        lamp_name = 'light_2'
-        lamp_position = (-2.5, 0.0, 2.75)
-        lamp_data2 = bpy.data.lamps.new(name=lamp_name, type=lamp_type)
-        lamp_object2 = bpy.data.objects.new(name=lamp_name, object_data=lamp_data2)
-        scene.objects.link(lamp_object2)
-        lamp_object2.location = lamp_position
-        lamp_object2.select = True
-        if lamp_type == 'AREA':
-                bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
-                bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
-                bpy.data.lamps[lamp_name].size_y = 0.1
-        
-        bpy.data.lamps[lamp_name].use_nodes =  True
-        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (60.0) # to normalize scene illuminations
-        bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (1.0, 1.0, 1.0)
-        '''
-        print('too far')
+            bpy.data.lamps.remove(lamp=lam)
         # randomize lights and position
         lights = np.random.randint(low=2, high=4)
         for lamp in range(0, lights):
@@ -450,64 +412,75 @@ for num_set in np.arange(total_set):
             lamp_object = bpy.data.objects.new(name=lamp_name, object_data=lamp_data)
             scene.objects.link(lamp_object)
             lamp_object.location = lamp_position
+            lamp_object.select = True
+            bpy.data.lamps[lamp_name].use_nodes =  True
+            # light emission has to be adjusted depending on the lamp type
+            emission = (100.0 + random()* 50.0) * (1/lights) # to normalize scene illuminations
             if lamp_type == 'AREA':
                 bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
                 bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
                 bpy.data.lamps[lamp_name].size_y = 0.1
-            lamp_object.select = True
-            bpy.data.lamps[lamp_name].use_nodes =  True
-            print('lmap type: ', lamp_type)
-            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = (100.0 + random()* 50.0) * (1/lights) # to normalize scene illuminations
-            print('lamp intensity: ', bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value)
+            elif lamp_type == 'SPOT':
+                emission *= 1.5
+            elif lamp_type == 'HEMI':
+                emission *= 0.1
+            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = emission
             #bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.1 + 0.9, random() * 0.2 + 0.8)
             bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.06 + 0.94, random() * 0.1 + 0.9)
-            print('lamp color: ', bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3])
-        '''
+            print(lamp_type)
 
+        print('Done')
+        print('---------------')
+        print("Rendering images")
+        #When Rander cam_L, render mask together
+
+        prefix='{:08}_'.format(index)
+        index+=1
+        scene.cycles.samples=100
         maskfile = os.path.join(target_dir+'/mask' , 'mask.png')  # correspondence mask
         rgbfile= os.path.join(target_dir+"/rgb", prefix+'rgb.png')   # rgb image
-
-
+        tree = bpy.context.scene.node_tree
+        nodes = tree.nodes
         for ob in scene.objects:
-            if ob.type == 'CAMERA':          
+            if ob.type == 'CAMERA':
                 if ob.name=='cam_L': #ob.name =='mask':
                     #Render image and Mask
                     bpy.context.scene.camera = ob
                     print('Set camera %s for IR' % ob.name )
                     file_L = os.path.join(sample_dir , ob.name )
-                    
-                    auto_file = os.path.join(sample_dir, ob.name+'0061.png')  
+
+                    auto_file = os.path.join(sample_dir, ob.name+'0061.png')
                     node= nodes['maskout']
                     node.file_slots[0].path = ob.name
                     node_mix = nodes['ColorRamp']
                     link_mask= tree.links.new(node_mix.outputs["Image"], node.inputs[0])
-                    node.base_path=sample_dir                 
-
+                    node.base_path=sample_dir
                     auto_file_rgb = os.path.join(sample_dir+'/rgb/', ob.name+'0061.png')
                     node= nodes['rgbimage.001']
                     node.file_slots[0].path = ob.name
                     node_mix = nodes['Render Layers']
                     link_rgb = tree.links.new(node_mix.outputs["Image"], node.inputs[0])
                     node.base_path=sample_dir+'/rgb/'
-                  
+
                     scene.render.filepath = file_L
                     bpy.ops.render.render( write_still=True )
                     tree.links.remove(link_mask)
                     tree.links.remove(link_rgb)
-                  
+
                     os.rename(auto_file, maskfile)
                     os.rename(auto_file_rgb, rgbfile)
-            
 
+        print('Done')
+        print('------------------')
+        # Compute annotations and export
+        # Visibility ratios are not calculated here, needs separate step.
+        # computationally too expensive in blender because of rendering step
+        print('Computing annotations')
         mask = cv2.imread(maskfile)
-
         minmax_vu = np.zeros((num_object,4),dtype=np.int) #min v, min u, max v, max u
         label_vu = np.zeros((mask.shape[0],mask.shape[1]),dtype=np.int8) #min v, min u, max v, max u
         colors = np.zeros((num_object,3),dtype=mask.dtype)
-        print(colors.shape)
-
         n_label=0
-
         color_index=np.array([  [  0, 0,   0],
                         [  0, 100,   0],
                         [  0, 139,   0],
@@ -540,8 +513,6 @@ for num_set in np.arange(total_set):
                         [255, 224, 224],
                         [255, 240, 240],
                         [255, 255, 255]])
-
-
         for v in np.arange(mask.shape[0]):
             for u in np.arange(mask.shape[1]):
                 has_color = False
@@ -565,19 +536,15 @@ for num_set in np.arange(total_set):
                         n_label=n_label+1
                 else:
                     label_vu[v,u]=0
-
         bbox_refined = mask
         color_map=np.zeros(n_label)
-
         for k in np.arange(n_label):
             for i in np.arange(color_index.shape[0]):
                 if(color_index[i,0] == colors[k,0] and color_index[i,1] == colors[k,1] and color_index[i,2] == colors[k,2] ):
                     color_map[k]=i
                     continue
-
         object_no=[]
         refined=[]
-
         for ob_index in np.arange(n_label): #np.arange(n_label):
             min_v=minmax_vu[ob_index,0]
             min_u=minmax_vu[ob_index,1]
@@ -595,7 +562,6 @@ for num_set in np.arange(total_set):
                     refined.append(ob_index)
                     object_no.append(color_map[ob_index])
                     #print(color_map[ob_index])
-
         #cv2.imwrite(os.path.join(sample_dir,'bbox_refined.png'),bbox_refined)
         bbox_refined = minmax_vu[refined]
         poses =np.zeros((len(object_no),4,4),dtype=np.float)
@@ -626,7 +592,6 @@ for num_set in np.arange(total_set):
                 camera_z = obj_object.location.z
                 #camera_ext[:,:] = obj_object.matrix_world
                 #camera_ext = camera_ext.reshape(-1)
-
         np.save(target_dir+"/mask/"+prefix+"mask.npy",label_vu)
         cam_trans = -np.matmul(camera_rot[:3, :3],np.array([0,0,camera_z]))
         world_trans =np.zeros((4,4))
@@ -635,7 +600,6 @@ for num_set in np.arange(total_set):
         world_trans[2,2]=1
         world_trans[3,3]=1
         world_trans[:3,3] = cam_trans
-
         masksT = []
         boxesT = []
         #camOrientation = np.array(bpy.data.objects['cam_L'].matrix_world).reshape(-1)
@@ -656,8 +620,15 @@ for num_set in np.arange(total_set):
                 mask_id = int(refined[i]+1)
                 gt={int(i):{'bbox':bbox_refined[i].tolist(),'class_id':id,'mask_id':mask_id,'pose':pose_list.tolist()}} #,'camera_z':camera_z,'camera_rot':camera_rot.tolist()
                 yaml.dump(gt,f)
-    
-    print("Iterations done: ", num_set, "/", total_set, " done ")
+
+        print('Done')
+        print('---------------')
+        print('Overall progress')
+        iteration_counter += 1
+        print("Iterations done: ", iteration_counter, "/", total_set * num_set, " done ")
+        print('---------------')
+        print('###############')
+        print('---------------')
     
     
 bpy.ops.object.select_all(action='DESELECT')
