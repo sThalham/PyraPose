@@ -1,0 +1,503 @@
+import os
+import sys
+import yaml
+import cv2
+import numpy as np
+import datetime
+import copy
+import transforms3d as tf3d
+import time
+import random
+import json
+import open3d
+import math
+
+from pathlib import Path
+
+from misc import manipulate_RGB, toPix_array, toPix, calculate_feature_visibility
+
+# Import bop_renderer and bop_toolkit.
+# ------------------------------------------------------------------------------
+bop_renderer_path = '/home/stefan/bop_renderer/build'
+sys.path.append(bop_renderer_path)
+
+import bop_renderer
+
+
+def load_rendering(fn_gt, fn_part, fn_rgb):
+
+    with open(fn_gt, 'r') as stream:
+        query = yaml.load(stream)
+        if query is None:
+            print('Whatever is wrong there.... ¯\_(ツ)_/¯')
+            return None, None, None, None, None, None, None
+
+        bboxes = np.zeros((len(query), 5), np.int)
+        poses = np.zeros((len(query), 7), np.float32)
+        mask_ids = np.zeros((len(query)), np.int)
+        for j in range(len(query)-1): # skip cam pose
+            qr = query[j]
+            class_id = qr['class_id']
+            bbox = qr['bbox']
+            mask_ids[j] = int(qr['mask_id'])
+            pose = np.array(qr['pose']).reshape(4, 4)
+            bboxes[j, 0] = class_id
+            bboxes[j, 1:5] = np.array(bbox)
+            q_pose = tf3d.quaternions.mat2quat(pose[:3, :3])
+            poses[j, 3:7] = np.array(q_pose)
+            poses[j, 0:3] = np.array([pose[0, 3], pose[1, 3], pose[2, 3]])
+
+    if bboxes.shape[0] < 2:
+        print('invalid train image, no bboxes in fov')
+        return None, None, None, None, None, None, None
+
+    #partmask = cv2.imread(fn_part, 0)
+    partmask = np.load(fn_part)
+    rgb_img = cv2.imread(fn_rgb, 1)
+
+    return rgb_img, partmask, bboxes, poses, mask_ids
+
+
+def lookAt(eye, target, up):
+    # eye is from
+    # target is to
+    # expects numpy arrays
+    f = eye - target
+    f = f/np.linalg.norm(f)
+
+    s = np.cross(up, f)
+    s = s/np.linalg.norm(s)
+    u = np.cross(f, s)
+    u = u/np.linalg.norm(u)
+
+    tx = np.dot(s, eye.T)
+    ty = np.dot(u, eye.T)
+    tz = np.dot(f, eye.T)
+
+    m = np.zeros((4, 4), dtype=np.float32)
+    m[0, :3] = s
+    m[1, :3] = u
+    m[2, :3] = f
+    m[:, 3] = [tx, ty, tz, 1]
+
+    #m[0, :-1] = s
+    #m[1, :-1] = u
+    #m[2, :-1] = -f
+    #m[-1, -1] = 1.0
+
+    return m
+
+def m3dLookAt(eye, target, up):
+    mz = normalize(eye - target) # inverse line of sight
+    mx = normalize( cross( up, mz ) )
+    my = normalize( cross( mz, mx ) )
+    tx =  dot( mx, eye )
+    ty =  dot( my, eye )
+    tz = -dot( mz, eye )
+    return np.array([mx[0], my[0], mz[0], 0, mx[1], my[1], mz[1], 0, mx[2], my[2], mz[2], 0, tx, ty, tz, 1])
+
+
+if __name__ == "__main__":
+
+    data_path = '/home/stefan/data/renderings/CIT_render/patches'
+    mesh_path = '/home/stefan/data/Meshes/CIT_color/'
+    target = '/home/stefan/data/train_data/CIT_PBR/'
+
+    visu = False
+    resX = 640
+    resY = 480
+    fx = 623.1298104626079 # blender calc
+    fy = 617.1590544390115 # blender calc
+    cx = 320.0
+    cy = 240.0
+    K = [fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0]
+
+    ren = bop_renderer.Renderer()
+    ren.init(resX, resY)
+    mesh_id = 1
+    categories = []
+
+    for mesh_now in os.listdir(mesh_path):
+        mesh_path_now = os.path.join(mesh_path, mesh_now)
+        if mesh_now[-4:] != '.ply':
+            continue
+        #mesh_id = int(mesh_now[-6:-4])
+        ren.add_object(mesh_id, mesh_path_now)
+        categories.append(mesh_id)
+        mesh_id += 1
+
+    mesh_info = os.path.join(mesh_path, 'models_info.yml')
+    threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
+    # sym_cont = np.ndarray((34, 3), dtype=np.float32)
+    # sym_disc = np.ndarray((34, 9), dtype=np.float32)
+
+    max_box = [0, 0, 0, 0]
+    max_box_area = 0
+    min_box = [0, 0, 0, 0]
+    min_box_area = 300 * 300
+
+    for key, value in yaml.load(open(mesh_info)).items():
+        # for key, value in json.load(open(mesh_info)).items():
+        fac = 0.001
+        x_minus = value['min_x']
+        y_minus = value['min_y']
+        z_minus = value['min_z']
+        x_plus = value['size_x'] + x_minus
+        y_plus = value['size_y'] + y_minus
+        z_plus = value['size_z'] + z_minus
+        three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                   [x_plus, y_plus, z_minus],
+                                   [x_plus, y_minus, z_minus],
+                                   [x_plus, y_minus, z_plus],
+                                   [x_minus, y_plus, z_plus],
+                                   [x_minus, y_plus, z_minus],
+                                   [x_minus, y_minus, z_minus],
+                                   [x_minus, y_minus, z_plus]])
+
+        threeD_boxes[int(key), :, :] = three_box_solo * fac
+
+    now = datetime.datetime.now()
+    dateT = str(now)
+
+    dict = {"info": {
+        "description": "cit",
+        "version": "1.0",
+        "year": 2021,
+        "contributor": "Stefan Thalhammer",
+        "date_created": dateT
+    },
+        "licenses": [],
+        "images": [],
+        "annotations": [],
+        "categories": []
+    }
+
+    dictVal = copy.deepcopy(dict)
+
+    annoID = 0
+    gloCo = 1
+    times = 0
+    loops = 6
+
+    syns = os.listdir(data_path)
+
+    for samp in syns:
+
+        print(samp)
+
+        if not samp.endswith('.yaml'):
+            continue
+
+        start_t = time.time()
+
+        anno_path = os.path.join(data_path, samp)
+        img_path = os.path.join(data_path, 'rgb', samp[:-7] + 'rgb.png')
+        mask_path = os.path.join(data_path, 'mask', samp[:-7] + 'mask.npy')
+
+        img, mask, boxes, poses, mask_ids = load_rendering(anno_path, mask_path, img_path)
+
+        print(img.shape)
+        print(mask.shape)
+        print(boxes)
+        print(poses)
+        print(mask_ids)
+
+        #bg_img = cv2.imread(bg_img_path_j)
+        #bg_x, bg_y, _ = bg_img.shape
+        #if bg_y > bg_x:
+        #    bg_img = np.swapaxes(bg_img, 0, 1)
+        #bg_img = cv2.resize(bg_img, (resX, resY))
+        #samp = int(bg_img_path[:-4])
+        #template_samp = '00000'
+        #imgNum = str(o_idx) + template_samp[:-len(str(samp))] + str(samp)
+        #img_id = int(imgNum)
+        #imgNam = imgNum + '.png'
+        #iname = str(imgNam)
+        fileName = target + 'images/train/' + samp[:-7] + '_rgb.png'
+        myFile = Path(fileName)
+        cnt = 0
+        mask_ind = 0
+        mask_img = np.zeros((480, 640), dtype=np.uint8)
+        visib_img = np.zeros((480, 640, 3), dtype=np.uint8)
+        boxes3D = []
+        calib_K = []
+        zeds = []
+        renderings = []
+        rotations = []
+        translations = []
+        visibilities = []
+        bboxes = []
+        full_visib = []
+        areas = []
+        mask_idxs = []
+        poses = []
+
+        obj_ids = np.random.choice(categories, size=objsperimg, replace=True)
+        right, top = False, False
+        seq_obj = 0
+        for objID in obj_ids:
+            # sample rotation and append
+            R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
+            z = 0.4 + np.random.rand() * 1.0
+            #x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
+            #y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
+            if right == False and top == False:
+                x = (-0.45 * z) * np.random.rand()
+                y = (-0.3 * z) * np.random.rand()
+            elif right == False and top == True:
+                x = (-0.45 * z) * np.random.rand()
+                y = (0.3 * z) * np.random.rand()
+            elif right == True and top == False:
+                x = (0.45 * z) * np.random.rand()
+                y = (-0.3 * z) * np.random.rand()
+            elif right == True and top == True:
+                x = (0.45 * z) * np.random.rand()
+                y = (0.3 * z) * np.random.rand()
+            if seq_obj == 0 or seq_obj == 2:
+                top = True
+            else:
+                top = False
+            if seq_obj > 0:
+                right = True
+            seq_obj += 1
+            t = np.array([[x, y, z]]).T
+            rotations.append(R_ren)
+            translations.append(t)
+            zeds.append(z)
+            R_list = R_ren.flatten().tolist()
+            t_list = t.flatten().tolist()
+            # pose [x, y, z, roll, pitch, yaw] for anno
+            R = np.asarray(R_ren, dtype=np.float32)
+            rot = tf3d.quaternions.mat2quat(R.reshape(3, 3))
+            rot = np.asarray(rot, dtype=np.float32)
+            tra = np.asarray(t, dtype=np.float32)
+            pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
+            pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
+                    np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
+            trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
+            #R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+            #3Dbox for visualization
+            tDbox = R.reshape(3, 3).dot(threeD_boxes[objID, :, :].T).T
+            tDbox = tDbox + np.repeat(trans[:, np.newaxis].T, 8, axis=0)
+            box3D = toPix_array(tDbox, fx=fx, fy=fy, cx=cx, cy=cy)
+            box3D = np.reshape(box3D, (16))
+            box3D = box3D.tolist()
+            poses.append(pose)
+            calib_K.append(K)
+            boxes3D.append(box3D)
+            # light, render and append
+            light_pose = [np.random.rand() * 3 - 1.0, np.random.rand() * 2 - 1.0, 0.0]
+            #light_color = [np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9]
+            light_color = [1.0, 1.0, 1.0]
+            light_ambient_weight = np.random.rand()
+            light_diffuse_weight = 0.75 + np.random.rand() * 0.25
+            light_spec_weight = 0.25 + np.random.rand() * 0.25
+            light_spec_shine = np.random.rand() * 3.0
+            ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
+            ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
+            rgb_img = ren.get_color_image(objID)
+            renderings.append(rgb_img)
+            # render for visibility mask
+            z_straight = np.linalg.norm
+            t_list = np.array([[0.0, 0.0, t[2]]]).T
+            t_list = t_list.flatten().tolist()
+            T_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+            R_2obj = T_2obj[:3, :3]
+            t_2obj = T_2obj[:3, 3]
+            R_fv = np.dot(R_2obj, np.linalg.inv(R).T)
+            R_list = R_fv.flatten().tolist()
+            ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
+            full_visib_img = ren.get_color_image(objID)
+            full_visib.append(full_visib_img)
+        zeds = np.asarray(zeds, dtype=np.float32)
+        low2high = np.argsort(zeds)
+        high2low = low2high[::-1]
+        full_seg = []
+        for v_idx in low2high:
+            obj_id = int(obj_ids[v_idx])
+            ren_img = renderings[v_idx]
+            # partial visibility mask
+            partial_visib_img = np.where(visib_img > 0, 0, ren_img)
+            partial_visib_mask = np.nan_to_num(partial_visib_img, copy=True, nan=0, posinf=0, neginf=0)
+            partial_visib_mask = np.where(np.any(partial_visib_mask, axis=2) > 0, 1, 0)
+            partial_mask_surf = np.sum(partial_visib_mask)
+            #partvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_pv.png'
+            #cv2.imwrite(partvisibName, partial_visib_mask*255)
+            full_visib_img = full_visib[v_idx]
+            full_visib_mask = np.nan_to_num(full_visib_img, copy=True, nan=0, posinf=0, neginf=0)
+            full_visib_mask = np.where(np.any(full_visib_mask, axis=2) > 0, 1, 0)
+            surf_visib = np.sum(full_visib_mask)
+            #fullvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_fv.png'
+            #cv2.imwrite(fullvisibName, full_visib_mask*255)
+            # some systematic error in visibility calculation, yet I can't point the finger at it
+            visib_fract = int(partial_mask_surf / surf_visib)
+            if visib_fract > 1.0:
+                visib_fract = int(1.0)
+            visibilities.append(visib_fract)
+            #print('visib: ', obj_id, visib_fract)
+            visib_img = np.where(visib_img > 0, visib_img, ren_img)
+            # compute bounding box and append
+            non_zero = np.nonzero(partial_visib_mask)
+            surf_ren = np.sum(non_zero[0])
+            if non_zero[0].size != 0:
+                bb_xmin = np.nanmin(non_zero[1])
+                bb_xmax = np.nanmax(non_zero[1])
+                bb_ymin = np.nanmin(non_zero[0])
+                bb_ymax = np.nanmax(non_zero[0])
+                obj_bb = [int(bb_xmin), int(bb_ymin), int(bb_xmax - bb_xmin), int(bb_ymax - bb_ymin)]
+                # out of order with other lists
+                bboxes.append(obj_bb)
+                area = int(obj_bb[2] * obj_bb[3])
+                areas.append(area)
+            else:
+                area = int(0)
+                obj_bb = [int(0), int(0), int(0), int(0)]
+                bboxes.append(obj_bb)
+                areas.append(area)
+            bg_img = np.where(partial_visib_img > 0, partial_visib_img, bg_img)
+            # mask calculation
+            mask_id = mask_ind + 1
+            mask_img = np.where(partial_visib_img.any(axis=2) > 0, mask_id, mask_img)
+            mask_ind = mask_ind + 1
+            annoID = annoID + 1
+            pose = poses[v_idx]
+            box3D = boxes3D[v_idx]
+            tempTA = {
+                "id": annoID,
+                "image_id": img_id,
+                "category_id": obj_id,
+                "bbox": obj_bb,
+                "pose": pose,
+                "segmentation": box3D,
+                "mask_id": mask_id,
+                "area": area,
+                "iscrowd": 0,
+                "feature_visibility": visib_fract
+            }
+            dict["annotations"].append(tempTA)
+            cnt = cnt + 1
+        tempTL = {
+            "url": "https://bop.felk.cvut.cz/home/",
+            "id": img_id,
+            "name": iname,
+        }
+        dict["licenses"].append(tempTL)
+        if myFile.exists():
+            print('File exists, skip encoding, ', fileName)
+        else:
+            cv2.imwrite(fileName, bg_img)
+            print("storing image in : ", fileName)
+            mask_safe_path = fileName[:-8] + '_mask.png'
+            cv2.imwrite(mask_safe_path, mask_img.astype(np.int8))
+            tempTV = {
+                "license": 2,
+                "url": "https://bop.felk.cvut.cz/home/",
+                "file_name": iname,
+                "height": resY,
+                "width": resX,
+                "fx": fx,
+                "fy": fy,
+                "cx": cx,
+                "cy": cy,
+                "date_captured": dateT,
+                "id": img_id,
+            }
+            dict["images"].append(tempTV)
+            if visu is True:
+                boxes3D = [boxes3D[x] for x in low2high]
+                obj_ids = [obj_ids[x] for x in low2high]
+                #boxes3D = boxes3D[low2high]
+                #obj_ids = obj_ids[low2high]
+                img = bg_img
+                for i, bb in enumerate(bboxes):
+                    bb = np.array(bb)
+                    cv2.rectangle(img, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
+                                  (255, 255, 255), 2)
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    bottomLeftCornerOfText = (int(bb[0]), int(bb[1]))
+                    fontScale = 1
+                    fontColor = (0, 0, 0)
+                    fontthickness = 1
+                    lineType = 2
+                    gtText = str(obj_ids[i])
+                    fontColor2 = (255, 255, 255)
+                    fontthickness2 = 3
+                    cv2.putText(img, gtText,
+                                bottomLeftCornerOfText,
+                                font,
+                                fontScale,
+                                fontColor2,
+                                fontthickness2,
+                                lineType)
+                    pose = np.asarray(boxes3D[i], dtype=np.float32)
+                    colR = 250
+                    colG = 25
+                    colB = 175
+                    img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
+                    img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
+                    img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
+                    img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
+                    img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
+                                   2)
+                    img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
+                                   (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
+                                   (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
+                                   (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
+                                   (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
+                                   (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
+                                   (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
+                                   (colR, colG, colB), 2)
+                    '''
+                    img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[2:4].ravel()), (130, 245, 13), 2)
+                    img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[4:6].ravel()), (50, 112, 220), 2)
+                    img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[6:8].ravel()), (50, 112, 220), 2)
+                    img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[0:2].ravel()), (50, 112, 220), 2)
+                    img = cv2.line(img, tuple(pose[0:2].ravel()), tuple(pose[8:10].ravel()), (colR, colG, colB),
+                                       2)
+                    img = cv2.line(img, tuple(pose[2:4].ravel()), tuple(pose[10:12].ravel()),
+                                       (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[4:6].ravel()), tuple(pose[12:14].ravel()),
+                                       (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[6:8].ravel()), tuple(pose[14:16].ravel()),
+                                       (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[8:10].ravel()), tuple(pose[10:12].ravel()),
+                                       (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[10:12].ravel()), tuple(pose[12:14].ravel()),
+                                       (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[12:14].ravel()), tuple(pose[14:16].ravel()),
+                                       (colR, colG, colB), 2)
+                    img = cv2.line(img, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()),
+                                       (colR, colG, colB), 2)
+                    '''
+                # print(camR_vis[i], camT_vis[i])
+                # draw_axis(img, camR_vis[i], camT_vis[i], K)
+                cv2.imwrite(fileName, img)
+                #print('STOP')
+            end_t = time.time()
+            times += end_t - start_t
+            avg_time = times / gloCo
+            rem_time = ((all_data - gloCo) * avg_time) / 60
+            print('time remaining: ', rem_time, ' min')
+            gloCo += 1
+
+    for s in categories:
+        objName = str(s)
+        tempC = {
+            "id": s,
+            "name": objName,
+            "supercategory": "object"
+        }
+        dict["categories"].append(tempC)
+
+    valAnno = target + 'annotations/instances_train.json'
+
+    with open(valAnno, 'w') as fpT:
+        json.dump(dict, fpT)
+
+    print('everythings done')

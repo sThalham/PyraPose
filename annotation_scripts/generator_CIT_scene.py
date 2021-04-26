@@ -111,6 +111,30 @@ print('---------------')
 # Quasi Main
 print('Setting variables and clear memory')
 
+#Realsense D415
+# vanilla
+#Image sensor OV2740
+#1,4 x 1,4 um/pixel
+#image sensor: 2.7288 x 1.5498 mm
+#1920 x 1080
+#f=1.93 mm
+#Fov_h = 42.5
+#Fov-v = 69.4
+
+#Realsense D415
+#cropped and resized
+#crop to 
+#640 x 480
+#fov_h = 42.5
+#fov_v = 54.89, blender says 54.4
+#image_sensor = 2.0466 x 1.5498
+
+#F(mm) = F(pixels) * SensorWidth(mm) / ImageWidth (pixel)
+f_x = ((bpy.data.cameras['Camera.001'].lens) * 640) / 2.0466
+f_y = ((bpy.data.cameras['Camera.001'].lens) * 480) / 1.5498
+
+print('fx: ', f_x, 'fy: ', f_y)
+
 # 23.4.2018
 # render image 350 of object 23
 # cam_K: [1076.74064739, 0.0, 215.98264967, 0.0, 1075.17825536, 204.59181836, 0.0, 0.0, 1.0]
@@ -131,7 +155,7 @@ base_dir = "/home/stefan/data/Meshes/CIT_color"
 back_img_path = '/home/stefan/data/datasets/cocoval2017'
 all_backgrounds = os.listdir(back_img_path)
 total_set = 1 #10000 set of scenes, each set has identical objects with varied poses to anchor pose (+-15)
-pair_set = 3 #number of pair scene for each set, 10
+pair_set = 5 #number of pair scene for each set, 10
 sample_dir = '/home/stefan/data/renderings/CIT_render' #directory for temporary files (cam_L, cam_R, masks..~)
 target_dir = '/home/stefan/data/renderings/CIT_render/patches'
 index=0
@@ -234,20 +258,26 @@ for num_set in np.arange(total_set):
         file_model = model_file[file_idx]
         solo_model = model_solo[file_idx]
         imported_object = bpy.ops.import_mesh.ply(filepath=file_model, filter_glob="*.ply", files=[{"name":solo_model, "name":solo_model}], directory=root)
-        object_label.append(object_idx)
+        
         obj_object = bpy.context.selected_objects[0]
+        object_label.append(int(obj_object.name[:2]))
         
         mat_obj = mat.copy()
         nodes = mat_obj.node_tree.nodes
         pbr = nodes.get("Principled BSDF")
         attr = nodes.get("Attribute")
         if obj_object.name[:2] == '01':
-            ior = 1.49 # Polypropylen
+            #ior = 1.49 # Polypropylen
+            ior = 1.3 + random() * 0.3
             #pbr.inputs[0].default_value[:3] = (0.66, 0.66, 0.66)
+            #pbr.inputs[0].default_value[:3] = (143/255, 155/255, 174/255)
+            pbr.inputs[0].default_value[:3] = (152/255, 164/255, 174/255) #Pantone 7543c
             pbr.inputs[4].default_value = 0.0 # Metallic
             pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
-            pbr.inputs[6].default_value = 0.9 # specular tint
-            pbr.inputs[7].default_value = 0.4 # reoghness
+            #pbr.inputs[6].default_value = 0.9 # specular tint
+            #pbr.inputs[7].default_value = 0.4 # reoghness
+            pbr.inputs[6].default_value = 0.6 + random() * 0.4 # specular tint
+            pbr.inputs[7].default_value = 0.2 + random() * 0.5 # reoghness
             # plastics 1.3 - 1.6, higly refractive ~ 1.75
             # polished stainless steel 2.75      
             #pbr.inputs[14].default_value = ior
@@ -255,20 +285,31 @@ for num_set in np.arange(total_set):
             ior = 2.75
             # stainless steel 224, 223, 219
             #pbr.inputs[0].default_value[:3] = (0.879, 0.874, 0.859)
-            pbr.inputs[4].default_value = 1.0 # Metallic
-            pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
-            pbr.inputs[6].default_value = 0.1 # specular tint
-            pbr.inputs[7].default_value = random() * 0.4 # reoghness
+            #pbr.inputs[4].default_value = 1.0 # Metallic
+            #pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
+            #pbr.inputs[5].default_value = 0.8
+            #pbr.inputs[6].default_value = 0.1 # specular tint
+            #pbr.inputs[7].default_value = 0.2 # reoghness
+            pbr.inputs[4].default_value = 0.8 + random() * 0.2 # Metallic
+            pbr.inputs[5].default_value = 0.6 + random() * 0.4
+            pbr.inputs[6].default_value = 0.0 + random() * 0.2
+            pbr.inputs[7].default_value = random() * 0.5 # reoghness
             # plastics 1.3 - 1.6, higly refractive ~ 1.75
             # polished stainless steel 2.75
             #pbr.inputs[14].default_value = ior
         else:
-            pbr.inputs[0].default_value[:3] = (0.7725, 0.7843, 0.8078)
-            ior = 1.49 # Polypropylen
+            #pbr.inputs[0].default_value[:3] = (0.7725, 0.7843, 0.8078)
+            pbr.inputs[0].default_value[:3] = (152/255, 164/255, 174/255) #Pantone 7543c
+            #pbr.inputs[0].default_value[:3] = (143/255, 155/255, 174/255)
+            #ior = 1.49 # Polypropylen
+            ior = 1.3 + random() * 0.3
             pbr.inputs[4].default_value = 0.0 # Metallic
+            #print(np.power(((ior - 1)/(ior + 1)), 2)/0.08)
             pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
-            pbr.inputs[6].default_value = 0.8 # specular tint
-            pbr.inputs[7].default_value = 0.1 # reoghness
+            #pbr.inputs[6].default_value = 0.8 # specular tint
+            #pbr.inputs[7].default_value = 0.2 # reoghness
+            pbr.inputs[6].default_value = 0.6 + random() * 0.4 # specular tint
+            pbr.inputs[7].default_value = 0.0 + random() * 0.4 # reoghness
             # plastics 1.3 - 1.6, higly refractive ~ 1.75
             # polished stainless steel 2.75
             #pbr.inputs[14].default_value = ior
@@ -296,7 +337,23 @@ for num_set in np.arange(total_set):
         object_label.append(object_idx + num_object)
         obj_object = bpy.data.objects[dis_objects[file_idx]]
         obj_object.hide_render = False
-        obj_object.active_material = mat
+        
+        mat_obj = mat.copy()
+        nodes = mat_obj.node_tree.nodes
+        pbr = nodes.get("Principled BSDF")
+        attr = nodes.get("Attribute")
+        #ior = 1.8
+        #pbr.inputs[4].default_value = 0.5 # Metallic
+        #pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
+        #pbr.inputs[6].default_value = 0.7 # specular tint
+        #pbr.inputs[7].default_value = 0.5 # reoghness
+        ior = 1 + random() * 0.8
+        pbr.inputs[4].default_value = 0.4 + random() * 0.3  # Metallic
+        pbr.inputs[5].default_value = np.power(((ior - 1)/(ior + 1)), 2)/0.08 # specular
+        pbr.inputs[6].default_value = 0.1 + random() * 0.4 # specular tint
+        pbr.inputs[7].default_value = 0.2 + random() * 0.5 # reoghness
+        
+        obj_object.active_material = mat_obj
         obj_object.pass_index = object_idx+2
         #anchor_pose[object_idx+1,0] = random()*0.5 - 0.25
         #anchor_pose[object_idx+1, 1] = random()*0.5 - 0.25
@@ -420,7 +477,7 @@ for num_set in np.arange(total_set):
         # randomize lights and position
         lights = np.random.randint(low=2, high=4)
         for lamp in range(0, lights):
-            lamp_types = ['SPOT', 'HEMI', 'AREA']
+            lamp_types = ['SPOT', 'AREA']
             lamp_type = Rchoice(lamp_types)
             lamp_name = 'light_' + str(lamp)
             lamp_position = ((random()*5.0-2.5), (random()*2.5-1.25), (random()*2.0+1.5))
@@ -431,19 +488,18 @@ for num_set in np.arange(total_set):
             lamp_object.select = True
             bpy.data.lamps[lamp_name].use_nodes =  True
             # light emission has to be adjusted depending on the lamp type
-            emission = (100.0 + random()* 50.0) * (1/lights) # to normalize scene illuminations
+            emission = (100.0 + random()* 75.0) * (1/lights) # to normalize scene illuminations
             if lamp_type == 'AREA':
                 bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
                 bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
                 bpy.data.lamps[lamp_name].size_y = 0.1
             elif lamp_type == 'SPOT':
                 emission *= 1.5
-            elif lamp_type == 'HEMI':
-                emission *= 0.1
+            #elif lamp_type == 'SUN':
+            #    emission *= 0.1
             bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = emission
-            #bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.1 + 0.9, random() * 0.2 + 0.8)
-            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.06 + 0.94, random() * 0.1 + 0.9)
-            print(lamp_type)
+            bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.1 + 0.9, random() * 0.2 + 0.8)
+            #bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[0].default_value[:3] = (random() * 0.03 + 0.97, random() * 0.06 + 0.94, random() * 0.1 + 0.9)
 
         print('Done')
         print('---------------')
@@ -641,7 +697,7 @@ for num_set in np.arange(total_set):
         print('---------------')
         print('Overall progress')
         iteration_counter += 1
-        print("Iterations done: ", iteration_counter, "/", total_set * num_set, " done ")
+        print("Iterations done: ", iteration_counter, "/", int(total_set * pair_set), " done ")
         print('---------------')
         print('###############')
         print('---------------')
