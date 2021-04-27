@@ -154,7 +154,7 @@ print('fx: ', f_x, 'fy: ', f_y)
 base_dir = "/home/stefan/data/Meshes/CIT_color"
 back_img_path = '/home/stefan/data/datasets/cocoval2017'
 all_backgrounds = os.listdir(back_img_path)
-total_set = 1 #10000 set of scenes, each set has identical objects with varied poses to anchor pose (+-15)
+total_set = 5 #10000 set of scenes, each set has identical objects with varied poses to anchor pose (+-15)
 pair_set = 5 #number of pair scene for each set, 10
 sample_dir = '/home/stefan/data/renderings/CIT_render' #directory for temporary files (cam_L, cam_R, masks..~)
 target_dir = '/home/stefan/data/renderings/CIT_render/patches'
@@ -327,6 +327,8 @@ for num_set in np.arange(total_set):
         anchor_pose[object_idx+1,5] = radians(random()*360.0)
         object_idx += 1
         
+    print('object_labels: ', object_label)
+        
     print("FOREGROUND IMPORTED")
     # Background objects
     for name in dis_objects:
@@ -334,7 +336,7 @@ for num_set in np.arange(total_set):
         obj_object.hide_render = True
     
     for file_idx in DisDraw:
-        object_label.append(object_idx + num_object)
+        #object_label.append(object_idx + num_object)
         obj_object = bpy.data.objects[dis_objects[file_idx]]
         obj_object.hide_render = False
         
@@ -428,7 +430,6 @@ for num_set in np.arange(total_set):
             if obj.name[:3] == 'dis':
             #if obj_object.pass_index > (num_object+1):
                 obj_object.pass_index = 0
-                print('pass_idx to 0')
               
         #if obj.name == 'InvisibleCube':
             #obj_object.rotation_euler.x=radians(random()*60.0 + 15.0) #0~90
@@ -488,13 +489,13 @@ for num_set in np.arange(total_set):
             lamp_object.select = True
             bpy.data.lamps[lamp_name].use_nodes =  True
             # light emission has to be adjusted depending on the lamp type
-            emission = (100.0 + random()* 75.0) * (1/lights) # to normalize scene illuminations
+            emission = (100.0 + random()* 50.0) * (1/lights) # to normalize scene illuminations
             if lamp_type == 'AREA':
                 bpy.data.lamps[lamp_name].shape = 'RECTANGLE'
                 bpy.data.lamps[lamp_name].size = 0.5 + random() * 0.5
                 bpy.data.lamps[lamp_name].size_y = 0.1
             elif lamp_type == 'SPOT':
-                emission *= 1.5
+                emission *= 2.0
             #elif lamp_type == 'SUN':
             #    emission *= 0.1
             bpy.data.lamps[lamp_name].node_tree.nodes["Emission"].inputs[1].default_value = emission
@@ -508,7 +509,7 @@ for num_set in np.arange(total_set):
 
         prefix='{:08}_'.format(index)
         index+=1
-        scene.cycles.samples=100
+        scene.cycles.samples=250
         maskfile = os.path.join(target_dir+'/mask' , 'mask.png')  # correspondence mask
         rgbfile= os.path.join(target_dir+"/rgb", prefix+'rgb.png')   # rgb image
         tree = bpy.context.scene.node_tree
@@ -541,7 +542,7 @@ for num_set in np.arange(total_set):
 
                     os.rename(auto_file, maskfile)
                     os.rename(auto_file_rgb, rgbfile)
-
+ 
         print('Done')
         print('------------------')
         # Compute annotations and export
@@ -608,6 +609,7 @@ for num_set in np.arange(total_set):
                         n_label=n_label+1
                 else:
                     label_vu[v,u]=0
+                    
         bbox_refined = mask
         color_map=np.zeros(n_label)
         for k in np.arange(n_label):
@@ -617,7 +619,7 @@ for num_set in np.arange(total_set):
                     continue
         object_no=[]
         refined=[]
-        for ob_index in np.arange(n_label): #np.arange(n_label):
+        for ob_index in np.arange(n_label): 
             min_v=minmax_vu[ob_index,0]
             min_u=minmax_vu[ob_index,1]
             max_v=minmax_vu[ob_index,2]
@@ -625,20 +627,18 @@ for num_set in np.arange(total_set):
             bbox = label_vu[min_v:max_v,min_u:max_u]
             bbox=bbox.reshape(-1)
             counts = np.bincount(bbox)
-            #print('counts: ', counts)
-            #print(colors[ob_index])
             if(counts.shape[0]>1):
                 if(np.argmax(counts[1:]) ==(ob_index)): #(mask.shape[0],mask.shape[1]
                 #if(min_v>30 and min_u>30 and max_v < (mask.shape[0]-30) and max_u < (mask.shape[1]-30) ):
                 #cv2.rectangle(bbox_refined,(min_u,min_v),(max_u,max_v),(0,255,0),1)
                     refined.append(ob_index)
                     object_no.append(color_map[ob_index])
-                    #print(color_map[ob_index])
         #cv2.imwrite(os.path.join(sample_dir,'bbox_refined.png'),bbox_refined)
+        
+        
         bbox_refined = minmax_vu[refined]
         poses =np.zeros((len(object_no),4,4),dtype=np.float)
         names = ['a'] * len(object_no)
-        #visibilities =np.zeros((len(object_no)),dtype=np.float)
         camera_rot =np.zeros((4,4),dtype=np.float)
         for obj in scene.objects:
             if obj.type == 'MESH':
@@ -646,7 +646,7 @@ for num_set in np.arange(total_set):
                     idx = object_no.index(obj.pass_index)
                     poses[idx]=obj.matrix_world
                     img_name = obj.name + '.png'
-                    names[idx] = os.path.join(sample_dir, img_name)
+                    #names[idx] = os.path.join(sample_dir, img_name)
                 if obj.name=='InvisibleCube':
                     camera_rot[:,:] = obj.matrix_world
                     camera_rot = camera_rot[:3,:3] #only rotation (z was recorded seprately)

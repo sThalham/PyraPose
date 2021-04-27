@@ -99,11 +99,11 @@ def m3dLookAt(eye, target, up):
 
 if __name__ == "__main__":
 
-    data_path = '/home/stefan/data/renderings/CIT_render/patches'
+    data_path = '/home/stefan/data/renderings/CIT_render_250/patches'
     mesh_path = '/home/stefan/data/Meshes/CIT_color/'
     target = '/home/stefan/data/train_data/CIT_PBR/'
 
-    visu = False
+    visu = True
     resX = 640
     resY = 480
     fx = 623.1298104626079 # blender calc
@@ -115,16 +115,24 @@ if __name__ == "__main__":
     ren = bop_renderer.Renderer()
     ren.init(resX, resY)
     mesh_id = 1
+    light_pose = [0.0, 0.0, 0.0]
+    light_color = [1.0, 0.0, 0.0]
+    light_ambient_weight = 1.0
+    light_diffuse_weight = 1.0
+    light_spec_weight = 0.0
+    light_spec_shine = 1.0
+    ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight,
+                  light_spec_shine)
     categories = []
 
     for mesh_now in os.listdir(mesh_path):
         mesh_path_now = os.path.join(mesh_path, mesh_now)
         if mesh_now[-4:] != '.ply':
             continue
-        #mesh_id = int(mesh_now[-6:-4])
+        mesh_id = int(mesh_now[-6:-4])
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)
-        mesh_id += 1
+        #mesh_id += 1
 
     mesh_info = os.path.join(mesh_path, 'models_info.yml')
     threeD_boxes = np.ndarray((34, 8, 3), dtype=np.float32)
@@ -191,185 +199,92 @@ if __name__ == "__main__":
         start_t = time.time()
 
         anno_path = os.path.join(data_path, samp)
-        img_path = os.path.join(data_path, 'rgb', samp[:-7] + 'rgb.png')
-        mask_path = os.path.join(data_path, 'mask', samp[:-7] + 'mask.npy')
+        img_path = os.path.join(data_path, 'rgb', samp[:-8] + '_rgb.png')
+        mask_path = os.path.join(data_path, 'mask', samp[:-8] + '_mask.npy')
 
-        img, mask, boxes, poses, mask_ids = load_rendering(anno_path, mask_path, img_path)
+        img_PBR, mask_PBR, boxes_PBR, poses_PBR, mask_ids_PBR = load_rendering(anno_path, mask_path, img_path)
 
-        print(img.shape)
-        print(mask.shape)
-        print(boxes)
-        print(poses)
-        print(mask_ids)
+        img_id = int(samp[:-8])
+        imgNam = samp[:-8] + '.png'
+        iname = str(imgNam)
 
-        #bg_img = cv2.imread(bg_img_path_j)
-        #bg_x, bg_y, _ = bg_img.shape
-        #if bg_y > bg_x:
-        #    bg_img = np.swapaxes(bg_img, 0, 1)
-        #bg_img = cv2.resize(bg_img, (resX, resY))
-        #samp = int(bg_img_path[:-4])
-        #template_samp = '00000'
-        #imgNum = str(o_idx) + template_samp[:-len(str(samp))] + str(samp)
-        #img_id = int(imgNum)
-        #imgNam = imgNum + '.png'
-        #iname = str(imgNam)
-        fileName = target + 'images/train/' + samp[:-7] + '_rgb.png'
+        fileName = target + 'images/train/' + samp[:-8] + '_rgb.png'
         myFile = Path(fileName)
+
         cnt = 0
         mask_ind = 0
-        mask_img = np.zeros((480, 640), dtype=np.uint8)
-        visib_img = np.zeros((480, 640, 3), dtype=np.uint8)
-        boxes3D = []
-        calib_K = []
-        zeds = []
-        renderings = []
-        rotations = []
-        translations = []
-        visibilities = []
-        bboxes = []
-        full_visib = []
-        areas = []
-        mask_idxs = []
-        poses = []
 
-        obj_ids = np.random.choice(categories, size=objsperimg, replace=True)
-        right, top = False, False
+        boxes3D = []
+        obj_ids = []
+        calib_K = []
+        bboxes = []
+
         seq_obj = 0
-        for objID in obj_ids:
-            # sample rotation and append
-            R_ren = tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi)
-            z = 0.4 + np.random.rand() * 1.0
-            #x = (2 * (0.45 * z)) * np.random.rand() - (0.45 * z) # 0.55 each side kinect
-            #y = (2 * (0.3 * z)) * np.random.rand() - (0.3 * z) # 0.40 each side kinect
-            if right == False and top == False:
-                x = (-0.45 * z) * np.random.rand()
-                y = (-0.3 * z) * np.random.rand()
-            elif right == False and top == True:
-                x = (-0.45 * z) * np.random.rand()
-                y = (0.3 * z) * np.random.rand()
-            elif right == True and top == False:
-                x = (0.45 * z) * np.random.rand()
-                y = (-0.3 * z) * np.random.rand()
-            elif right == True and top == True:
-                x = (0.45 * z) * np.random.rand()
-                y = (0.3 * z) * np.random.rand()
-            if seq_obj == 0 or seq_obj == 2:
-                top = True
-            else:
-                top = False
-            if seq_obj > 0:
-                right = True
-            seq_obj += 1
-            t = np.array([[x, y, z]]).T
-            rotations.append(R_ren)
-            translations.append(t)
-            zeds.append(z)
-            R_list = R_ren.flatten().tolist()
-            t_list = t.flatten().tolist()
-            # pose [x, y, z, roll, pitch, yaw] for anno
-            R = np.asarray(R_ren, dtype=np.float32)
-            rot = tf3d.quaternions.mat2quat(R.reshape(3, 3))
-            rot = np.asarray(rot, dtype=np.float32)
-            tra = np.asarray(t, dtype=np.float32)
-            pose = [tra[0], tra[1], tra[2], rot[0], rot[1], rot[2], rot[3]]
-            pose = [np.asscalar(pose[0]), np.asscalar(pose[1]), np.asscalar(pose[2]),
-                    np.asscalar(pose[3]), np.asscalar(pose[4]), np.asscalar(pose[5]), np.asscalar(pose[6])]
+        for idx, box in enumerate(boxes_PBR[:-1]):
+
+            # ID + box
+            objID = int(box[0])
+            print('objID: ', objID)
+            bbox = box[1:]
+            obj_bb = [int(bbox[1]), int(bbox[0]), int(bbox[3] - bbox[1]), int(bbox[2] - bbox[0])]
+            area = int(obj_bb[2] * obj_bb[3])
+            obj_ids.append(objID)
+            bboxes.append(obj_bb)
+
+            # pose + 3Dbox
+            pose = [np.asscalar(poses_PBR[idx][0]), np.asscalar(poses_PBR[idx][1]), np.asscalar(poses_PBR[idx][2]),
+                    np.asscalar(poses_PBR[idx][3]), np.asscalar(poses_PBR[idx][4]), np.asscalar(poses_PBR[idx][5]), np.asscalar(poses_PBR[idx][6])]
             trans = np.asarray([pose[0], pose[1], pose[2]], dtype=np.float32)
-            #R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
+            R = tf3d.quaternions.quat2mat(np.asarray([pose[3], pose[4], pose[5], pose[6]], dtype=np.float32))
             #3Dbox for visualization
             tDbox = R.reshape(3, 3).dot(threeD_boxes[objID, :, :].T).T
             tDbox = tDbox + np.repeat(trans[:, np.newaxis].T, 8, axis=0)
             box3D = toPix_array(tDbox, fx=fx, fy=fy, cx=cx, cy=cy)
             box3D = np.reshape(box3D, (16))
             box3D = box3D.tolist()
-            poses.append(pose)
             calib_K.append(K)
             boxes3D.append(box3D)
-            # light, render and append
-            light_pose = [np.random.rand() * 3 - 1.0, np.random.rand() * 2 - 1.0, 0.0]
-            #light_color = [np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9, np.random.rand() * 0.1 + 0.9]
-            light_color = [1.0, 1.0, 1.0]
-            light_ambient_weight = np.random.rand()
-            light_diffuse_weight = 0.75 + np.random.rand() * 0.25
-            light_spec_weight = 0.25 + np.random.rand() * 0.25
-            light_spec_shine = np.random.rand() * 3.0
-            ren.set_light(light_pose, light_color, light_ambient_weight, light_diffuse_weight, light_spec_weight, light_spec_shine)
-            ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
-            rgb_img = ren.get_color_image(objID)
-            renderings.append(rgb_img)
-            # render for visibility mask
-            z_straight = np.linalg.norm
-            t_list = np.array([[0.0, 0.0, t[2]]]).T
+
+            # obj_mask
+            mask_id_PBR = int(mask_ids_PBR[idx])
+            print('mask id: ', mask_id_PBR)
+
+            t_list = np.array([[0.0, 0.0, trans[2]]]).T
             t_list = t_list.flatten().tolist()
-            T_2obj = lookAt(t.T[0], np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+            T_2obj = lookAt(trans.T, np.array([0.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
             R_2obj = T_2obj[:3, :3]
             t_2obj = T_2obj[:3, 3]
-            R_fv = np.dot(R_2obj, np.linalg.inv(R).T)
+            R_fv = R_2obj @ np.linalg.inv(R).T
             R_list = R_fv.flatten().tolist()
             ren.render_object(objID, R_list, t_list, fx, fy, cx, cy)
             full_visib_img = ren.get_color_image(objID)
-            full_visib.append(full_visib_img)
-        zeds = np.asarray(zeds, dtype=np.float32)
-        low2high = np.argsort(zeds)
-        high2low = low2high[::-1]
-        full_seg = []
-        for v_idx in low2high:
-            obj_id = int(obj_ids[v_idx])
-            ren_img = renderings[v_idx]
-            # partial visibility mask
-            partial_visib_img = np.where(visib_img > 0, 0, ren_img)
-            partial_visib_mask = np.nan_to_num(partial_visib_img, copy=True, nan=0, posinf=0, neginf=0)
-            partial_visib_mask = np.where(np.any(partial_visib_mask, axis=2) > 0, 1, 0)
+            #full_visib_mask = np.where(np.any(full_visib_img, axis=2) > 0, 255, 0)
+
+            partial_visib_mask = np.where(mask_PBR==mask_id_PBR, 1, 0)
             partial_mask_surf = np.sum(partial_visib_mask)
-            #partvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_pv.png'
-            #cv2.imwrite(partvisibName, partial_visib_mask*255)
-            full_visib_img = full_visib[v_idx]
             full_visib_mask = np.nan_to_num(full_visib_img, copy=True, nan=0, posinf=0, neginf=0)
             full_visib_mask = np.where(np.any(full_visib_mask, axis=2) > 0, 1, 0)
             surf_visib = np.sum(full_visib_mask)
-            #fullvisibName = target + 'images/train/' + imgNam[:-4] + str(v_idx) + '_fv.png'
-            #cv2.imwrite(fullvisibName, full_visib_mask*255)
-            # some systematic error in visibility calculation, yet I can't point the finger at it
-            visib_fract = int(partial_mask_surf / surf_visib)
+            visib_fract = float(partial_mask_surf / surf_visib)
             if visib_fract > 1.0:
-                visib_fract = int(1.0)
-            visibilities.append(visib_fract)
-            #print('visib: ', obj_id, visib_fract)
-            visib_img = np.where(visib_img > 0, visib_img, ren_img)
-            # compute bounding box and append
-            non_zero = np.nonzero(partial_visib_mask)
-            surf_ren = np.sum(non_zero[0])
-            if non_zero[0].size != 0:
-                bb_xmin = np.nanmin(non_zero[1])
-                bb_xmax = np.nanmax(non_zero[1])
-                bb_ymin = np.nanmin(non_zero[0])
-                bb_ymax = np.nanmax(non_zero[0])
-                obj_bb = [int(bb_xmin), int(bb_ymin), int(bb_xmax - bb_xmin), int(bb_ymax - bb_ymin)]
-                # out of order with other lists
-                bboxes.append(obj_bb)
-                area = int(obj_bb[2] * obj_bb[3])
-                areas.append(area)
-            else:
-                area = int(0)
-                obj_bb = [int(0), int(0), int(0), int(0)]
-                bboxes.append(obj_bb)
-                areas.append(area)
-            bg_img = np.where(partial_visib_img > 0, partial_visib_img, bg_img)
+                visib_fract = float(1.0)
+
+            print('visib_fract: ', visib_fract)
+
+            #bg_img = np.where(partial_visib_img > 0, partial_visib_img, bg_img)
             # mask calculation
-            mask_id = mask_ind + 1
-            mask_img = np.where(partial_visib_img.any(axis=2) > 0, mask_id, mask_img)
-            mask_ind = mask_ind + 1
+            #mask_id = mask_ind + 1
+            #mask_img = np.where(mask_PBR==mask_id_PBR, mask_id, mask_img)
+            #mask_ind = mask_ind + 1
             annoID = annoID + 1
-            pose = poses[v_idx]
-            box3D = boxes3D[v_idx]
             tempTA = {
                 "id": annoID,
                 "image_id": img_id,
-                "category_id": obj_id,
+                "category_id": objID,
                 "bbox": obj_bb,
                 "pose": pose,
                 "segmentation": box3D,
-                "mask_id": mask_id,
+                "mask_id": mask_id_PBR,
                 "area": area,
                 "iscrowd": 0,
                 "feature_visibility": visib_fract
@@ -382,13 +297,15 @@ if __name__ == "__main__":
             "name": iname,
         }
         dict["licenses"].append(tempTL)
+
+        # safe images
         if myFile.exists():
             print('File exists, skip encoding, ', fileName)
         else:
-            cv2.imwrite(fileName, bg_img)
+            cv2.imwrite(fileName, img_PBR)
             print("storing image in : ", fileName)
             mask_safe_path = fileName[:-8] + '_mask.png'
-            cv2.imwrite(mask_safe_path, mask_img.astype(np.int8))
+            cv2.imwrite(mask_safe_path, mask_PBR.astype(np.int8))
             tempTV = {
                 "license": 2,
                 "url": "https://bop.felk.cvut.cz/home/",
@@ -404,15 +321,11 @@ if __name__ == "__main__":
             }
             dict["images"].append(tempTV)
             if visu is True:
-                boxes3D = [boxes3D[x] for x in low2high]
-                obj_ids = [obj_ids[x] for x in low2high]
-                #boxes3D = boxes3D[low2high]
-                #obj_ids = obj_ids[low2high]
-                img = bg_img
+                img = img_PBR
                 for i, bb in enumerate(bboxes):
                     bb = np.array(bb)
-                    cv2.rectangle(img, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
-                                  (255, 255, 255), 2)
+                    #cv2.rectangle(img, (int(bb[0]), int(bb[1])), (int(bb[0] + bb[2]), int(bb[1] + bb[3])),
+                    #              (255, 255, 255), 2)
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     bottomLeftCornerOfText = (int(bb[0]), int(bb[1]))
                     fontScale = 1
@@ -482,7 +395,7 @@ if __name__ == "__main__":
             end_t = time.time()
             times += end_t - start_t
             avg_time = times / gloCo
-            rem_time = ((all_data - gloCo) * avg_time) / 60
+            rem_time = ((len(syns) - gloCo) * avg_time) / 60
             print('time remaining: ', rem_time, ' min')
             gloCo += 1
 
