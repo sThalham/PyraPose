@@ -99,7 +99,7 @@ def m3dLookAt(eye, target, up):
 
 if __name__ == "__main__":
 
-    data_path = '/home/stefan/data/renderings/CIT_render/patches'
+    data_path = '/home/stefan/data/renderings/CIT_render_300/patches'
     mesh_path = '/home/stefan/data/Meshes/CIT_color/'
     target = '/home/stefan/data/train_data/CIT_PBR/'
 
