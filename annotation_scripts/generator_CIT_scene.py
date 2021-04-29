@@ -154,8 +154,8 @@ print('fx: ', f_x, 'fy: ', f_y)
 base_dir = "/home/stefan/data/Meshes/CIT_color"
 back_img_path = '/home/stefan/data/datasets/SUN2012pascalformat/JPEGImages'
 all_backgrounds = os.listdir(back_img_path)
-total_set = 4000 #10000 set of scenes, each set has identical objects with varied poses to anchor pose (+-15)
-pair_set = 5 #number of pair scene for each set, 10
+total_set = 1 #10000 set of scenes, each set has identical objects with varied poses to anchor pose (+-15)
+pair_set = 1 #number of pair scene for each set, 10
 sample_dir = '/home/stefan/data/renderings/CIT_render_300' #directory for temporary files (cam_L, cam_R, masks..~)
 target_dir = '/home/stefan/data/renderings/CIT_render_300/patches'
 index=0
