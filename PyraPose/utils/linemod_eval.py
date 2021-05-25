@@ -25,7 +25,7 @@ from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
 import sys
-
+import time
 
 import progressbar
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
@@ -266,14 +266,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
         image = generator.preprocess_image(image_raw)
         image, scale = generator.resize_image(image)
 
-        image_raw_dep = generator.load_image_dep(index)
-        image_raw_dep = np.where(image_raw_dep > 0, image_raw_dep, 0.0)
-        image_raw_dep = np.multiply(image_raw_dep, 255.0 / 2000.0)
-        image_raw_dep = np.repeat(image_raw_dep[:, :, np.newaxis], 3, 2)
-        #image_raw_dep = get_normal(image_raw_dep, fxkin, fykin, cxkin, cykin)
-        image_dep = generator.preprocess_image(image_raw_dep)
-        image_dep, scale = generator.resize_image(image_dep)
-
         image_viz = copy.deepcopy(image_raw)
 
         anno = generator.load_annotations(index)
@@ -308,7 +300,6 @@ def evaluate_linemod(generator, model, threshold=0.05):
         # run network
         images = []
         images.append(image)
-        images.append(image_dep)
         boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))#, np.expand_dims(image_dep, axis=0)])
 
         #print(np.nanmax(scores))
