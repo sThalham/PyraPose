@@ -94,7 +94,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     # compile model
     training_model.compile(
         loss={
-            '3Dbox'        : losses.orthogonal_l1(),
+            '3Dbox'        : losses.sym_orthogonal_l1(),
             'cls'          : losses.focal(),
             'mask'          : losses.focal(),
         },
@@ -322,8 +322,8 @@ def parse_args(args):
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
-    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
+    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=1080)
+    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=1920)
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Fit generator arguments
@@ -415,15 +415,15 @@ def main(args=None):
     #    LinemodDataset().prefetch(tf.data.AUTOTUNE)
     #)
 
-    dataset = CustomDataset(args.custom_path, 'train', batch_size=args.batch_size)
-    dataset = tf.data.Dataset.range(args.workers).interleave(
-        lambda _: dataset,
+    #dataset = CustomDataset(args.custom_path, 'train', batch_size=args.batch_size)
+    #dataset = tf.data.Dataset.range(args.workers).interleave(
+    #    lambda _: dataset,
         #num_parallel_calls=tf.data.experimental.AUTOTUNE
-        num_parallel_calls=args.workers
-    )
+    #    num_parallel_calls=args.workers
+    #)
 
     training_model.fit(
-        x=dataset,
+        x=train_generator,
         steps_per_epoch=train_generator.size() / args.batch_size,
         epochs=args.epochs,
         verbose=1,

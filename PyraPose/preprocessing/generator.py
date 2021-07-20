@@ -240,12 +240,12 @@ class Generator(keras.utils.Sequence):
                                                            self.transform_parameters.relative_translation)
 
             # apply transformation to image            
-            if annotations['cam_params'].shape[0] > 1:
-                K = annotations['cam_params'][0, :]
-            else:
-                K = [572.4114, 573.57043, 325.26110828, 242.04899594]
+            #if annotations['cam_params'].shape[0] > 1:
+            #    K = annotations['cam_params'][0, :]
+            #else:
+            #    K = [572.4114, 573.57043, 325.26110828, 242.04899594]
 
-            image = apply_transform(transform, image, self.transform_parameters, K)
+            image = apply_transform(transform, image, self.transform_parameters)
             annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters)
 
             # Transform the bounding boxes in the annotations.

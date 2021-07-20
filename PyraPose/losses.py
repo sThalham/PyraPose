@@ -391,8 +391,8 @@ def orthogonality_loss_hyps(inputs):
     #regression_orth = keras.backend.print_tensor(regression_orth, message='regression_orth: ')
     #regression_xy = keras.backend.print_tensor(regression_xy, message='regression_xy: ')
 
-    #return weight_xy * regression_xy + (1 - weight_xy) * regression_orth
-    return 0.85 * regression_xy
+    return weight_xy * regression_xy + (1 - weight_xy) * regression_orth
+    #return 0.85 * regression_xy
 
 
 def orthogonal_l1_local(inputs):
@@ -420,7 +420,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
     def _sym_orth_l1(y_true, y_pred):
 
         #y_pred = keras.backend.expand_dims(y_pred, axis=2) # hackiest !
-        y_pred = keras.backend.repeat_elements(x=y_pred, rep=12, axis=2)
+        y_pred = keras.backend.repeat_elements(x=y_pred, rep=4, axis=2)
         #print('y_pred: ', y_pred)
         regression        = y_pred
         regression_target = y_true[:, :, :, :-1]

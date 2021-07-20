@@ -64,9 +64,9 @@ class CustomGenerator(Generator):
 
         self.load_classes()
 
-        self.TDboxes = np.zeros((16, 8, 3), dtype=np.float32)
-        self.sym_cont = np.zeros((34, 3), dtype=np.float32)
-        self.sym_disc = np.zeros((34, 3, 16), dtype=np.float32)
+        self.TDboxes = np.zeros((19, 8, 3), dtype=np.float32)
+        self.sym_cont = np.zeros((19, 3), dtype=np.float32)
+        self.sym_disc = np.zeros((19, 3, 16), dtype=np.float32)
 
         for key, value in yaml.load(open(self.mesh_info)).items():
             x_minus = value['min_x']
