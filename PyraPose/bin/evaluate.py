@@ -127,9 +127,10 @@ def create_generator(args):
 
     elif args.dataset_type == 'debug':
         # import here to prevent unnecessary dependency on cocoapi
-        from ..preprocessing.custom import CustomGenerator
+        #from ..preprocessing.custom import CustomGenerator
 
-        validation_generator = args.custom_path
+        validation_generator = args.debug_path
+        #validation_generator = None
 
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
@@ -161,6 +162,9 @@ def parse_args(args):
 
     custom_parser = subparsers.add_parser('custom')
     custom_parser.add_argument('custom_path', help='Path to dataset directory (ie. /tmp/Homebrewed).')
+
+    debug_parser = subparsers.add_parser('debug')
+    debug_parser.add_argument('debug_path', help='Path to dataset directory (ie. /tmp/Homebrewed).')
 
     parser.add_argument('model',              help='Path to RetinaNet model.')
     parser.add_argument('--convert-model',    help='Convert the model to an inference model (ie. the input is a training model).', action='store_true')
