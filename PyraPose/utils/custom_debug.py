@@ -243,6 +243,7 @@ def evaluate_custom(generator, model, threshold=0.3):
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
+    classes = []
 
     for key, value in yaml.load(open(mesh_info)).items():
         fac = 0.001
@@ -262,6 +263,7 @@ def evaluate_custom(generator, model, threshold=0.3):
                                    [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
+        classes.append(int(key))
     '''
 
     threeD_boxes = np.ndarray((2, 8, 3), dtype=np.float32)
@@ -413,7 +415,11 @@ def evaluate_custom(generator, model, threshold=0.3):
                 #print('per_ins: ', per_ins_indices)
                 #print('len per_ins', len(per_ins_indices))
                 k_hyp = len(per_ins_indices)
-                ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+                cls_conv = classes[inv_cls]
+                ori_points = np.ascontiguousarray(threeD_boxes[cls_conv, :, :], dtype=np.float32)
+                print('cls: ', cls_conv)
+                print('box: ', threeD_boxes[cls_conv, :, :])
+                #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
                 ##############################
