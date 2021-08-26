@@ -37,10 +37,16 @@ assert(callable(progressbar.progressbar)), "Using wrong progressbar module, inst
 #cykin = 242.04899
 
 # CIT
-fxkin = 615.40063
-fykin = 615.04529
-cxkin = 312.87567
-cykin = 250.85875
+#fxkin = 615.40063
+#fykin = 615.04529
+#cxkin = 312.87567
+#cykin = 250.85875
+
+# CIT
+fxkin = 1164.6233338297
+fykin = 1161.1018211652
+cxkin = 950.1242940800
+cykin = 538.5516554830
 
 
 def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
@@ -225,9 +231,9 @@ def evaluate_custom(generator, model, threshold=0.3):
     test_path = generator
 
     # InDex cube
-    mesh_info = '/home/stefan/data/Meshes/CIT_color/models_info.yml'
+    mesh_info = '/home/stefan/data/IST_assembly/models_info.yml'
     mesh_path = '/home/stefan/data/Meshes/CIT_color'
-    results_path = '/home/stefan/data/datasets/CIT_data/test_samples'
+    results_path = '/home/stefan/data/IST_assembly/images_results'
 
     #metal Markus
     #mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
@@ -237,6 +243,7 @@ def evaluate_custom(generator, model, threshold=0.3):
 
     threeD_boxes = np.ndarray((31, 8, 3), dtype=np.float32)
     model_dia = np.zeros((31), dtype=np.float32)
+    classes = []
 
     for key, value in yaml.load(open(mesh_info)).items():
         fac = 0.001
@@ -256,6 +263,7 @@ def evaluate_custom(generator, model, threshold=0.3):
                                    [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
+        classes.append(int(key))
     '''
 
     threeD_boxes = np.ndarray((2, 8, 3), dtype=np.float32)
@@ -292,20 +300,26 @@ def evaluate_custom(generator, model, threshold=0.3):
     #print('max model: ', np.nanmax(np.asarray(pcd_model.points)))
     #print('min model: ', np.nanmin(np.asarray(pcd_model.points)))
 
-    anchor_params = anchors_for_shape((480, 640))
+    resX = 1920
+    resY = 1080
+    anchor_params = anchors_for_shape((resY, resX))
 
+    # load and sort
     for img_idx, img_name in enumerate(os.listdir(test_path)):
+
+        print(test_path)
+        print(img_name)
         img_path = os.path.join(test_path, img_name)
 
         print('------------------------------------')
         print('processing image: ', img_path)
 
         image_raw = cv2.imread(img_path, 1)
-        image_raw = image_raw[:, 160:-160, :]
-        image_raw = cv2.resize(image_raw, (640, 480))
+        #image_raw = image_raw[:, 160:-160, :]
+        image_raw = cv2.resize(image_raw, (resX, resY))
 
         image_mask = copy.deepcopy(image_raw)
-        image_mask = cv2.resize(image_mask, (640, 480))
+        image_mask = cv2.resize(image_mask, (resX, resY))
         image_pose = copy.deepcopy(image_mask)
         image_pose_rep = copy.deepcopy(image_mask)
         image_ori = copy.deepcopy(image_mask)
@@ -314,14 +328,15 @@ def evaluate_custom(generator, model, threshold=0.3):
         image[..., 0] -= 103.939
         image[..., 1] -= 116.779
         image[..., 2] -= 123.68
-        image = cv2.resize(image, (640, 480))
+        image = cv2.resize(image, (resX, resY))
 
         boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))
+        print(mask.shape)
 
         clust_t = time.time()
         for inv_cls in range(scores.shape[2]):
-            #cls = inv_cls + 1
-            cls = 2
+            cls = inv_cls + 1
+            #cls = 2
             cls_mask = scores[0, :, inv_cls]
             obj_mask = mask[0, :, inv_cls]
 
@@ -386,13 +401,13 @@ def evaluate_custom(generator, model, threshold=0.3):
             #print('per_obj_hyps: ', len(per_obj_hyps))
 
             cls_img = np.where(obj_mask > 0.5, 1, 0)
-            cls_img = cls_img.reshape((60, 80)).astype(np.uint8)
-            cls_img = np.asarray(Image.fromarray(cls_img).resize((640, 480), Image.NEAREST))
+            cls_img = cls_img.reshape((int(resY/8), int(resX/8))).astype(np.uint8)
+            cls_img = np.asarray(Image.fromarray(cls_img).resize((resX, resY), Image.NEAREST))
             cls_img = np.repeat(cls_img[:, :, np.newaxis], 3, 2)
             cls_img = cls_img.astype(np.uint8)
-            cls_img[:, :, 0] *= 0
-            cls_img[:, :, 1] *= 215
-            cls_img[:, :, 2] *= 255
+            cls_img[:, :, 0] *= 250
+            cls_img[:, :, 1] *= 125
+            cls_img[:, :, 2] *= 0
             image_mask = np.where(cls_img > 0, cls_img, image_mask)
 
             for per_ins_indices in per_obj_hyps:
@@ -400,7 +415,11 @@ def evaluate_custom(generator, model, threshold=0.3):
                 #print('per_ins: ', per_ins_indices)
                 #print('len per_ins', len(per_ins_indices))
                 k_hyp = len(per_ins_indices)
-                ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+                cls_conv = classes[inv_cls]
+                ori_points = np.ascontiguousarray(threeD_boxes[cls_conv, :, :], dtype=np.float32)
+                print('cls: ', cls_conv)
+                print('box: ', threeD_boxes[cls_conv, :, :])
+                #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
                 ##############################
@@ -467,6 +486,7 @@ def evaluate_custom(generator, model, threshold=0.3):
 
                 # render bop
                 #print(tf3d.euler.euler2mat((np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi, (np.random.rand() * 2 * math.pi) - math.pi).shape)
+                '''
                 R_list = R_est.flatten().tolist()
                 t_list = t_est.flatten().tolist()
                 light_pose = [1.0, 1.0, 0.0]
@@ -485,10 +505,12 @@ def evaluate_custom(generator, model, threshold=0.3):
                 #out_path = os.path.join(results_path, 'pose_' + str(img_idx) + '.png')
                 #cv2.imwrite(out_path, pose_img)
                 image_pose_rep = np.where(pose_img > 0, pose_img, image_pose_rep)
+                '''
 
-        ori_mask = np.concatenate([image_ori, image_mask], axis=1)
-        box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
-        image_out = np.concatenate([ori_mask, box_rep], axis=0)
+        #ori_mask = np.concatenate([image_ori, image_mask], axis=1)
+        #box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
+        #image_out = np.concatenate([ori_mask, box_rep], axis=0)
+        image_out = np.concatenate([image_ori, image_mask, image_pose], axis=1)
         out_path = os.path.join(results_path, 'sequence_2_' + str(img_idx) + '.png')
         cv2.imwrite(out_path, image_out)
 
