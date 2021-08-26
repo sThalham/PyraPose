@@ -173,14 +173,14 @@ def create_BB(rgb):
 
 if __name__ == "__main__":
 
-    dataset = 'homebrewed'
+    dataset = 'linemod'
     traintestval = 'val'
     visu = False
     specific_object_set = False
     spec_objs = [5, 8, 9, 10, 21]
 
-    root = "/home/stefan/data/datasets/HB_BOP_val/"  # path to train samples, depth + rgb
-    target = '/home/stefan/data/train_data/hb_RGBD_val/'
+    root = "/home/stefan/data/datasets/LM_BOP_test/"  # path to train samples, depth + rgb
+    target = '/home/stefan/data/train_data/linemod_val/'
 
     if dataset == 'linemod':
         mesh_info = '/home/stefan/data/Meshes/linemod_13/models_info.yml'
