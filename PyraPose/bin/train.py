@@ -322,8 +322,8 @@ def parse_args(args):
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
-    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=1080)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=1920)
+    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
+    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Fit generator arguments

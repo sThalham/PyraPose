@@ -29,12 +29,12 @@ import ros_numpy
 import cv2
 from PIL import Image as Pilimage
 
-sys.path.append("/RGBDPose")
-from RGBDPose import models
-from RGBDPose.utils.config import read_config_file, parse_anchor_parameters
-from RGBDPose.utils.eval import evaluate
-from RGBDPose.utils.keras_version import check_keras_version
-from RGBDPose.utils import ply_loader
+sys.path.append("/PyraPose")
+from PyraPose import models
+from PyraPose.utils.config import read_config_file, parse_anchor_parameters
+from PyraPose.utils.eval import evaluate
+from PyraPose.utils.keras_version import check_keras_version
+#from PyraPose.utils import ply_loader
 
 from object_detector_msgs.srv import get_poses, get_posesResponse
 from object_detector_msgs.msg import PoseWithConfidence
@@ -71,14 +71,23 @@ from geometry_msgs.msg import PoseArray, Pose
 # cykin = 233.048356
 
 # magic intrinsics
-fxkin = 1066.778
-fykin = 1067.487
-cxkin = 320.0
-cykin = 240.0
+#fxkin = 1066.778
+#fykin = 1067.487
+#cxkin = 320.0
+#cykin = 240.0
+
+# IST-assembly
+resX = 1920
+resY = 1080
+# c930e (https://github.com/thsant/3dmcap/blob/master/resources/Logitech-C930e.yaml)
+# interlude to make image 4:3 for detection
+fx = 1164.6233338297
+fy = 1161.1018211652
+cx = 950.1242940800
+cy = 538.5516554830
 
 
-
-def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
+def icp_refinement(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):
     tf_pcd =np.eye(4)
     pcd_temp_.transform(tf)
 
@@ -209,8 +218,7 @@ def preprocess_image(x, mode='caffe'):
 class PoseEstimationClass:
     #def __init__(self, model, mesh_path, threshold, topic, graph):
     def __init__(self, model, mesh_path, threshold, topic):
-        #event that will block until the info is received
-        #attribute for storing the rx'd message
+
         self._model = model
         self._score_th = threshold
         #self.graph = graph
@@ -222,9 +230,9 @@ class PoseEstimationClass:
         self.bridge = CvBridge()
         self.pose_pub = rospy.Publisher("/pyrapose/poses", PoseArray, queue_size=10)
         self.image_sub = rospy.Subscriber(topic, Image, self.callback)
-        self.depth_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
+        #self.depth_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
 
-        self.threeD_boxes = np.ndarray((22, 8, 3), dtype=np.float32)
+        self.threeD_boxes = np.ndarray((40, 8, 3), dtype=np.float32)
         mesh_info = os.path.join(mesh_path, 'models_info.json')
         for key, value in json.load(open(mesh_info)).items():
             fac = 0.001
@@ -243,6 +251,9 @@ class PoseEstimationClass:
                                    [x_minus, y_minus, z_minus],
                                    [x_minus, y_minus, z_plus]])
             self.threeD_boxes[int(key), :, :] = three_box_solo
+
+        '''
+        # interlude for ICRA-paper grasping experiments 
         ply_path = os.path.join(mesh_path, 'obj_000005.ply')
         model_vsd = ply_loader.load_ply(ply_path)
         self.model_6 = open3d.PointCloud()
@@ -283,6 +294,8 @@ class PoseEstimationClass:
         self.pcd_model_61.points = open3d.Vector3dVector(model_vsd['pts'])
         open3d.estimate_normals(self.pcd_model_61, search_param=open3d.KDTreeSearchParamHybrid(
         radius=2.0, max_nn=30))
+        '''
+
     def depth_callback(self, data):
         self.depth = data
 
@@ -292,9 +305,10 @@ class PoseEstimationClass:
         self.frame_id = data.header.frame_id
         self._msg = self.bridge.imgmsg_to_cv2(data, "8UC3")
         #self._msg = ros_numpy.numpify(data)
-        self._dep =self.bridge.imgmsg_to_cv2(self.depth, "16UC1")
+        #self._dep =self.bridge.imgmsg_to_cv2(self.depth, "16UC1")
 
-        
+        '''
+        # Interlude for ICRA to adapt to instrinsics
         f_sca_x = 538.391033 / 1066.778
         f_sca_y = 538.085452 / 1067.487
         x_min = 315.30747 * f_sca_x
@@ -308,13 +322,12 @@ class PoseEstimationClass:
         cv2.imwrite('/stefan/test.png', self._msg)
         self._dep = self._dep[int(y_min):int(y_max), int(x_min):int(x_max)]
         self._dep = cv2.resize(self._dep, (640, 480))
-
+        '''
 
         det_objs, det_poses, det_confs = run_estimation(self._msg, self._dep, self._model, self._score_th, self.threeD_boxes, self.pcd_model_6, self.pcd_model_9, self.pcd_model_10, self.pcd_model_11, self.pcd_model_61)#, self.seq)
 
         self.publish_pose(det_objs, det_poses, det_confs)
-        rospy.sleep(2)
-    
+        #rospy.sleep(2)
 
     def publish_pose(self, det_names, det_poses, det_confidences):
         msg = PoseArray()
@@ -367,10 +380,9 @@ class PoseEstimationServer:
         self.pose_pub = rospy.Publisher("/pyrapose/poses", PoseArray, queue_size=10)
         self.pose_srv = rospy.Service(service_name, get_poses, self.callback)
         self.image_sub = rospy.Subscriber(topic, Image, self.image_callback)
-        self.depth_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
+        #self.depth_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/depth_registered/image_raw', Image, self.depth_callback)
 
-
-        self.threeD_boxes = np.ndarray((22, 8, 3), dtype=np.float32)
+        self.threeD_boxes = np.ndarray((40, 8, 3), dtype=np.float32)
         mesh_info = os.path.join(mesh_path, 'models_info.json')
         for key, value in json.load(open(mesh_info)).items():
             fac = 0.001
@@ -389,6 +401,8 @@ class PoseEstimationServer:
                                    [x_minus, y_minus, z_minus],
                                    [x_minus, y_minus, z_plus]])
             self.threeD_boxes[int(key), :, :] = three_box_solo
+
+        '''
         ply_path = os.path.join(mesh_path, 'obj_000005.ply')
         model_vsd = ply_loader.load_ply(ply_path)
         self.model_6 = open3d.PointCloud()
@@ -429,6 +443,7 @@ class PoseEstimationServer:
         self.pcd_model_61.points = open3d.Vector3dVector(model_vsd['pts'])
         open3d.estimate_normals(self.pcd_model_61, search_param=open3d.KDTreeSearchParamHybrid(
         radius=2.0, max_nn=30))
+        '''
     
     def image_callback(self, data):
         self.image = data
@@ -445,9 +460,9 @@ class PoseEstimationServer:
         self.frame_id = data.header.frame_id
         self._msg = self.bridge.imgmsg_to_cv2(data, "8UC3")
         #self._msg = ros_numpy.numpify(data)
-        self._dep =self.bridge.imgmsg_to_cv2(self.depth, "16UC1")
+        #self._dep =self.bridge.imgmsg_to_cv2(self.depth, "16UC1")
 
-        
+        '''        
         f_sca_x = 538.391033 / 1066.778
         f_sca_y = 538.085452 / 1067.487
         x_min = 315.30747 * f_sca_x
@@ -461,6 +476,7 @@ class PoseEstimationServer:
         cv2.imwrite('/stefan/test.png', self._msg)
         self._dep = self._dep[int(y_min):int(y_max), int(x_min):int(x_max)]
         self._dep = cv2.resize(self._dep, (640, 480))
+        '''
 
         det_objs, det_poses, det_confs = run_estimation(self._msg, self._dep, self._model, self._score_th, self.threeD_boxes, self.pcd_model_6, self.pcd_model_9, self.pcd_model_10, self.pcd_model_11, self.pcd_model_61)#, self.seq)
 
@@ -504,7 +520,7 @@ class PoseEstimationServer:
 
         
 #################################
-########## RetNetPose ###########
+########## PyraPose ###########
 #################################
 def get_session():
     """ Construct a modified tf session.
@@ -518,7 +534,7 @@ def get_session():
 def parse_args(args):
 
     parser     = argparse.ArgumentParser(description='Evaluation script for a RetinaNet network.')
-    parser.add_argument('model',              help='Path to RetinaNet model.')
+    parser.add_argument('model',              help='Path to PyraPose model.')
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file (only used with --convert-model).')
 
@@ -537,7 +553,6 @@ def load_model(model_path):
     backbone = 'resnet50'
 
     print('Loading model, this may take a second...')
-    print(model_path)
     model = models.load_model(model_path, backbone_name=backbone)
     #graph = tf.compat.v1.get_default_graph()
     model = models.convert_model(model, anchor_params=anchor_params) # convert model
@@ -547,9 +562,9 @@ def load_model(model_path):
 
     return model#, graph
 
-mask_pub = rospy.Publisher('/pyrapose/masks', Image, queue_size=10)
+#mask_pub = rospy.Publisher('/pyrapose/masks', Image, queue_size=10)
 #def run_estimation(image, model, score_threshold, graph, frame_id):
-def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model_6, model_9, model_10, model_11, model_61):
+def run_estimation(image, model, score_threshold, threeD_boxes):
     obj_names = []
     obj_poses = []
     obj_confs = []
@@ -568,6 +583,7 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
 
     for inv_cls in range(scores.shape[2]):
 
+        '''
         if inv_cls == 0:
             true_cls = 5
         elif inv_cls == 1:
@@ -578,7 +594,8 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
             true_cls = 10
         elif inv_cls == 4:
             true_cls = 21
-        #true_cat = inv_cls + 1
+        '''
+        true_cat = inv_cls + 1
         #true_cls = true_cat
 
         cls_mask = scores[0, :, inv_cls]
@@ -587,6 +604,7 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
         #cls_indices = np.argmax(cls_mask)
         #print(cls_mask[cls_indices])
 
+        '''
         cls_img = image
         obj_mask = mask[0, :, inv_cls]
         if inv_cls == 0:
@@ -632,15 +650,15 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
             pcd_model = model_61
         else:
             continue 
+        '''
 
-        obj_names.append(name)
+        obj_names.append(str(true_cat))
         #obj_confs.append(np.sum(cls_mask[cls_indices[0]]))
         obj_confs.append(np.sum(cls_mask[cls_indices]))
 
-
         k_hyp = len(cls_indices[0])
         #k_hyp = 1
-        ori_points = np.ascontiguousarray(threeD_boxes[(true_cls), :, :], dtype=np.float32)  # .reshape((8, 1, 3))
+        ori_points = np.ascontiguousarray(threeD_boxes[(true_cat), :, :], dtype=np.float32)  # .reshape((8, 1, 3))
         K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
         ##############################
@@ -654,11 +672,11 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
                                                             distCoeffs=None, rvec=None, tvec=None,
                                                             useExtrinsicGuess=False, iterationsCount=300,
                                                             reprojectionError=5.0, confidence=0.99,
-                                                            flags=cv2.SOLVEPNP_ITERATIVE)
+                                                            flags=cv2.SOLVEPNP_EPNP)
         R_est, _ = cv2.Rodrigues(orvec)
         t_est = otvec[:, 0]
-              
-        
+
+        '''
         if np.sum(depth_mask) > 3000 :
 
             print('--------------------- ICP refinement -------------------')
@@ -755,18 +773,16 @@ def run_estimation(image, image_dep, model, score_threshold, threeD_boxes, model
             t_est = guess[:3, 3] 
 
             #print('guess: ', guess)
-        
+        '''
 
         est_pose = np.zeros((7), dtype=np.float32)
         est_pose[:3] = t_est
         est_pose[3:] = tf3d.quaternions.mat2quat(R_est)
         obj_poses.append(est_pose)
 
-    bridge = CvBridge()
-
-    image_mask_msg = bridge.cv2_to_imgmsg(image_mask)
-
-    mask_pub.publish(image_mask_msg)
+    #bridge = CvBridge()
+    #image_mask_msg = bridge.cv2_to_imgmsg(image_mask)
+    #mask_pub.publish(image_mask_msg)
     return obj_names, obj_poses, obj_confs
 
 
