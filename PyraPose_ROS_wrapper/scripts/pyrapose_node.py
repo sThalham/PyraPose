@@ -584,6 +584,7 @@ def run_estimation(image, model, score_threshold, threeD_boxes):
     for inv_cls in range(scores.shape[2]):
 
         '''
+	# Graspa
         if inv_cls == 0:
             true_cls = 5
         elif inv_cls == 1:
@@ -595,12 +596,43 @@ def run_estimation(image, model, score_threshold, threeD_boxes):
         elif inv_cls == 4:
             true_cls = 21
         '''
+	if inv_cls == 0:
+            true_cls = 5
+        elif inv_cls == 1:
+            true_cls = 6
+        elif inv_cls == 2:
+            true_cls = 7
+        elif inv_cls == 3:
+            true_cls = 8
+        elif inv_cls == 4:
+            true_cls = 9
+	elif inv_cls == 5:
+            true_cls = 10
+        elif inv_cls == 6:
+            true_cls = 12
+        elif inv_cls == 7:
+            true_cls = 13
+        elif inv_cls == 8:
+            true_cls = 14
+	elif inv_cls == 9:
+            true_cls = 15
+        elif inv_cls == 10:
+            true_cls = 16
+        elif inv_cls == 11:
+            true_cls = 17
+        elif inv_cls == 12:
+            true_cls = 18
+	else:
+	    print('Dafuq?')
+
         true_cat = inv_cls + 1
         #true_cls = true_cat
 
         cls_mask = scores[0, :, inv_cls]
 
         cls_indices = np.where(cls_mask > score_threshold)
+	if len(cls_indices[0]) < 1:
+	    continue
         #cls_indices = np.argmax(cls_mask)
         #print(cls_mask[cls_indices])
 
