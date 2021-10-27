@@ -9,6 +9,7 @@ import open3d
 from ..utils import ply_loader
 from .pose_error import reproj, add, adi, re, te, vsd
 import yaml
+import os
 
 from PIL import Image
 
@@ -151,6 +152,25 @@ def load_pcd(cat):
 
     return pcd_model, model_vsd, model_vsd_mm
 
+'''
+def load_pcd(data_path, cat):
+    # load meshes
+    ply_path = os.path.join(data_path, 'meshes', 'obj_' + cat + '.ply')
+    #model_vsd = ply_loader.load_ply(ply_path)
+    pcd_model = open3d.io.read_point_cloud(ply_path)
+    #pcd_model.points = open3d.Vector3dVector(model_vsd['pts'])
+    model_vsd = {}
+    model_vsd['pts'] = np.asarray(pcd_model.points) * 0.001
+    open3d.estimate_normals(pcd_model, search_param=open3d.KDTreeSearchParamHybrid(
+        radius=0.1, max_nn=30))
+    # open3d.draw_geometries([pcd_model])
+    model_vsd_mm = copy.deepcopy(model_vsd)
+    #model_vsd_mm['pts'] = model_vsd_mm['pts'] * 1000.0
+    #pcd_model = open3d.read_point_cloud(ply_path)
+
+    return pcd_model, model_vsd, model_vsd_mm
+'''
+
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
 
@@ -226,6 +246,17 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                                    [x_minus, y_minus, z_plus]])
         threeD_boxes[int(key), :, :] = three_box_solo
         model_dia[int(key)] = value['diameter'] * fac
+
+    data_path = '/home/stefan/data/train_data/occlusion_val'
+
+    #pc1, mv1, mv1_mm = load_pcd(data_path, '000001')
+    #pc5, mv5, mv5_mm = load_pcd(data_path, '000005')
+    #pc6, mv6, mv6_mm = load_pcd(data_path, '000006')
+    #pc8, mv8, mv8_mm = load_pcd(data_path, '000008')
+    #pc9, mv9, mv9_mm = load_pcd(data_path, '000009')
+    #pc10, mv10, mv10_mm = load_pcd(data_path, '000010')
+    #pc11, mv11, mv11_mm = load_pcd(data_path, '000011')
+    #pc12, mv12, mv12_mm = load_pcd(data_path, '000012')
 
     pc1, mv1, mv1_mm = load_pcd('01')
     pc5, mv5, mv5_mm = load_pcd('05')
@@ -562,6 +593,8 @@ def evaluate_occlusion(generator, model, threshold=0.05):
             recall[i] = 0.0
         if np.isnan(precision[i]):
             precision[i] = 0.0
+        if np.isnan(detections[i]):
+            detections[i] = 0.0
 
         print('CLS: ', i)
         print('true detections: ', detections[i])
