@@ -133,7 +133,7 @@ def toPix_array(translation):
 
     return np.stack((xpix, ypix), axis=1) #, zpix]
 
-
+'''
 def load_pcd(cat):
     # load meshes
     #mesh_path ="/RGBDPose/Meshes/linemod_13/"
@@ -151,8 +151,9 @@ def load_pcd(cat):
     pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-
 '''
+
+
 def load_pcd(data_path, cat):
     # load meshes
     ply_path = os.path.join(data_path, 'meshes', 'obj_' + cat + '.ply')
@@ -169,7 +170,6 @@ def load_pcd(data_path, cat):
     #pcd_model = open3d.read_point_cloud(ply_path)
 
     return pcd_model, model_vsd, model_vsd_mm
-'''
 
 
 def create_point_cloud(depth, fx, fy, cx, cy, ds):
@@ -249,23 +249,23 @@ def evaluate_occlusion(generator, model, threshold=0.05):
 
     data_path = '/home/stefan/data/train_data/occlusion_val'
 
-    #pc1, mv1, mv1_mm = load_pcd(data_path, '000001')
-    #pc5, mv5, mv5_mm = load_pcd(data_path, '000005')
-    #pc6, mv6, mv6_mm = load_pcd(data_path, '000006')
-    #pc8, mv8, mv8_mm = load_pcd(data_path, '000008')
-    #pc9, mv9, mv9_mm = load_pcd(data_path, '000009')
-    #pc10, mv10, mv10_mm = load_pcd(data_path, '000010')
-    #pc11, mv11, mv11_mm = load_pcd(data_path, '000011')
-    #pc12, mv12, mv12_mm = load_pcd(data_path, '000012')
+    pc1, mv1, mv1_mm = load_pcd(data_path, '000001')
+    pc5, mv5, mv5_mm = load_pcd(data_path, '000005')
+    pc6, mv6, mv6_mm = load_pcd(data_path, '000006')
+    pc8, mv8, mv8_mm = load_pcd(data_path, '000008')
+    pc9, mv9, mv9_mm = load_pcd(data_path, '000009')
+    pc10, mv10, mv10_mm = load_pcd(data_path, '000010')
+    pc11, mv11, mv11_mm = load_pcd(data_path, '000011')
+    pc12, mv12, mv12_mm = load_pcd(data_path, '000012')
 
-    pc1, mv1, mv1_mm = load_pcd('01')
-    pc5, mv5, mv5_mm = load_pcd('05')
-    pc6, mv6, mv6_mm = load_pcd('06')
-    pc8, mv8, mv8_mm = load_pcd('08')
-    pc9, mv9, mv9_mm = load_pcd('09')
-    pc10, mv10, mv10_mm = load_pcd('10')
-    pc11, mv11, mv11_mm = load_pcd('11')
-    pc12, mv12, mv12_mm = load_pcd('12')
+    #pc1, mv1, mv1_mm = load_pcd('01')
+    #pc5, mv5, mv5_mm = load_pcd('05')
+    #pc6, mv6, mv6_mm = load_pcd('06')
+    #pc8, mv8, mv8_mm = load_pcd('08')
+    #pc9, mv9, mv9_mm = load_pcd('09')
+    #pc10, mv10, mv10_mm = load_pcd('10')
+    #pc11, mv11, mv11_mm = load_pcd('11')
+    #pc12, mv12, mv12_mm = load_pcd('12')
 
     allPoses = np.zeros((16), dtype=np.uint32)
     trueDets = np.zeros((16), dtype=np.uint32)
@@ -368,7 +368,7 @@ def evaluate_occlusion(generator, model, threshold=0.05):
                 # falsePoses[int(cls)] += 1
                 continue
 
-            if len(cls_indices[0]) < 10:
+            if len(cls_indices[0]) < 1:
                 # print('not enough inlier')
                 continue
             trueDets[int(cls)] += 1
