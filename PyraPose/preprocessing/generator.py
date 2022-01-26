@@ -236,8 +236,8 @@ class Generator(keras.utils.Sequence):
                 next_transform = next(self.transform_generator)
                 transform = adjust_transform_for_image(next_transform, image,
                                                        self.transform_parameters.relative_translation)
-                transform_mask = adjust_transform_for_mask(next_transform, annotations['mask'],
-                                                           self.transform_parameters.relative_translation)
+                #transform_mask = adjust_transform_for_mask(next_transform, annotations['mask'],
+                #                                           self.transform_parameters.relative_translation)
 
             # apply transformation to image            
             #if annotations['cam_params'].shape[0] > 1:
@@ -246,7 +246,7 @@ class Generator(keras.utils.Sequence):
             #    K = [572.4114, 573.57043, 325.26110828, 242.04899594]
 
             image = apply_transform(transform, image, self.transform_parameters)
-            annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters)
+            #annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], self.transform_parameters)
 
             # Transform the bounding boxes in the annotations.
             annotations['bboxes'] = annotations['bboxes'].copy()
@@ -363,7 +363,6 @@ class Generator(keras.utils.Sequence):
         # load images and annotations
         image_group       = self.load_image_group(group) # image group is now [image_rgb, image_dep]
         annotations_group = self.load_annotations_group(group)
-
         # check validity of annotations
         #image_group, annotations_group = self.filter_annotations(image_group, annotations_group, group)
 

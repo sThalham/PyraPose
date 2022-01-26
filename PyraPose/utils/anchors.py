@@ -165,7 +165,7 @@ def anchor_targets_bbox(
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
-        print('image: ', image.shape)
+        #print('image: ', image.shape)
 
         # w/o mask
         #mask = annotations['mask'][0]
