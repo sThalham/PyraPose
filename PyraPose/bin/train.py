@@ -21,8 +21,8 @@ import os
 import sys
 import warnings
 
-import keras
-import keras.preprocessing.image
+import tensorflow.keras as keras
+import tensorflow.keras.preprocessing.image
 import tensorflow as tf
 
 # Allow relative imports when being executed as script.
@@ -40,7 +40,6 @@ from ..callbacks.eval import Evaluate
 from ..models.retinanet import retinanet_bbox
 from ..utils.anchors import make_shapes_callback
 from ..utils.config import read_config_file, parse_anchor_parameters
-from ..utils.keras_version import check_keras_version
 from ..utils.model import freeze as freeze_model
 from ..utils.transform import random_transform_generator
 
@@ -88,27 +87,25 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
         model          = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = model
 
-    # make prediction model
-    prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
-
     # compile model
     training_model.compile(
         loss={
             '3Dbox'        : losses.sym_orthogonal_l1(),
             'cls'          : losses.focal(),
-            'mask'          : losses.focal(),
+            #'mask'          : losses.focal(),
         },
         optimizer=keras.optimizers.Adam(lr=lr, clipnorm=0.001)
     )
 
-    return model, training_model, prediction_model
+    return model, training_model
 
 
-def create_callbacks(model, training_model, prediction_model, validation_generator, args):
+def create_callbacks(model, training_model, validation_generator, args):
     callbacks = []
 
     tensorboard_callback = None
 
+    '''
     if args.evaluation and validation_generator:
         if args.dataset_type == 'coco':
             from ..callbacks.coco import CocoEval
@@ -123,6 +120,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
             evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
         evaluation = RedirectModel(evaluation, prediction_model)
         callbacks.append(evaluation)
+    '''
 
         # save the model
     if args.snapshots:
@@ -268,12 +266,13 @@ def create_generators(args, preprocess_image):
             **common_args
         )
 
-        validation_generator = CustomGenerator(
-            args.custom_path,
-            'val',
-            transform_generator=transform_generator,
-            **common_args
-        )
+        #validation_generator = CustomGenerator(
+        #    args.custom_path,
+        #    'val',
+        #    transform_generator=transform_generator,
+        #    **common_args
+        #)
+        validation_generator = None
 
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
@@ -322,8 +321,8 @@ def parse_args(args):
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_true')
     parser.add_argument('--freeze-backbone',  help='Freeze training of backbone layers.', action='store_true')
-    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=480)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
+    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=1080)
+    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=1920)
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Fit generator arguments
@@ -341,8 +340,6 @@ def main(args=None):
 
     backbone = models.backbone(args.backbone)
 
-    check_keras_version()
-
     # optionally choose specific GPU
     if args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
@@ -359,16 +356,16 @@ def main(args=None):
         anchor_params    = None
         if args.config and 'anchor_parameters' in args.config:
             anchor_params = parse_anchor_parameters(args.config)
-        prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
+        #prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
     else:
         weights = args.weights
         # default to imagenet if nothing else is specified
-        if weights is None and args.imagenet_weights:
-            weights = backbone.download_imagenet()
+        #if weights is None and args.imagenet_weights:
+        #    weights = backbone.download_imagenet()
 
         print('Creating model, this may take a second...')
-        model, training_model, prediction_model = create_models(
-            backbone_retinanet=backbone.retinanet,
+        model, training_model = create_models(
+            backbone_retinanet=backbone.model,
             num_classes=train_generator.num_classes(),
             weights=weights,
             multi_gpu=0,
@@ -383,7 +380,6 @@ def main(args=None):
     callbacks = create_callbacks(
         model,
         training_model,
-        prediction_model,
         validation_generator,
         args,
     )

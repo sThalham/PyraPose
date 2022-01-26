@@ -21,7 +21,7 @@ import copy
 import cv2
 import time
 
-import keras
+from tensorflow import keras
 
 from ..utils.anchors import (
     anchor_targets_bbox,

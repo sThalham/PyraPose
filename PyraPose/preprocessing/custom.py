@@ -64,9 +64,9 @@ class CustomGenerator(Generator):
 
         self.load_classes()
 
-        self.TDboxes = np.zeros((19, 8, 3), dtype=np.float32)
-        self.sym_cont = np.zeros((19, 3), dtype=np.float32)
-        self.sym_disc = np.zeros((19, 3, 16), dtype=np.float32)
+        self.TDboxes = np.zeros((21, 8, 3), dtype=np.float32)
+        self.sym_cont = np.zeros((21, 3), dtype=np.float32)
+        self.sym_disc = np.zeros((21, 3, 16), dtype=np.float32)
 
         for key, value in yaml.load(open(self.mesh_info)).items():
             x_minus = value['min_x']
@@ -181,6 +181,7 @@ class CustomGenerator(Generator):
             image_info = self.image_ann[image_index]
         path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
         path = path[:-4] + '_rgb' + path[-4:]
+        print('path: ', path)
 
         return read_image_bgr(path)
 
@@ -220,6 +221,7 @@ class CustomGenerator(Generator):
         lists = [self.imgToAnns[imgId] for imgId in ids if imgId in self.imgToAnns]
         anns = list(itertools.chain.from_iterable(lists))
 
+        '''
         # load mask
         if _isArrayLike(image_index):
             image_info = (self.image_ann[id] for id in image_index)
@@ -229,6 +231,8 @@ class CustomGenerator(Generator):
         path = path[:-4] + '_mask.png'  # + path[-4:]
         # mask = None
         mask = cv2.imread(path, -1)
+        '''
+        mask = None
 
         annotations     = {'mask': mask, 'labels': np.empty((0,)), 'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,)), 'sym_dis': np.empty((0, 3, 16)), 'sym_con': np.empty((0, 3))}
 

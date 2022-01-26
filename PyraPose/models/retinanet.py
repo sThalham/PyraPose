@@ -1,4 +1,4 @@
-import keras
+from tensorflow import keras
 import tensorflow as tf
 from .. import initializers
 from .. import layers
@@ -279,7 +279,7 @@ def retinanet(
     backbone_layers,
     num_classes,
     num_anchors             = None,
-    create_pyramid_features = __create_sparceFPN,
+    create_pyramid_features = __create_pyramid_features,
     submodels               = None,
     name                    = 'retinanet'
 ):
@@ -293,7 +293,7 @@ def retinanet(
         #submodels_2 = default_submodels_2(num_classes, num_anchors)
 
     #mask_head = default_mask_decoder(num_classes=num_classes, num_anchors=num_anchors)
-    mask_head = default_mask_model(num_classes=num_classes)
+    #mask_head = default_mask_model(num_classes=num_classes)
 
     b1, b2, b3 = backbone_layers
 
@@ -310,8 +310,8 @@ def retinanet(
     features = create_pyramid_features(b1, b2, b3)
     pyramids = __build_pyramid(submodels, features)
 
-    masks = mask_head(features[0])
-    pyramids.append(masks)
+    #masks = mask_head(features[0])
+    #pyramids.append(masks)
 
     return keras.models.Model(inputs=inputs, outputs=pyramids, name=name)
 

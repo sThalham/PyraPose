@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import numpy as np
-import keras
+from tensorflow import keras
 import transforms3d as tf3d
 import cv2
 from PIL import Image
@@ -55,13 +55,13 @@ The default anchor parameters.
 #    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
 #)
 
-# YCB-video
-AnchorParameters.default = AnchorParameters(
-    sizes   = [48, 96, 192],
-    strides = [8, 16, 32],
-    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
-    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
-)
+## YCB-video
+#AnchorParameters.default = AnchorParameters(
+#    sizes   = [48, 96, 192],
+#    strides = [8, 16, 32],
+#    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+#    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
+#)
 
 # homebrewed
 #AnchorParameters.default = AnchorParameters(
@@ -79,13 +79,21 @@ AnchorParameters.default = AnchorParameters(
 #    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
 #)
 
-# IST
+## IST
 #AnchorParameters.default = AnchorParameters(
 #    sizes   = [16, 48, 128],
 #    strides = [8, 16, 32],
 #    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
 #    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0), 2 ** 1], keras.backend.floatx()),
 #)
+
+# IST
+AnchorParameters.default = AnchorParameters(
+    sizes   = [32, 64, 128, 256, 512],
+    strides = [8, 16, 32, 64, 128],
+    ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
+)
 
 defaultHypotheses = 8
 
@@ -150,29 +158,31 @@ def anchor_targets_bbox(
     labels_batch      = np.zeros((batch_size, anchors.shape[0], num_classes + 1), dtype=keras.backend.floatx())
     # MHP
     regression_3D = np.zeros((batch_size, anchors.shape[0], defaultHypotheses, 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
-    mask_batch = np.zeros((batch_size, mask_locations, num_classes + 1), dtype=keras.backend.floatx())
+    #mask_batch = np.zeros((batch_size, mask_locations, num_classes + 1), dtype=keras.backend.floatx())
 
     pyramid_levels = [3]
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
 
+        print('image: ', image.shape)
+
         # w/o mask
-        mask = annotations['mask'][0]
-        image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
+        #mask = annotations['mask'][0]
+        #image_shapes = guess_shapes(image.shape[:2], pyramid_levels)
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        image_raw = image
-        image_raw[..., 0] += 103.939
-        image_raw[..., 1] += 116.779
-        image_raw[..., 2] += 123.68
+        #image_raw = image
+        #image_raw[..., 0] += 103.939
+        #image_raw[..., 1] += 116.779
+        #image_raw[..., 2] += 123.68
 
-        image_raw_sym = copy.deepcopy(image_raw)
-        image_raw_sym1 = copy.deepcopy(image_raw)
-        image_raw_sym2 = copy.deepcopy(image_raw)
+        #image_raw_sym = copy.deepcopy(image_raw)
+        #image_raw_sym1 = copy.deepcopy(image_raw)
+        #image_raw_sym2 = copy.deepcopy(image_raw)
 
-        rind = np.random.randint(0, 1000)
+        #rind = np.random.randint(0, 1000)
         #viz_img = False
 
         if annotations['bboxes'].shape[0]:
@@ -200,15 +210,15 @@ def anchor_targets_bbox(
             for idx, pose in enumerate(annotations['poses']):
 
                 # mask part
-                cls = int(annotations['labels'][idx])
-                mask_id = annotations['mask_ids'][idx]
-                mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
-                mask_flat = mask_flat.flatten()
-                anchors_pyramid = np.where(mask_flat == int(mask_id))
-                anchors_spec = anchors_pyramid[0]
-                if len(anchors_spec) > 1:
-                    mask_batch[index, anchors_spec, cls] = 1
-                    mask_batch[index, anchors_spec, -1] = 1
+                #cls = int(annotations['labels'][idx])
+                #mask_id = annotations['mask_ids'][idx]
+                #mask_flat = np.asarray(Image.fromarray(mask).resize((image_shapes[0][1], image_shapes[0][0]), Image.NEAREST))
+                #mask_flat = mask_flat.flatten()
+                #anchors_pyramid = np.where(mask_flat == int(mask_id))
+                #anchors_spec = anchors_pyramid[0]
+                #if len(anchors_spec) > 1:
+                #    mask_batch[index, anchors_spec, cls] = 1
+                #    mask_batch[index, anchors_spec, -1] = 1
                     #mask_viz[anchors_spec, :] = int(10*cls)
                 # mask part
 
@@ -445,7 +455,7 @@ def anchor_targets_bbox(
             #regression_3D[index, indices, -1] = -1
 
     #return regression_3D, labels_batch, mask_batch
-    return tf.convert_to_tensor(regression_3D), tf.convert_to_tensor(labels_batch), tf.convert_to_tensor(mask_batch)
+    return tf.convert_to_tensor(regression_3D), tf.convert_to_tensor(labels_batch)#, tf.convert_to_tensor(mask_batch)
 
 
 def compute_gt_annotations(
@@ -549,8 +559,8 @@ def anchors_for_shape(
     """
 
     if pyramid_levels is None:
-        #pyramid_levels = [3, 4, 5, 6, 7]
-        pyramid_levels = [3, 4, 5]
+        pyramid_levels = [3, 4, 5, 6, 7]
+        #pyramid_levels = [3, 4, 5]
 
     if anchor_params is None:
         anchor_params = AnchorParameters.default
