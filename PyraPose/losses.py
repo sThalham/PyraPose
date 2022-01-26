@@ -452,8 +452,8 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
     sigma_squared = sigma ** 2
 
-    def _per_cls_l1_sym(y_true, y_pred):
-        regression = y_pred
+    def _sym_orthogonal_l1(y_true, y_pred):
+        #regression = y_pred
         regression_target = y_true[:, :, :, :-1]
         anchor_state = y_true[:, :, 0, -1]
 
@@ -487,7 +487,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
         return weight * tf.math.divide_no_nan(regression_loss, normalizer)
 
-    return _sym_orth_l1
+    return _sym_orthogonal_l1
 
 
 def project_points(inputs):

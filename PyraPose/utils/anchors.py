@@ -160,6 +160,8 @@ def anchor_targets_bbox(
     regression_3D = np.zeros((batch_size, anchors.shape[0], defaultHypotheses, 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
     #mask_batch = np.zeros((batch_size, mask_locations, num_classes + 1), dtype=keras.backend.floatx())
 
+    print('anchors: ', anchors.shape[0])
+
     pyramid_levels = [3]
 
     # compute labels and regression targets

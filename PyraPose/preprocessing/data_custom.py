@@ -1,9 +1,12 @@
 """
 Copyright 2017-2018 Fizyr (https://fizyr.com)
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,16 +27,15 @@ import warnings
 import copy
 import cv2
 import time
+import imgaug.augmenters as iaa
 
 import tensorflow.keras as keras
 import tensorflow as tf
 
 from ..utils.anchors import (
     anchor_targets_bbox,
-    anchors_for_shape,
     guess_shapes
 )
-from ..utils.config import parse_anchor_parameters
 from ..utils.image import (
     TransformParameters,
     adjust_transform_for_image,
@@ -44,6 +46,7 @@ from ..utils.image import (
     preprocess_image,
     resize_image,
     read_image_bgr,
+    augment_image
 )
 from ..utils.transform import transform_aabb, random_transform_generator
 
@@ -54,8 +57,8 @@ def _isArrayLike(obj):
 
 class CustomDataset(tf.data.Dataset):
 
-    def _generate(data_dir, set_name, batch_size=8, image_min_side=480,
-                         image_max_side=640):
+    def _generate(data_dir, set_name, batch_size=8, transform_generator=None, image_min_side=1080,
+                         image_max_side=1920):
 
         def _isArrayLike(obj):
             return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
@@ -127,9 +130,10 @@ class CustomDataset(tf.data.Dataset):
         classes, labels, labels_inverse, labels_rev = load_classes(cats)
 
         # load 3D boxes
-        TDboxes = np.ndarray((16, 8, 3), dtype=np.float32)
-        sym_cont = np.zeros((34, 3), dtype=np.float32)
-        sym_disc = np.zeros((34, 3, 16), dtype=np.float32)
+        TDboxes = np.ndarray((22, 8, 3), dtype=np.float32)
+        sphere_diameters = np.ndarray((22), dtype=np.float32)
+        sym_cont = np.zeros((22, 2, 3), dtype=np.float32)
+        sym_disc = np.zeros((22, 8, 16), dtype=np.float32)
 
         for key, value in yaml.load(open(mesh_info)).items():
             x_minus = value['min_x']
@@ -147,22 +151,27 @@ class CustomDataset(tf.data.Dataset):
                                        [x_minus, y_minus, z_minus],
                                        [x_minus, y_minus, z_plus]])
             TDboxes[int(key), :, :] = three_box_solo
+            sphere_diameters[int(key)] = value['diameter']
+
             if 'symmetries_discrete' in value:
                 for sdx, sym in enumerate(value['symmetries_discrete']):
                     sym_disc[int(key), sdx, :] = np.array(sym)
-            else:
-                sym_disc[int(key), :, :] = np.repeat(np.eye((4)).reshape(16)[np.newaxis, :], repeats=3, axis=0) #np.zeros((3, 16))
-            if "symmetries_continuous" in value:
-                sym_cont[int(key), :] = np.array(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
-            else:
-                sym_cont[int(key), :] = np.zeros((3))
+                    sym_disc[int(key), sdx, [3, 7, 11]] *= 0.001
+            #else:
+                #sym_disc[int(key), :, :] = np.repeat(np.eye((4)).reshape(16)[np.newaxis, :], repeats=3, axis=0)  # np.zeros((3, 16))
 
-            transform_generator = random_transform_generator(
-                min_translation=(0.0, 0.0),
-                max_translation=(0.0, 0.0),
-                min_scaling=(0.95, 0.95),
-                max_scaling=(1.05, 1.05),
-            )
+            if "symmetries_continuous" in value:
+                sym_cont[int(key), 0, :] = np.array(value['symmetries_continuous'][0]['axis'], dtype=np.float32)
+                sym_cont[int(key), 1, :] = np.array(value['symmetries_continuous'][0]['offset'], dtype=np.float32)
+            #else:
+            #    sym_cont[int(key), :, :] = np.zeros((2, 3))
+
+        transform_generator = random_transform_generator(
+            min_translation=(0.0, 0.0),
+            max_translation=(0.0, 0.0),
+            min_scaling=(0.95, 0.95),
+            max_scaling=(1.05, 1.05),
+        )
 
         def load_image(image_index):
             """ Load an image at the image_index.
@@ -187,8 +196,8 @@ class CustomDataset(tf.data.Dataset):
             mask = cv2.imread(mask_path, -1)
 
             annotations = {'mask': mask, 'labels': np.empty((0,)),
-                           'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)),
-                           'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,)), 'sym_dis': np.empty((0, 3, 16)), 'sym_con': np.empty((0, 3))}
+                           'bboxes': np.empty((0, 4)), 'poses': np.empty((0, 7)), 'segmentations': np.empty((0, 8, 3)), 'diameters': np.empty((0,)),
+                           'cam_params': np.empty((0, 4)), 'mask_ids': np.empty((0,)), 'sym_dis': np.empty((0, 8, 16)), 'sym_con': np.empty((0, 2, 3))}
 
             for idx, a in enumerate(anns):
                 if set_name == 'train':
@@ -221,6 +230,8 @@ class CustomDataset(tf.data.Dataset):
                 objID = a['category_id']
                 threeDbox = TDboxes[objID, :, :]
                 annotations['segmentations'] = np.concatenate([annotations['segmentations'], [threeDbox]], axis=0)
+                annotations['diameters'] = np.concatenate([annotations['diameters'], [sphere_diameters[objID]]],
+                                                          axis=0)
                 annotations['cam_params'] = np.concatenate([annotations['cam_params'], [[
                     fx,
                     fy,
@@ -230,7 +241,7 @@ class CustomDataset(tf.data.Dataset):
                 annotations['sym_dis'] = np.concatenate(
                     [annotations['sym_dis'], sym_disc[objID, :, :][np.newaxis, ...]], axis=0)
                 annotations['sym_con'] = np.concatenate(
-                    [annotations['sym_con'], sym_cont[objID, :][np.newaxis, ...]], axis=0)
+                    [annotations['sym_con'], sym_cont[objID, :, :][np.newaxis, ...]], axis=0)
 
             return annotations
 
@@ -249,55 +260,94 @@ class CustomDataset(tf.data.Dataset):
                 image = apply_transform(transform, image, transform_parameters)
                 annotations['mask'] = apply_transform2mask(transform_mask, annotations['mask'], transform_parameters)
 
-                # Transform the bounding boxes in the annotations.
-                annotations['bboxes'] = annotations['bboxes'].copy()
-                annotations['segmentations'] = annotations['segmentations'].copy()
-                for index in range(annotations['bboxes'].shape[0]):
-                    annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
+                for index in range(annotations['poses'].shape[0]):
                     annotations['poses'][index, :] = adjust_pose_annotation(transform, annotations['poses'][index, :],
                                                                             annotations['cam_params'][index, :])
+                    annotations['bboxes'][index, :] = transform_aabb(transform, annotations['bboxes'][index, :])
 
             return image, annotations
 
-
         max_shape = (image_min_side, image_max_side, 3)
-        anchors = anchors_for_shape(max_shape, anchor_params=None, shapes_callback=compute_shapes)
+
+        seq = iaa.Sequential([
+            #iaa.SomeOf((0, 2), [
+            #    iaa.BlendAlphaFrequencyNoise(
+            #        exponent=(-4, 4),
+            #        foreground=iaa.MultiplyAndAddToBrightness((0.5, 1.5), (-50, 50)),
+            #        background=iaa.MultiplyAndAddToBrightness((0.5, 1.5), (-50, 50)),
+            #        upscale_method=["linear", "cubic"]
+            #    ),
+            #    iaa.BlendAlphaSimplexNoise(
+            #        foreground=iaa.MultiplyAndAddToBrightness((0.5, 1.5), (-50, 50)),
+            #        background=iaa.MultiplyAndAddToBrightness((0.5, 1.5), (-50, 50)),
+            #        upscale_method=["linear", "cubic"]
+            #    ),
+            #    iaa.BlendAlphaSimplexNoise(
+            #        foreground=[iaa.MultiplyHue((0.5, 1.5)), iaa.MultiplySaturation((0.5, 1.5))],
+            #        background=[iaa.MultiplyHue((0.5, 1.5)), iaa.MultiplySaturation((0.5, 1.5))],
+            #        upscale_method=["linear", "cubic"]
+            #    ),
+            #    iaa.BlendAlphaSimplexNoise(
+            #        foreground=[iaa.AddToHue((-50, 50)), iaa.AddToSaturation((-50, 50))],
+            #        background=[iaa.AddToHue((-50, 50)), iaa.AddToSaturation((-50, 50))],
+            #        upscale_method=["linear", "cubic"]
+            #    ),
+            #]),
+            # blur
+            iaa.SomeOf((0, 2), [
+                iaa.GaussianBlur((0.0, 2.0)),
+                iaa.AverageBlur(k=(3, 7)),
+                iaa.MedianBlur(k=(3, 7)),
+                iaa.BilateralBlur(d=(1, 7)),
+                iaa.MotionBlur(k=(3, 7))
+            ]),
+            # color
+            iaa.SomeOf((0, 2), [
+                # iaa.WithColorspace(),
+                iaa.AddToHueAndSaturation((-15, 15)),
+                # iaa.ChangeColorspace(to_colorspace[], alpha=0.5),
+                iaa.Grayscale(alpha=(0.0, 0.2))
+            ]),
+            # brightness
+            iaa.OneOf([
+                iaa.Sequential([
+                    iaa.Add((-10, 10), per_channel=0.5),
+                    iaa.Multiply((0.75, 1.25), per_channel=0.5)
+                ]),
+                iaa.Add((-10, 10), per_channel=0.5),
+                iaa.Multiply((0.75, 1.25), per_channel=0.5),
+                iaa.FrequencyNoiseAlpha(
+                    exponent=(-4, 0),
+                    first=iaa.Multiply((0.75, 1.25), per_channel=0.5),
+                    second=iaa.LinearContrast((0.7, 1.3), per_channel=0.5))
+            ]),
+            # contrast
+            iaa.SomeOf((0, 2), [
+                iaa.GammaContrast((0.75, 1.25), per_channel=0.5),
+                iaa.SigmoidContrast(gain=(0, 10), cutoff=(0.25, 0.75), per_channel=0.5),
+                iaa.LogContrast(gain=(0.75, 1), per_channel=0.5),
+                iaa.LinearContrast(alpha=(0.7, 1.3), per_channel=0.5)
+            ]),
+        ], random_order=True)
 
         while True:
-            order_syn = list(range(len(image_ids)))
-            np.random.shuffle(order_syn)
-            groups_syn = [[order_syn[x % len(order_syn)] for x in range(i, i + batch_size)] for i in
-                          range(0, len(order_syn), batch_size)]
+            order = list(range(len(image_ids)))
+            np.random.shuffle(order)
+            groups = [[order[x % len(order)] for x in range(i, i + batch_size)] for i in
+                          range(0, len(order), batch_size)]
 
-            batches_syn = np.arange(len(groups_syn))
+            batches = np.arange(len(groups))
 
-            for btx in range(len(batches_syn)):
-
-                x_s = [load_image(image_index) for image_index in groups_syn[btx]]
-                y_s = [load_annotations(image_index) for image_index in groups_syn[btx]]
+            for btx in range(len(batches)):
+                x_s = [load_image(image_index) for image_index in groups[btx]]
+                y_s = [load_annotations(image_index) for image_index in groups[btx]]
 
                 assert (len(x_s) == len(y_s))
 
                 # filter annotations
                 for index, (image, annotations) in enumerate(zip(x_s, y_s)):
-                    '''
-                    # test x2 < x1 | y2 < y1 | x1 < 0 | y1 < 0 | x2 <= 0 | y2 <= 0 | x2 >= image.shape[1] | y2 >= image.shape[0]
-                    invalid_indices = np.where(
-                        (annotations['bboxes'][:, 2] <= annotations['bboxes'][:, 0]) |
-                        (annotations['bboxes'][:, 3] <= annotations['bboxes'][:, 1]) |
-                        (annotations['bboxes'][:, 0] < 0) |
-                        (annotations['bboxes'][:, 1] < 0) |
-                        (annotations['bboxes'][:, 2] > image.shape[1]) |
-                        (annotations['bboxes'][:, 3] > image.shape[0])
-                    )[0]
 
-                    # delete invalid indices
-                    if len(invalid_indices):
-                        for k in y_s[index].keys():
-                            if k == 'target_domain' or k == 'mask' or k == 'depth':
-                                continue
-                            y_s[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
-                    '''
+                    x_s[index] = augment_image(x_s[index], seq)
 
                     # transform a single group entry
                     x_s[index], y_s[index] = random_transform_group_entry(x_s[index], y_s[index])
@@ -311,12 +361,24 @@ class CustomDataset(tf.data.Dataset):
                 for image_index, image in enumerate(x_s):
                     image_source_batch[image_index, :image.shape[0], :image.shape[1], :image.shape[2]] = image
 
-                target_batch = compute_anchor_targets(anchors, x_s, y_s, len(classes))
+                target_batch = compute_anchor_targets(x_s, y_s, len(classes))
 
-                image_source_batch = tf.convert_to_tensor(image_source_batch, dtype=tf.float32)
-                target_batch = tf.tuple(target_batch)
+                #image_source_batch = tf.convert_to_tensor(image_source_batch, dtype=tf.float32)
+                #target_batch = tf.tuple(target_batch)
 
-                yield image_source_batch, target_batch
+                #yield image_source_batch, target_batch
+                yield image_source_batch, (
+                target_batch[0], target_batch[1])
 
     def __new__(self, data_dir, set_name, batch_size):
-        return tf.data.Dataset.from_generator(self._generate, (tf.dtypes.float32, (tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32)), args=(data_dir, set_name, batch_size))
+
+        return tf.data.Dataset.from_generator(self._generate,
+                                              output_signature=(
+                                              tf.TensorSpec(shape=(batch_size, None, None, 3), dtype=tf.float32),
+                                              (tf.TensorSpec(shape=(batch_size, None, 20, 8, 17), dtype=tf.float32),
+                                               tf.TensorSpec(shape=(batch_size, None, 20 + 1), dtype=tf.float32))),
+                                               #tf.TensorSpec(shape=(batch_size, 42600, 20, 8, 4), dtype=tf.float32),
+                                               #tf.TensorSpec(shape=(batch_size, 42600, 20, 8, 7), dtype=tf.float32),
+                                               #tf.TensorSpec(shape=(batch_size, 42600, 20), dtype=tf.float32))),
+                                              args=(data_dir, set_name, batch_size))
+

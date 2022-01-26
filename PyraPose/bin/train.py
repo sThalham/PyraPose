@@ -24,6 +24,9 @@ import warnings
 import tensorflow.keras as keras
 import tensorflow.keras.preprocessing.image
 import tensorflow as tf
+import numpy as np
+import yaml
+import json
 
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
@@ -100,7 +103,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
     return model, training_model
 
 
-def create_callbacks(model, training_model, validation_generator, args):
+def create_callbacks(model, training_model, args):
     callbacks = []
 
     tensorboard_callback = None
@@ -257,27 +260,55 @@ def create_generators(args, preprocess_image):
             **common_args
         )
     elif args.dataset_type == 'custom':
-        from ..preprocessing.custom import CustomGenerator
+        from ..preprocessing.data_custom import CustomDataset
 
-        train_generator = CustomGenerator(
-            args.custom_path,
-            'train',
-            transform_generator=transform_generator,
-            **common_args
+        dataset = CustomDataset(args.custom_path, 'train', batch_size=args.batch_size)
+        num_classes = 20
+        train_samples = 10300
+        dataset = tf.data.Dataset.range(args.workers).interleave(
+            lambda _: dataset,
+            # num_parallel_calls=tf.data.experimental.AUTOTUNE
+            num_parallel_calls=args.workers
         )
-
-        #validation_generator = CustomGenerator(
-        #    args.custom_path,
-        #    'val',
-        #    transform_generator=transform_generator,
-        #    **common_args
-        #)
+        mesh_info = os.path.join(args.custom_path, 'annotations', 'models_info' + '.yml')
+        correspondences = np.ndarray((num_classes, 8, 3), dtype=np.float32)
+        sphere_diameters = np.ndarray((num_classes), dtype=np.float32)
+        for key, value in yaml.load(open(mesh_info)).items():
+            x_minus = value['min_x']
+            y_minus = value['min_y']
+            z_minus = value['min_z']
+            x_plus = value['size_x'] + x_minus
+            y_plus = value['size_y'] + y_minus
+            z_plus = value['size_z'] + z_minus
+            three_box_solo = np.array([[x_plus, y_plus, z_plus],
+                                       [x_plus, y_plus, z_minus],
+                                       [x_plus, y_minus, z_minus],
+                                       [x_plus, y_minus, z_plus],
+                                       [x_minus, y_plus, z_plus],
+                                       [x_minus, y_plus, z_minus],
+                                       [x_minus, y_minus, z_minus],
+                                       [x_minus, y_minus, z_plus]])
+            correspondences[int(key) - 1, :, :] = three_box_solo
+            sphere_diameters[int(key) - 1] = value['diameter']
+        path = os.path.join(args.custom_path, 'annotations', 'instances_train.json')
+        with open(path, 'r') as js:
+            data = json.load(js)
+        image_ann = data["images"]
+        intrinsics = np.ndarray((4), dtype=np.float32)
+        for img in image_ann:
+            if "fx" in img:
+                intrinsics[0] = img["fx"]
+                intrinsics[1] = img["fy"]
+                intrinsics[2] = img["cx"]
+                intrinsics[3] = img["cy"]
+            break
         validation_generator = None
 
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
 
-    return train_generator, validation_generator
+    #return train_generator, validation_generator
+    return dataset, num_classes, correspondences, sphere_diameters, train_samples, intrinsics
 
 
 def parse_args(args):
@@ -346,7 +377,8 @@ def main(args=None):
     #keras.backend.tensorflow_backend.set_session(get_session())
 
     # create the generators
-    train_generator, validation_generator = create_generators(args, backbone.preprocess_image)
+    #train_generator, validation_generator = create_generators(args, backbone.preprocess_image)
+    dataset, num_classes, correspondences, obj_diameters, train_samples, intrinsics = create_generators(args, backbone.preprocess_image)
 
     # create the model
     if args.snapshot is not None:
@@ -366,7 +398,8 @@ def main(args=None):
         print('Creating model, this may take a second...')
         model, training_model = create_models(
             backbone_retinanet=backbone.model,
-            num_classes=train_generator.num_classes(),
+            #num_classes=train_generator.num_classes(),
+            num_classes=num_classes,
             weights=weights,
             multi_gpu=0,
             freeze_backbone=args.freeze_backbone,
@@ -380,7 +413,6 @@ def main(args=None):
     callbacks = create_callbacks(
         model,
         training_model,
-        validation_generator,
         args,
     )
 
@@ -390,21 +422,20 @@ def main(args=None):
     else:
         use_multiprocessing = False
 
+    training_model.fit(
+        x=dataset,
+        steps_per_epoch=train_samples / args.batch_size,
+        # steps_per_epoch=10,
+        epochs=args.epochs,
+        # epochs=1,
+        verbose=1,
+        callbacks=callbacks,
+        workers=args.workers,
+        use_multiprocessing=use_multiprocessing,
+        max_queue_size=args.max_queue_size
+    )
 
-
-    # start training
-    #training_model.fit_generator(
-    #    generator=train_generator,
-    #    steps_per_epoch=train_generator.size()/args.batch_size,
-    #    epochs=args.epochs,
-    #    verbose=1,
-    #    callbacks=callbacks,
-    #    workers=args.workers,
-    #    use_multiprocessing=use_multiprocessing,
-    #    max_queue_size=args.max_queue_size
-    #)
-
-
+    '''
     # debugging
     from ..preprocessing.data_custom import CustomDataset
     #benchmark(
@@ -428,6 +459,7 @@ def main(args=None):
         use_multiprocessing=use_multiprocessing,
         max_queue_size=args.max_queue_size
     )
+    '''
 
 if __name__ == '__main__':
     main()
