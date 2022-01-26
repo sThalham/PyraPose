@@ -412,6 +412,7 @@ def orthogonal_l1_local(inputs):
     return loss_min
 
 
+'''
 def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
     weight_xy = 0.8
@@ -442,6 +443,49 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         regression_loss = keras.backend.sum(regression_loss) / normalizer
 
         return weight * regression_loss
+
+    return _sym_orth_l1
+'''
+
+
+def sym_orthogonal_l1(weight=0.125, sigma=3.0):
+
+    sigma_squared = sigma ** 2
+
+    def _per_cls_l1_sym(y_true, y_pred):
+        regression = y_pred
+        regression_target = y_true[:, :, :, :-1]
+        anchor_state = y_true[:, :, 0, -1]
+
+        in_shape = tf.shape(regression_target)
+        anchor_state = tf.reshape(anchor_state, [in_shape[0] * in_shape[1], in_shape[2]])
+        indices = tf.math.reduce_max(anchor_state, axis=1)
+        indices = tf.where(tf.math.equal(indices, 1))[:, 0]
+
+        y_pred_res = tf.reshape(y_pred, [in_shape[0] * in_shape[1], in_shape[3]])
+        regression = tf.gather(y_pred_res, indices, axis=0)
+        y_true_res = tf.reshape(regression_target, [in_shape[0] * in_shape[1], in_shape[2], in_shape[3]])
+        regression_target = tf.gather(y_true_res, indices, axis=0)
+
+        regression = tf.transpose(regression, perm=[1, 0])
+        regression_target = tf.transpose(regression_target, perm=[1, 2, 0])
+
+        # compute smooth L1 loss
+        # f(x) = 0.5 * (sigma * x)^2          if |x| < 1 / sigma / sigma
+        #        |x| - 0.5 / sigma / sigma    otherwise
+        regression_diff = regression_target - regression
+        regression_diff = keras.backend.abs(regression_diff)
+        regression_loss = backend.where(
+            keras.backend.less(regression_diff, 1.0 / sigma_squared),
+            0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
+            regression_diff - 0.5 / sigma_squared
+        )
+        regression_loss = tf.math.reduce_min(regression_loss, axis=0) # reduce regression loss to min hypothesis
+        regression_loss = tf.math.reduce_sum(regression_loss, axis=1)
+
+        normalizer = tf.math.reduce_sum(anchor_state)
+
+        return weight * tf.math.divide_no_nan(regression_loss, normalizer)
 
     return _sym_orth_l1
 
