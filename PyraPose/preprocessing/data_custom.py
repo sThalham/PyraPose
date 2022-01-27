@@ -370,7 +370,9 @@ class CustomDataset(tf.data.Dataset):
                     image_source_batch[image_index, :image.shape[0], :image.shape[1], :image.shape[2]] = image
 
                 max_shape = tuple(max(image.shape[x] for image in x_s) for x in range(3))
+                print('max_shape: ', max_shape)
                 anchors = generate_anchors(max_shape)
+                print(anchors)
                 target_batch = compute_anchor_targets(anchors, x_s, y_s, len(classes))
 
                 #image_source_batch = tf.convert_to_tensor(image_source_batch, dtype=tf.float32)
@@ -384,7 +386,7 @@ class CustomDataset(tf.data.Dataset):
 
         return tf.data.Dataset.from_generator(self._generate,
                                               output_signature=(
-                                              tf.TensorSpec(shape=(batch_size, None, None, 3), dtype=tf.float32),
+                                              tf.TensorSpec(shape=(batch_size, 1080, 1920, 3), dtype=tf.float32),
                                               (tf.TensorSpec(shape=(batch_size, None, 8, 17), dtype=tf.float32),
                                                tf.TensorSpec(shape=(batch_size, None, 20 + 1), dtype=tf.float32))),
                                                #tf.TensorSpec(shape=(batch_size, 42600, 20, 8, 4), dtype=tf.float32),
