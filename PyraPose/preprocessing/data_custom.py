@@ -34,6 +34,7 @@ import tensorflow as tf
 
 from ..utils.anchors import (
     anchor_targets_bbox,
+    anchors_for_shape,
     guess_shapes
 )
 from ..utils.image import (
@@ -53,6 +54,13 @@ from ..utils.transform import transform_aabb, random_transform_generator
 
 def _isArrayLike(obj):
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
+
+
+def generate_anchors(image_shape):
+    pyramid_levels=None,
+    anchor_params=None,
+    shapes_callback=None,
+    return anchors_for_shape(image_shape, pyramid_levels=None, anchor_params=None, shapes_callback=None)
 
 
 class CustomDataset(tf.data.Dataset):
@@ -361,7 +369,9 @@ class CustomDataset(tf.data.Dataset):
                 for image_index, image in enumerate(x_s):
                     image_source_batch[image_index, :image.shape[0], :image.shape[1], :image.shape[2]] = image
 
-                target_batch = compute_anchor_targets(x_s, y_s, len(classes))
+                max_shape = tuple(max(image.shape[x] for image in x_s) for x in range(3))
+                anchors = generate_anchors(max_shape)
+                target_batch = compute_anchor_targets(anchors, x_s, y_s, len(classes))
 
                 #image_source_batch = tf.convert_to_tensor(image_source_batch, dtype=tf.float32)
                 #target_batch = tf.tuple(target_batch)
@@ -375,7 +385,7 @@ class CustomDataset(tf.data.Dataset):
         return tf.data.Dataset.from_generator(self._generate,
                                               output_signature=(
                                               tf.TensorSpec(shape=(batch_size, None, None, 3), dtype=tf.float32),
-                                              (tf.TensorSpec(shape=(batch_size, None, 20, 8, 17), dtype=tf.float32),
+                                              (tf.TensorSpec(shape=(batch_size, None, 8, 17), dtype=tf.float32),
                                                tf.TensorSpec(shape=(batch_size, None, 20 + 1), dtype=tf.float32))),
                                                #tf.TensorSpec(shape=(batch_size, 42600, 20, 8, 4), dtype=tf.float32),
                                                #tf.TensorSpec(shape=(batch_size, 42600, 20, 8, 7), dtype=tf.float32),

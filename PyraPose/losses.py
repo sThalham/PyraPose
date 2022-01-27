@@ -458,9 +458,10 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         anchor_state = y_true[:, :, 0, -1]
 
         in_shape = tf.shape(regression_target)
-        anchor_state = tf.reshape(anchor_state, [in_shape[0] * in_shape[1], in_shape[2]])
-        indices = tf.math.reduce_max(anchor_state, axis=1)
-        indices = tf.where(tf.math.equal(indices, 1))[:, 0]
+        tf.print('in_shape: ', in_shape)
+        anchor_state = tf.reshape(anchor_state, [in_shape[0] * in_shape[1]])
+        #indices = tf.math.reduce_max(anchor_state, axis=1)
+        indices = tf.where(tf.math.equal(anchor_state, 1))[:, 0]
 
         y_pred_res = tf.reshape(y_pred, [in_shape[0] * in_shape[1], in_shape[3]])
         regression = tf.gather(y_pred_res, indices, axis=0)
@@ -484,6 +485,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         regression_loss = tf.math.reduce_sum(regression_loss, axis=1)
 
         normalizer = tf.math.reduce_sum(anchor_state)
+        tf.print('normalizer: ', normalizer)
 
         return weight * tf.math.divide_no_nan(regression_loss, normalizer)
 
