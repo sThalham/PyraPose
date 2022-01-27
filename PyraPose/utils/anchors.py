@@ -160,14 +160,10 @@ def anchor_targets_bbox(
     regression_3D = np.zeros((batch_size, anchors.shape[0], defaultHypotheses, 16 + 1), dtype=keras.backend.floatx()) # additional axis for symmetries
     #mask_batch = np.zeros((batch_size, mask_locations, num_classes + 1), dtype=keras.backend.floatx())
 
-    print('anchors: ', anchors.shape[0])
-
     pyramid_levels = [3]
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
-
-        print('image: ', image.shape)
 
         # w/o mask
         #mask = annotations['mask'][0]
@@ -232,7 +228,7 @@ def anchor_targets_bbox(
                 #viz = False
                 # handling rotational symmetries
                 if np.sum(annotations['sym_con'][idx]) > 0:
-                    pose = get_cont_sympose(pose, annotations['sym_con'][idx])
+                    pose = get_cont_sympose(pose, annotations['sym_con'][idx][0])
                     #viz = True
                     #rot_van = tf3d.quaternions.quat2mat(pose[3:]).reshape((3, 3))
                     #rota = np.dot(rot_van, tf3d.euler.euler2mat(0.0, 0.0, 2.12, 'sxyz'))
@@ -359,8 +355,8 @@ def anchor_targets_bbox(
                     for sdx in range(sym_disc.shape[0]):
                         if np.sum(np.abs(sym_disc[sdx, :])) != 0:
                             T_sym = np.matmul(full_T, np.array(sym_disc[sdx, :]).reshape((4, 4)))
-                            allo_sym = np.matmul(allo_pose, np.array(sym_disc[sdx, :]).reshape((4, 4)))
-                            hyps_pose[sdx, :, :] = allo_sym
+                            #allo_sym = np.matmul(allo_pose, np.array(sym_disc[sdx, :]).reshape((4, 4)))
+                            #hyps_pose[sdx, :, :] = allo_sym
                             rot_sym = T_sym[:3, :3]
                             tra = T_sym[:3, 3]
                             tDbox = rot_sym.dot(annotations['segmentations'][idx].T).T
@@ -371,7 +367,7 @@ def anchor_targets_bbox(
                                                     cx=annotations['cam_params'][idx][2],
                                                     cy=annotations['cam_params'][idx][3])
                             box3D_sym = np.reshape(box3D_sym, (16))
-                            calculated_boxes[sdx, :] = box3D_sym
+                            calculated_boxes[idx, sdx, :] = box3D_sym
 
                             '''
                             if cls == 0:
@@ -589,7 +585,6 @@ def anchors_for_shape(
     if shapes_callback is None:
         shapes_callback = guess_shapes
     image_shapes = shapes_callback(image_shape, pyramid_levels)
-    print('image_shape: ', image_shapes)
 
     # compute anchors over all pyramid levels
     all_anchors = np.zeros((0, 4))
