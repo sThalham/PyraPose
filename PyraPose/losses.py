@@ -486,7 +486,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
         #normalizer = tf.math.reduce_sum(anchor_state)
         normalizer = tf.cast(tf.shape(indices)[0], dtype=tf.float32)
-        tf.print('normalizer: ', normalizer)
+        #tf.print('normalizer: ', normalizer)
 
         return weight * tf.math.divide_no_nan(regression_loss, normalizer)
 

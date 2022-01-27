@@ -89,9 +89,11 @@ The default anchor parameters.
 
 # IST
 AnchorParameters.default = AnchorParameters(
-    sizes   = [32, 64, 128, 256, 512],
+    #sizes   = [32, 64, 128, 256, 512],
+    sizes   = [16, 32, 64, 128, 256],
     strides = [8, 16, 32, 64, 128],
     ratios  = np.array([0.5, 1, 2], keras.backend.floatx()),
+    #scales=np.array([1.0, 1.5], keras.backend.floatx()),
     scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], keras.backend.floatx()),
 )
 
@@ -164,6 +166,8 @@ def anchor_targets_bbox(
 
     # compute labels and regression targets
     for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
+
+        #print('image: ', image.shape)
 
         # w/o mask
         #mask = annotations['mask'][0]

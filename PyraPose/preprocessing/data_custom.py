@@ -65,8 +65,8 @@ def generate_anchors(image_shape):
 
 class CustomDataset(tf.data.Dataset):
 
-    def _generate(data_dir, set_name, batch_size=8, transform_generator=None, image_min_side=1080,
-                         image_max_side=1920):
+    def _generate(data_dir, set_name, batch_size=8, transform_generator=None, image_min_side=540,
+                         image_max_side=960):
 
         def _isArrayLike(obj):
             return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
@@ -360,6 +360,12 @@ class CustomDataset(tf.data.Dataset):
                     # transform a single group entry
                     x_s[index], y_s[index] = random_transform_group_entry(x_s[index], y_s[index])
 
+                    x_s[index], image_scale0 = resize_image(x_s[index], min_side=image_min_side, max_side=image_max_side)
+
+                    # apply resizing to annotations too
+                    y_s[index]['bboxes'] *= image_scale0
+                    #annotations['segmentations'] *= image_scale0
+
                     # preprocess
                     x_s[index] = preprocess_image(x_s[index])
                     x_s[index] = keras.backend.cast_to_floatx(x_s[index])
@@ -384,7 +390,7 @@ class CustomDataset(tf.data.Dataset):
 
         return tf.data.Dataset.from_generator(self._generate,
                                               output_signature=(
-                                              tf.TensorSpec(shape=(batch_size, 1080, 1920, 3), dtype=tf.float32),
+                                              tf.TensorSpec(shape=(batch_size, None, None, 3), dtype=tf.float32),
                                               (tf.TensorSpec(shape=(batch_size, None, 8, 17), dtype=tf.float32),
                                                tf.TensorSpec(shape=(batch_size, None, 20 + 1), dtype=tf.float32))),
                                                #tf.TensorSpec(shape=(batch_size, 42600, 20, 8, 4), dtype=tf.float32),
