@@ -364,6 +364,7 @@ class CustomDataset(tf.data.Dataset):
 
                     # apply resizing to annotations too
                     y_s[index]['bboxes'] *= image_scale0
+                    y_s[index]['cam_params'] *= image_scale0
                     #annotations['segmentations'] *= image_scale0
 
                     # preprocess

@@ -175,7 +175,7 @@ def anchor_targets_bbox(
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        #image_raw = image
+        image_raw = image
         #image_raw[..., 0] += 103.939
         #image_raw[..., 1] += 116.779
         #image_raw[..., 2] += 123.68
@@ -184,7 +184,7 @@ def anchor_targets_bbox(
         #image_raw_sym1 = copy.deepcopy(image_raw)
         #image_raw_sym2 = copy.deepcopy(image_raw)
 
-        #rind = np.random.randint(0, 1000)
+        rind = np.random.randint(0, 1000)
         #viz_img = False
 
         if annotations['bboxes'].shape[0]:
@@ -373,41 +373,36 @@ def anchor_targets_bbox(
                             box3D_sym = np.reshape(box3D_sym, (16))
                             calculated_boxes[idx, sdx, :] = box3D_sym
 
-                            '''
-                            if cls == 0:
-                                poseV = box3D.astype(np.uint16)
-
-                                img = image_raw
-
-                                img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[2:4].ravel()), (255, 0, 127),
-                                               3)
-                                img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[4:6].ravel()),
-                                               (130, 245, 13), 3)
-                                img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[6:8].ravel()), (255, 0, 127),
-                                               3)
-                                img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[0:2].ravel()), (255, 0, 127),
-                                               3)
-                                img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[8:10].ravel()),
-                                               (255, 0, 127), 3)
-                                img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[10:12].ravel()),
-                                               (255, 0, 127), 3)
-                                img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[12:14].ravel()),
-                                               (255, 0, 127), 3)
-                                img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[14:16].ravel()),
-                                               (255, 0, 127), 3)
-                                img = cv2.line(img, tuple(poseV[8:10].ravel()), tuple(poseV[10:12].ravel()),
-                                               (255, 0, 127), 3)
-                                img = cv2.line(img, tuple(poseV[10:12].ravel()), tuple(poseV[12:14].ravel()),
-                                               (255, 0, 127), 3)
-                                img = cv2.line(img, tuple(poseV[12:14].ravel()), tuple(poseV[14:16].ravel()),
-                                               (255, 0, 127), 3)
-                                img = cv2.line(img, tuple(poseV[14:16].ravel()), tuple(poseV[8:10].ravel()),
-                                               (255, 0, 127), 3)
-                                name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym.jpg'
-                                cv2.imwrite(name, img)
-                            '''
-
-
+                '''
+                poseV = box3D.astype(np.uint16)
+                img = image_raw
+                img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[2:4].ravel()), (255, 0, 127),
+                               3)
+                img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[4:6].ravel()),
+                               (130, 245, 13), 3)
+                img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[6:8].ravel()), (255, 0, 127),
+                               3)
+                img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[0:2].ravel()), (255, 0, 127),
+                               3)
+                img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[8:10].ravel()),
+                               (255, 0, 127), 3)
+                img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[10:12].ravel()),
+                               (255, 0, 127), 3)
+                img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[12:14].ravel()),
+                               (255, 0, 127), 3)
+                img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[14:16].ravel()),
+                               (255, 0, 127), 3)
+                img = cv2.line(img, tuple(poseV[8:10].ravel()), tuple(poseV[10:12].ravel()),
+                               (255, 0, 127), 3)
+                img = cv2.line(img, tuple(poseV[10:12].ravel()), tuple(poseV[12:14].ravel()),
+                               (255, 0, 127), 3)
+                img = cv2.line(img, tuple(poseV[12:14].ravel()), tuple(poseV[14:16].ravel()),
+                               (255, 0, 127), 3)
+                img = cv2.line(img, tuple(poseV[14:16].ravel()), tuple(poseV[8:10].ravel()),
+                               (255, 0, 127), 3)
+                name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym.jpg'
+                cv2.imwrite(name, img)
+                '''
                 '''
                 # Transformer loss
                 # handling rotational symmetries
@@ -798,6 +793,7 @@ def box3D_MHP(anchors, gt_boxes, mean=None, std=None):
     targets = np.transpose(targets, axes=[1, 2, 0])
 
     targets = (targets - mean) / std
+    #print(np.mean(gt_boxes, axis=0), np.var(gt_boxes, axis=0))
 
     return targets
 

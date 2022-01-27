@@ -448,7 +448,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 '''
 
 
-def sym_orthogonal_l1(weight=0.125, sigma=3.0):
+def sym_orthogonal_l1(weight=1.0, sigma=3.0):
 
     sigma_squared = sigma ** 2
 
@@ -458,7 +458,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
         anchor_state = y_true[:, :, 0, -1]
 
         in_shape = tf.shape(regression_target)
-        tf.print('in_shape: ', in_shape)
+        #tf.print('in_shape: ', in_shape)
         anchor_state = tf.reshape(anchor_state, [in_shape[0] * in_shape[1]])
         #indices = tf.math.reduce_max(anchor_state, axis=1)
         indices = tf.where(tf.math.equal(anchor_state, 1))[:, 0]
