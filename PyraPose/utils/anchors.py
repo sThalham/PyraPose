@@ -175,7 +175,8 @@ def anchor_targets_bbox(
         # w/o mask
 
         #mask_viz = cv2.resize(image, (image_shapes[0][1], image_shapes[0][0])).reshape((image_shapes[0][1] * image_shapes[0][0], 3))
-        image_raw = image
+        #image_raw = image
+        #image_van = copy.deepcopy(image_raw)
         #image_raw[..., 0] += 103.939
         #image_raw[..., 1] += 116.779
         #image_raw[..., 2] += 123.68
@@ -184,7 +185,7 @@ def anchor_targets_bbox(
         #image_raw_sym1 = copy.deepcopy(image_raw)
         #image_raw_sym2 = copy.deepcopy(image_raw)
 
-        rind = np.random.randint(0, 1000)
+        #rind = np.random.randint(0, 1000)
         #viz_img = False
 
         if annotations['bboxes'].shape[0]:
@@ -229,11 +230,12 @@ def anchor_targets_bbox(
                 #bb = annotations['bboxes'][idx]
                 #cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])), (255, 255, 255), 3)
 
-                #viz = False
+                pose_van = copy.deepcopy(pose)
+                viz = False
                 # handling rotational symmetries
                 if np.sum(annotations['sym_con'][idx]) > 0:
                     pose = get_cont_sympose(pose, annotations['sym_con'][idx][0])
-                    #viz = True
+                    viz = True
                     #rot_van = tf3d.quaternions.quat2mat(pose[3:]).reshape((3, 3))
                     #rota = np.dot(rot_van, tf3d.euler.euler2mat(0.0, 0.0, 2.12, 'sxyz'))
                     #pose[3:] = tf3d.quaternions.mat2quat(rota)
@@ -252,88 +254,6 @@ def anchor_targets_bbox(
 
                 box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
                 box3D = np.reshape(box3D, (16))
-
-                '''
-                if viz == True:
-                    poseV = box3D.astype(np.uint16)
-
-                    img = image_raw
-
-                    img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[2:4].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[4:6].ravel()), (130, 245, 13), 3)
-                    img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[6:8].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[0:2].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[8:10].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[10:12].ravel()),(255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[12:14].ravel()),(255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[14:16].ravel()),(255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[8:10].ravel()), tuple(poseV[10:12].ravel()),(255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[10:12].ravel()), tuple(poseV[12:14].ravel()),(255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[12:14].ravel()), tuple(poseV[14:16].ravel()),(255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[14:16].ravel()), tuple(poseV[8:10].ravel()),(255, 0, 127), 3)
-                    name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'van.jpg'
-                    cv2.imwrite(name, img)
-
-                    rot = tf3d.quaternions.quat2mat(pose_sym[3:])
-                    rot = np.asarray(rot, dtype=np.float32)
-                    tra = pose_sym[:3]
-                    full_T = np.ones((4, 4))
-                    full_T[:3, :3] = rot
-                    full_T[:3, 3] = tra
-                    tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
-                    tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
-
-                    box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0],
-                                        fy=annotations['cam_params'][idx][1], cx=annotations['cam_params'][idx][2],
-                                        cy=annotations['cam_params'][idx][3])
-                    box3D = np.reshape(box3D, (16))
-
-                    poseV = box3D.astype(np.uint16)
-                    img = image_raw_sym1
-
-                    img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[2:4].ravel()), (130, 245, 13), 3)
-                    img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[4:6].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[6:8].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[0:2].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[8:10].ravel()), (255, 0, 127),
-                                   3)
-                    img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[10:12].ravel()),
-                                   (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[12:14].ravel()),
-                                   (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[14:16].ravel()),
-                                   (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[8:10].ravel()), tuple(poseV[10:12].ravel()),
-                                   (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[10:12].ravel()), tuple(poseV[12:14].ravel()),
-                                   (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[12:14].ravel()), tuple(poseV[14:16].ravel()),
-                                   (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[14:16].ravel()), tuple(poseV[8:10].ravel()),
-                                   (255, 0, 127), 3)
-                    name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym.jpg'
-                    cv2.imwrite(name, img)
-
-                if cls == 0:
-                    poseV = box3D.astype(np.uint16)
-
-                    img = image_raw
-
-                    img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[2:4].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[4:6].ravel()), (130, 245, 13), 3)
-                    img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[6:8].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[0:2].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[8:10].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[10:12].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[12:14].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[14:16].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[8:10].ravel()), tuple(poseV[10:12].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[10:12].ravel()), tuple(poseV[12:14].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[12:14].ravel()), tuple(poseV[14:16].ravel()), (255, 0, 127), 3)
-                    img = cv2.line(img, tuple(poseV[14:16].ravel()), tuple(poseV[8:10].ravel()), (255, 0, 127), 3)
-                    name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'van.jpg'
-                    cv2.imwrite(name, img)
-                '''
 
                 # handling discrete symmetries
                 hyps_boxes = np.repeat(box3D[np.newaxis, np.newaxis, :], repeats=defaultHypotheses, axis=1)
@@ -373,90 +293,8 @@ def anchor_targets_bbox(
                             box3D_sym = np.reshape(box3D_sym, (16))
                             calculated_boxes[idx, sdx, :] = box3D_sym
 
-                '''
-                poseV = box3D.astype(np.uint16)
-                img = image_raw
-                img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[2:4].ravel()), (255, 0, 127),
-                               3)
-                img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[4:6].ravel()),
-                               (130, 245, 13), 3)
-                img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[6:8].ravel()), (255, 0, 127),
-                               3)
-                img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[0:2].ravel()), (255, 0, 127),
-                               3)
-                img = cv2.line(img, tuple(poseV[0:2].ravel()), tuple(poseV[8:10].ravel()),
-                               (255, 0, 127), 3)
-                img = cv2.line(img, tuple(poseV[2:4].ravel()), tuple(poseV[10:12].ravel()),
-                               (255, 0, 127), 3)
-                img = cv2.line(img, tuple(poseV[4:6].ravel()), tuple(poseV[12:14].ravel()),
-                               (255, 0, 127), 3)
-                img = cv2.line(img, tuple(poseV[6:8].ravel()), tuple(poseV[14:16].ravel()),
-                               (255, 0, 127), 3)
-                img = cv2.line(img, tuple(poseV[8:10].ravel()), tuple(poseV[10:12].ravel()),
-                               (255, 0, 127), 3)
-                img = cv2.line(img, tuple(poseV[10:12].ravel()), tuple(poseV[12:14].ravel()),
-                               (255, 0, 127), 3)
-                img = cv2.line(img, tuple(poseV[12:14].ravel()), tuple(poseV[14:16].ravel()),
-                               (255, 0, 127), 3)
-                img = cv2.line(img, tuple(poseV[14:16].ravel()), tuple(poseV[8:10].ravel()),
-                               (255, 0, 127), 3)
-                name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'sym.jpg'
-                cv2.imwrite(name, img)
-                '''
-                '''
-                # Transformer loss
-                # handling rotational symmetries
-                if np.sum(annotations['sym_con'][idx]) > 0:
-                    pose = get_cont_sympose(pose, annotations['sym_con'][idx])
-
-                rot = tf3d.quaternions.quat2mat(pose[3:])
-                rot = np.asarray(rot, dtype=np.float32)
-                tra = pose[:3]
-                tDbox = rot[:3, :3].dot(annotations['segmentations'][idx].T).T
-                tDbox = tDbox + np.repeat(tra[np.newaxis, 0:3], 8, axis=0)
-
-                box3D = toPix_array(tDbox, fx=annotations['cam_params'][idx][0], fy=annotations['cam_params'][idx][1],
-                                    cx=annotations['cam_params'][idx][2], cy=annotations['cam_params'][idx][3])
-                box3D = np.reshape(box3D, (16))
-                calculated_boxes = np.concatenate([calculated_boxes, [box3D]], axis=0)
-                
-                cls_ind = np.where(annotations['labels']==cls) # index of cls
-                if not len(cls_ind[0]) == 0:
-                    viz_img = True
-                    ov_laps = argmax_overlaps_inds #cls index overlap per anchor location?
-                    am_laps = positive_indices
-                    ov_laps = ov_laps[am_laps]
-                    pru_anc = anchors[am_laps, :]
-                    anc_idx = ov_laps == cls_ind
-                    true_anchors = pru_anc[anc_idx[0,:], :]
-                    for jdx in range(true_anchors.shape[0]):
-                        bb = true_anchors[jdx, :]
-                        #print(bb)
-                        cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                                   (255, 255, 255), 2)
-                        #cv2.rectangle(image_raw, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])),
-                        #              (255, 0, 0), 1)
-                        #image_crop = image[0][int(bb[1]):int(bb[3]), int(bb[0]):int(bb[2]), :]
-                        #name = '/home/stefan/RGBDPose_viz/anno_' + str(rind) + '_' + str(cls) + '_' + str(jdx) + '_crop.jpg'
-                        #cv2.imwrite(name, image_crop
-                '''
-
             # MHP
             regression_3D[index, :, :, :-1] = box3D_MHP(anchors, calculated_boxes[argmax_overlaps_inds, :])
-
-            #regression_3D[index, positive_indices, annotations['labels'][argmax_overlaps_inds[positive_indices]].astype(int), -1] = 1
-            #rind = np.random.randint(0, 1000)
-            #img_up = np.concatenate([image_raw, image_raw_sym], axis=1)
-            #img_down = np.concatenate([image_raw_sym2, image_raw_sym1], axis=1)
-            #img_viz = np.concatenate([img_up, img_down], axis=0)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'RGB.jpg'
-            #cv2.imwrite(name, img_viz)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + 'nosym_RGB.jpg'
-            #cv2.imwrite(name, image_raw_sym)
-            #mask_viz = mask_viz.reshape((image_shapes[0][0], image_shapes[0][1], 3))
-            #mask_viz = cv2.resize(mask_viz, (640, 480), interpolation=cv2.INTER_NEAREST)
-            #name = '/home/stefan/PyraPose_viz/anno_' + str(rind) + '_MASK.jpg'
-            #cv2.imwrite(name, mask_viz)
 
         # ignore annotations outside of image
         if image.shape:
@@ -471,6 +309,7 @@ def anchor_targets_bbox(
             #regression_3D[index, indices, -1] = -1
 
     #return regression_3D, labels_batch, mask_batch
+    #print('true annotations: ', np.where(regression_3D[:, :, :, -1]==1)[0].shape[0] / 8.0)
     return tf.convert_to_tensor(regression_3D), tf.convert_to_tensor(labels_batch)#, tf.convert_to_tensor(mask_batch)
 
 

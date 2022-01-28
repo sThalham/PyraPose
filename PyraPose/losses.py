@@ -448,7 +448,7 @@ def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 '''
 
 
-def sym_orthogonal_l1(weight=1.0, sigma=3.0):
+def sym_orthogonal_l1(weight=0.125, sigma=3.0):
 
     sigma_squared = sigma ** 2
 
@@ -482,11 +482,10 @@ def sym_orthogonal_l1(weight=1.0, sigma=3.0):
             regression_diff - 0.5 / sigma_squared
         )
         regression_loss = tf.math.reduce_min(regression_loss, axis=0) # reduce regression loss to min hypothesis
-        regression_loss = tf.math.reduce_sum(regression_loss, axis=1)
+        regression_loss = tf.math.reduce_sum(regression_loss)
 
         #normalizer = tf.math.reduce_sum(anchor_state)
         normalizer = tf.cast(tf.shape(indices)[0], dtype=tf.float32)
-        #tf.print('normalizer: ', normalizer)
 
         return weight * tf.math.divide_no_nan(regression_loss, normalizer)
 
