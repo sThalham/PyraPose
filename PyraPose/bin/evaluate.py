@@ -19,7 +19,6 @@ import os
 import sys
 import math
 
-import keras
 import tensorflow as tf
 
 from matplotlib import pyplot
@@ -32,9 +31,8 @@ if __name__ == "__main__" and __package__ is None:
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
 from .. import models
-from ..utils.config import read_config_file, parse_anchor_parameters
-from ..utils.eval import evaluate
-from ..utils.keras_version import check_keras_version
+#from ..utils.config import read_config_file, parse_anchor_parameters
+#from ..utils.eval import evaluate
 
 
 #def get_session():
@@ -186,9 +184,6 @@ def main(args=None):
     if args is None:
         args = sys.argv[1:]
     args = parse_args(args)
-
-    # make sure keras is the minimum required version
-    check_keras_version()
 
     # optionally choose specific GPU
     if args.gpu:

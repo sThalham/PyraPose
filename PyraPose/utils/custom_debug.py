@@ -18,10 +18,10 @@ from pathlib import Path
 from ..utils.anchors import anchors_for_shape
 
 
-bop_renderer_path = '/home/stefan/bop_renderer/build'
-sys.path.append(bop_renderer_path)
+#bop_renderer_path = '/home/stefan/bop_renderer/build'
+#sys.path.append(bop_renderer_path)
 
-import bop_renderer
+#import bop_renderer
 
 
 from PIL import Image
@@ -43,111 +43,10 @@ assert(callable(progressbar.progressbar)), "Using wrong progressbar module, inst
 #cykin = 250.85875
 
 # CIT
-fxkin = 1164.6233338297
-fykin = 1161.1018211652
-cxkin = 950.1242940800
-cykin = 538.5516554830
-
-
-def get_evaluation_kiru(pcd_temp_,pcd_scene_,inlier_thres,tf,final_th, model_dia):#queue
-    tf_pcd =np.eye(4)
-    pcd_temp_.transform(tf)
-
-    mean_temp = np.mean(np.array(pcd_temp_.points)[:, 2])
-    mean_scene = np.median(np.array(pcd_scene_.points)[:, 2])
-    pcd_diff = mean_scene - mean_temp
-
-    #open3d.draw_geometries([pcd_temp_])
-    # align model with median depth of scene
-    new_pcd_trans = []
-    for i, point in enumerate(pcd_temp_.points):
-        poi = np.asarray(point)
-        poi = poi + [0.0, 0.0, pcd_diff]
-        new_pcd_trans.append(poi)
-    tf = np.array(tf)
-    tf[2, 3] = tf[2, 3] + pcd_diff
-    pcd_temp_.points = open3d.Vector3dVector(np.asarray(new_pcd_trans))
-    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
-        radius=5.0, max_nn=10))
-
-    pcd_min = mean_scene - (model_dia * 2)
-    pcd_max = mean_scene + (model_dia * 2)
-    new_pcd_scene = []
-    for i, point in enumerate(pcd_scene_.points):
-        if point[2] > pcd_min or point[2] < pcd_max:
-            new_pcd_scene.append(point)
-    pcd_scene_.points = open3d.Vector3dVector(np.asarray(new_pcd_scene))
-    #open3d.draw_geometries([pcd_scene_])
-    open3d.estimate_normals(pcd_scene_, search_param=open3d.KDTreeSearchParamHybrid(
-        radius=5.0, max_nn=10))
-
-    reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
-                                                   open3d.registration.TransformationEstimationPointToPoint(),
-                                                   open3d.registration.ICPConvergenceCriteria(max_iteration = 5)) #5?
-    tf = np.matmul(reg_p2p.transformation,tf)
-    tf_pcd = np.matmul(reg_p2p.transformation,tf_pcd)
-    pcd_temp_.transform(reg_p2p.transformation)
-
-    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
-        radius=2.0, max_nn=30))
-    #open3d.draw_geometries([pcd_scene_])
-    points_unfiltered = np.asarray(pcd_temp_.points)
-    last_pcd_temp = []
-    for i, normal in enumerate(pcd_temp_.normals):
-        if normal[2] < 0:
-            last_pcd_temp.append(points_unfiltered[i, :])
-    if not last_pcd_temp:
-        normal_array = np.asarray(pcd_temp_.normals) * -1
-        pcd_temp_.normals = open3d.Vector3dVector(normal_array)
-        points_unfiltered = np.asarray(pcd_temp_.points)
-        last_pcd_temp = []
-        for i, normal in enumerate(pcd_temp_.normals):
-            if normal[2] < 0:
-                last_pcd_temp.append(points_unfiltered[i, :])
-    #print(np.asarray(last_pcd_temp))
-    pcd_temp_.points = open3d.Vector3dVector(np.asarray(last_pcd_temp))
-
-    open3d.estimate_normals(pcd_temp_, search_param=open3d.KDTreeSearchParamHybrid(
-        radius=5.0, max_nn=30))
-
-    hyper_tresh = inlier_thres
-    for i in range(4):
-        inlier_thres = reg_p2p.inlier_rmse*2
-        hyper_thres = hyper_tresh * 0.75
-        if inlier_thres < 1.0:
-            inlier_thres = hyper_tresh * 0.75
-            hyper_tresh = inlier_thres
-        reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_ , inlier_thres, np.eye(4),
-                                                       open3d.registration.TransformationEstimationPointToPlane(),
-                                                       open3d.registration.ICPConvergenceCriteria(max_iteration = 1)) #5?
-        tf = np.matmul(reg_p2p.transformation,tf)
-        tf_pcd = np.matmul(reg_p2p.transformation,tf_pcd)
-        pcd_temp_.transform(reg_p2p.transformation)
-    inlier_rmse = reg_p2p.inlier_rmse
-
-    #open3d.draw_geometries([pcd_temp_, pcd_scene_])
-
-    ##Calculate fitness with depth_inlier_th
-    if(final_th>0):
-
-        inlier_thres = final_th #depth_inlier_th*2 #reg_p2p.inlier_rmse*3
-        reg_p2p = open3d.registration.registration_icp(pcd_temp_,pcd_scene_, inlier_thres, np.eye(4),
-                                                       open3d.registration.TransformationEstimationPointToPlane(),
-                                                       open3d.registration.ICPConvergenceCriteria(max_iteration = 1)) #5?
-        tf = np.matmul(reg_p2p.transformation, tf)
-        tf_pcd = np.matmul(reg_p2p.transformation, tf_pcd)
-        pcd_temp_.transform(reg_p2p.transformation)
-
-    #open3d.draw_geometries([last_pcd_temp_, pcd_scene_])
-
-    if( np.abs(np.linalg.det(tf[:3,:3])-1)>0.001):
-        tf[:3,0]=tf[:3,0]/np.linalg.norm(tf[:3,0])
-        tf[:3,1]=tf[:3,1]/np.linalg.norm(tf[:3,1])
-        tf[:3,2]=tf[:3,2]/np.linalg.norm(tf[:3,2])
-    if( np.linalg.det(tf) < 0) :
-        tf[:3,2]=-tf[:3,2]
-
-    return tf,inlier_rmse,tf_pcd,reg_p2p.fitness
+fxkin = 1164.6233338297 * 2.0
+fykin = 1161.1018211652 * 2.0
+cxkin = 950.1242940800 * 0.5
+cykin = 538.5516554830 * 0.5
 
 
 def toPix_array(translation):
@@ -231,9 +130,9 @@ def evaluate_custom(generator, model, threshold=0.3):
     test_path = generator
 
     # InDex cube
-    mesh_info = '/home/stefan/data/IST_assembly/models_info.yml'
-    mesh_path = '/home/stefan/data/Meshes/CIT_color'
-    results_path = '/home/stefan/data/IST_assembly/images_results'
+    mesh_info = '/home/data/train_data/IST_PBR/meshes/models_info.yml'
+    #mesh_path = '/home/stefan/data/Meshes/CIT_color'
+    results_path = '/home/data/IST/results'
 
     #metal Markus
     #mesh_info = '/home/stefan/data/Meshes/metal_Markus/models_info.yml'
@@ -277,6 +176,7 @@ def evaluate_custom(generator, model, threshold=0.3):
                                       [-0.015, -0.105, 0.035]])
     '''
 
+    '''
     ren = bop_renderer.Renderer()
     ren.init(640, 480)
     categories = []
@@ -288,6 +188,7 @@ def evaluate_custom(generator, model, threshold=0.3):
         print(mesh_id, mesh_path_now)
         ren.add_object(mesh_id, mesh_path_now)
         categories.append(mesh_id)
+    '''
 
     #model_vsd = ply_loader.load_ply(mesh_path)
     #pcd_model = open3d.geometry.PointCloud()
@@ -300,15 +201,13 @@ def evaluate_custom(generator, model, threshold=0.3):
     #print('max model: ', np.nanmax(np.asarray(pcd_model.points)))
     #print('min model: ', np.nanmin(np.asarray(pcd_model.points)))
 
-    resX = 1920
-    resY = 1080
+    resX = 960
+    resY = 540
     anchor_params = anchors_for_shape((resY, resX))
 
     # load and sort
     for img_idx, img_name in enumerate(os.listdir(test_path)):
 
-        print(test_path)
-        print(img_name)
         img_path = os.path.join(test_path, img_name)
 
         print('------------------------------------')
@@ -330,15 +229,16 @@ def evaluate_custom(generator, model, threshold=0.3):
         image[..., 2] -= 123.68
         image = cv2.resize(image, (resX, resY))
 
-        boxes3D, scores, mask = model.predict_on_batch(np.expand_dims(image, axis=0))
-        print(mask.shape)
+        print(image.shape)
+
+        boxes3D, scores = model.predict_on_batch(np.expand_dims(image, axis=0))
 
         clust_t = time.time()
         for inv_cls in range(scores.shape[2]):
             cls = inv_cls + 1
             #cls = 2
             cls_mask = scores[0, :, inv_cls]
-            obj_mask = mask[0, :, inv_cls]
+            #obj_mask = mask[0, :, inv_cls]
 
             cls_indices = np.where(cls_mask > threshold)
             if len(cls_indices[0]) < 1:
@@ -389,7 +289,7 @@ def evaluate_custom(generator, model, threshold=0.3):
                     pos_anchors = np.delete(pos_anchors, indcs2rm, axis=0)
                     ind_anchors = np.delete(ind_anchors, indcs2rm, axis=0)
 
-                print('obj_inds per instance: ', obj_inds)
+                #print('obj_inds per instance: ', obj_inds)
                 per_obj_hyps.append(obj_inds)
 
                 #obj_col = (np.random.random() * 255, np.random.random() * 255, np.random.random() * 255)
@@ -400,6 +300,8 @@ def evaluate_custom(generator, model, threshold=0.3):
 
             #print('per_obj_hyps: ', len(per_obj_hyps))
 
+            '''
+            #no mask for now
             cls_img = np.where(obj_mask > 0.5, 1, 0)
             cls_img = cls_img.reshape((int(resY/8), int(resX/8))).astype(np.uint8)
             cls_img = np.asarray(Image.fromarray(cls_img).resize((resX, resY), Image.NEAREST))
@@ -409,16 +311,18 @@ def evaluate_custom(generator, model, threshold=0.3):
             cls_img[:, :, 1] *= 125
             cls_img[:, :, 2] *= 0
             image_mask = np.where(cls_img > 0, cls_img, image_mask)
+            '''
 
             for per_ins_indices in per_obj_hyps:
 
                 #print('per_ins: ', per_ins_indices)
                 #print('len per_ins', len(per_ins_indices))
                 k_hyp = len(per_ins_indices)
-                cls_conv = classes[inv_cls]
+                #cls_conv = classes[inv_cls]
+                cls_conv = cls
                 ori_points = np.ascontiguousarray(threeD_boxes[cls_conv, :, :], dtype=np.float32)
-                print('cls: ', cls_conv)
-                print('box: ', threeD_boxes[cls_conv, :, :])
+                #print('cls: ', cls_conv)
+                #print('box: ', threeD_boxes[cls_conv, :, :])
                 #ori_points = np.ascontiguousarray(threeD_boxes[cls, :, :], dtype=np.float32)  # .reshape((8, 1, 3))
                 K = np.float32([fxkin, 0., cxkin, 0., fykin, cykin, 0., 0., 1.]).reshape(3, 3)
 
@@ -463,6 +367,21 @@ def evaluate_custom(generator, model, threshold=0.3):
                                  3)
                 image_pose = cv2.line(image_pose, tuple(pose[14:16].ravel()), tuple(pose[8:10].ravel()), colEst,
                                  3)
+
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                bottomLeftCornerOfText = pose[0:2]
+                fontScale = 1
+                fontColor = (255, 255, 255)
+                thickness = 1
+                lineType = 2
+
+                cv2.putText(image_pose, str(cls),
+                            bottomLeftCornerOfText,
+                            font,
+                            fontScale,
+                            fontColor,
+                            thickness,
+                            lineType)
 
                 #pose_path = os.path.join(results_path, 'pose_' + str(idx) + '.png')
                 #cv2.imwrite(pose_path, image_pose)
@@ -510,8 +429,8 @@ def evaluate_custom(generator, model, threshold=0.3):
         #ori_mask = np.concatenate([image_ori, image_mask], axis=1)
         #box_rep = np.concatenate([image_pose, image_pose_rep], axis=1)
         #image_out = np.concatenate([ori_mask, box_rep], axis=0)
-        image_out = np.concatenate([image_ori, image_mask, image_pose], axis=1)
+        #image_out = np.concatenate([image_ori, image_mask, image_pose], axis=1)
         out_path = os.path.join(results_path, 'sequence_2_' + str(img_idx) + '.png')
-        cv2.imwrite(out_path, image_out)
+        cv2.imwrite(out_path, image_pose)
 
     print('Look at what you did... are you proud of yourself?')

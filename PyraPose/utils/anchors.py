@@ -353,6 +353,7 @@ def anchor_targets_bbox(
                                         cy=annotations['cam_params'][idx][3])
                             box3D = np.reshape(box3D, (16))
                             calculated_boxes[idx, sdx, :] = box3D
+                            print('K: ', annotations['cam_params'][idx])
 
                             '''
                             if cls == 0:

@@ -24,7 +24,7 @@ class Backbone(object):
             '_focal'           : losses.focal(),
             '_focal_mask'      : losses.focal_mask(),
             '_orth_l1'         : losses.orthogonal_l1(),
-            '_sym_orth_l1'      : losses.sym_orthogonal_l1(),
+            '_sym_orthogonal_l1'      : losses.sym_orthogonal_l1(),
             '_transformer_smooth_l1':losses.transformer_smooth_l1(),
             'RegressBoxes3D'   : layers.RegressBoxes3D(),
             'DenormBoxes3D'   : layers.DenormBoxes3D(),
@@ -70,8 +70,9 @@ def load_model(filepath, backbone_name='resnet50'):
 
 
 def convert_model(model, nms=True, class_specific_filter=True, anchor_params=None):
-    from retinanet import retinanet_bbox
-    return retinanet_bbox(model=model, nms=nms, class_specific_filter=class_specific_filter, anchor_params=anchor_params)
+    from . import retinanet
+    #from retinanet import retinanet_bbox
+    return retinanet.retinanet_bbox(model=model, nms=nms, class_specific_filter=class_specific_filter, anchor_params=anchor_params)
 
 
 def assert_training_model(model):
