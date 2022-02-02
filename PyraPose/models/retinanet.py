@@ -133,10 +133,15 @@ def default_3Dregression_model(num_values, num_anchors, pyramid_feature_size=256
             **options
         )(outputs)
 
-    outputs = keras.layers.Conv2D(num_anchors * 1 *  num_values, **options)(outputs) #, name='pyramid_regression3D'
-    outputs = keras.layers.Conv2D(num_anchors * 1 * num_values, **options)(outputs)
+    outputs = keras.layers.Conv2D(num_anchors * num_values, **options)(outputs)  # , name='pyramid_regression3D'
     if keras.backend.image_data_format() == 'channels_first':
-        outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression3D_permute'
+        outputs = keras.layers.Permute((2, 3, 1))(outputs)  # , name='pyramid_regression3D_permute'
+    outputs = keras.layers.Reshape((-1, num_values))(outputs)
+
+    #outputs = keras.layers.Conv2D(num_anchors, num_values, **options)(outputs) #, name='pyramid_regression3D'
+    #outputs = keras.layers.Conv2D(num_anchors, num_values, **options)(outputs)
+    #if keras.backend.image_data_format() == 'channels_first':
+    #    outputs = keras.layers.Permute((2, 3, 1))(outputs) # , name='pyramid_regression3D_permute'
 
     # MHP
     #outputs = keras.layers.Reshape((-1, 1, num_values))(outputs) # , name='pyramid_regression3D_reshape'
